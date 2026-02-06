@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG World Map</title>
+    <style>
+        body { margin: 0; background: #111; overflow: hidden; font-family: 'Segoe UI', serif; }
+        
+        #map-container {
+            position: relative;
+            width: 100vw; height: 100vh;
+            /* Flex para centralizar o mapa na tela */
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* O SVG e a Imagem ficam sobrepostos perfeitamente */
+        .layer {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            transition: transform 1s ease-in-out; /* Zoom suave */
+        }
+
+        /* Estilo dos Reinos */
+        polygon {
+            fill: transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        polygon:hover {
+            fill: rgba(255, 255, 255, 0.1);
+            stroke: #ffd700;
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 10px gold);
+        }
+
+        /* Modal de Informações */
+        #info-box {
+            position: fixed; top: 20px; right: 20px;
+            width: 300px; padding: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff; border: 1px solid #ffd700;
+            border-radius: 8px;
+            display: none; /* Escondido por padrão */
+            z-index: 100;
+        }
+        #info-box h2 { color: #ffd700; margin-top: 0; }
+        #info-box img { width: 100%; border-radius: 4px; margin-bottom: 10px; }
+        
+        /* Botão para sair do Zoom */
+        #reset-btn {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            padding: 10px 30px; background: #ffd700; color: #000;
+            border: none; font-weight: bold; cursor: pointer; display: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map-container">
+        <img id="world-img" class="layer" src="Mapa Mundo.png">
+        <svg id="world-svg" class="layer"></svg>
+    </div>
+
+    <div id="info-box">
+        <img id="k-img" src="" alt="">
+        <h2 id="k-name">Nome</h2>
+        <p id="k-desc">Descrição...</p>
+    </div>
+
+    <button id="reset-btn" onclick="resetZoom()">VOLTAR AO MAPA</button>
+
+    <script src="database.js"></script>
+
+    <script>
+        const img = document.getElementById('world-img');
+        const svg = document.getElementById('world-svg');
+        const container = document.getElementById('map-container');
+        
+        // 1. Configuração Inicial
+        // Espera a imagem carregar para configurar o tamanho do SVG igualzinho a ela
+        img.onload = () => {
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+            renderKingdoms();
+        };
+
+        // 2. Renderiza os Reinos baseado no database.js
+        function renderKingdoms() {
+            if(typeof kingdomData === 'undefined') {
+                alert("Erro: Arquivo database.js não encontrado ou vazio!");
+                return;
+            }
+
+            kingdomData.forEach(kingdom => {
+                const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                poly.setAttribute("points", kingdom.points);
+                poly.setAttribute("id", kingdom.id);
+                
+                // Evento de Clique
+                poly.onclick = () => focusOnKingdom(kingdom, poly);
+                
+                svg.appendChild(poly);
+            });
+        }
+
+        // 3. Lógica de Zoom e Foco
+        function focusOnKingdom(data, element) {
+            // Pega o retângulo que envolve o polígono (Bounding Box)
+            const bbox = element.getBBox();
+            
+            // Calcula o centro do reino
+            const cx = bbox.x + (bbox.width / 2);
+            const cy = bbox.y + (bbox.height / 2);
+            
+            // Tamanho original do mapa
+            const mapW = img.naturalWidth;
+            const mapH = img.naturalHeight;
+
+            // Define o ponto de origem do zoom no centro do reino
+            const originX = (cx / mapW) * 100;
+            const originY = (cy / mapH) * 100;
+
+            // Aplica o zoom nas camadas
+            const zoomLevel = 3.5; // Ajuste conforme necessário
+            const layers = document.querySelectorAll('.layer');
+            layers.forEach(el => {
+                el.style.transformOrigin = `${originX}% ${originY}%`;
+                el.style.transform = `scale(${zoomLevel})`;
+            });
+
+            // Mostra informações
+            showInfo(data);
+        }
+
+        function showInfo(data) {
+            document.getElementById('k-name').innerText = data.name;
+            document.getElementById('k-desc').innerText = data.description;
+            document.getElementById('k-img').src = data.image;
+            document.getElementById('info-box').style.display = 'block';
+            document.getElementById('reset-btn').style.display = 'block';
+        }
+
+        function resetZoom() {
+            const layers = document.querySelectorAll('.layer');
+            layers.forEach(el => {
+                el.style.transform = `scale(1)`;
+            });
+            document.getElementById('info-box').style.display = 'none';
+            document.getElementById('reset-btn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
