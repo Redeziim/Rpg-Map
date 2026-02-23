@@ -121,14 +121,18 @@
 
     <script>
         // CONFIGURAÇÕES
-        const ZOOM_LEVEL = 3.5; // Quanto zoom dá ao clicar (3.5x)
+        const ZOOM_LEVEL = 3.5; // Fator de zoom em cima do tamanho base
 
         // ELEMENTOS
         const img = document.getElementById('map-image');
         const svg = document.getElementById('map-svg');
         const zoomLayer = document.getElementById('zoom-layer');
+        const worldContainer = document.getElementById('world-container');
         const panel = document.getElementById('info-panel');
         const btn = document.getElementById('back-btn');
+
+        // Escala base calculada pelo fitToScreen (para não perder o encaixe inicial)
+        let baseScale = 1;
 
         // 1. INICIALIZAÇÃO SEGURA
         // Garante que o código só rode quando a imagem existir e tiver tamanho
@@ -181,21 +185,27 @@
 
         // 3. ZOOM NO REINO
         function zoomIn(data, element) {
-            // Matemática para achar o centro do polígono
+            // Matemática para achar o centro do polígono (em coordenadas do mapa)
             const bbox = element.getBBox();
             const cx = bbox.x + (bbox.width / 2);
             const cy = bbox.y + (bbox.height / 2);
-            
-            const mapW = img.naturalWidth;
-            const mapH = img.naturalHeight;
 
-            // Converte pixel para porcentagem (necessário para CSS transform-origin)
-            const originX = (cx / mapW) * 100;
-            const originY = (cy / mapH) * 100;
+            // Tamanho visível da tela
+            const containerW = worldContainer.clientWidth;
+            const containerH = worldContainer.clientHeight;
 
-            // Aplica animação
-            zoomLayer.style.transformOrigin = `${originX}% ${originY}%`;
-            zoomLayer.style.transform = `scale(${ZOOM_LEVEL})`;
+            // Escala final = escala base * fator de zoom
+            const finalScale = baseScale * ZOOM_LEVEL;
+
+            // Queremos que o ponto (cx, cy) fique no centro da tela:
+            // finalX = cx * finalScale + translateX = containerW / 2
+            // finalY = cy * finalScale + translateY = containerH / 2
+            const translateX = containerW / 2 - cx * finalScale;
+            const translateY = containerH / 2 - cy * finalScale;
+
+            // Aplica animação (origem no canto superior esquerdo para simplificar a matemática)
+            zoomLayer.style.transformOrigin = `0 0`;
+            zoomLayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${finalScale})`;
 
             // Atualiza UI
             document.getElementById('ui-title').innerText = data.name;
@@ -222,12 +232,13 @@
             const screenH = window.innerHeight;
 
             // Calcula qual escala faz a imagem caber inteira
-            const scale = Math.min(screenW / w, screenH / h) * 0.95; // 95% para margem
-            
+            baseScale = Math.min(screenW / w, screenH / h) * 0.95; // 95% para margem
+
             // Define tamanho base
             zoomLayer.style.width = w + "px";
             zoomLayer.style.height = h + "px";
-            zoomLayer.style.transform = `scale(${scale})`;
+            zoomLayer.style.transformOrigin = `0 0`;
+            zoomLayer.style.transform = `translate(0px, 0px) scale(${baseScale})`;
         }
 
         // Recalcula se redimensionar a janela
