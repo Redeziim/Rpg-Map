@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { Users, Map, Swords } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { UploadZone, type UploadStatus } from "@/components/upload-zone";
 import { StatusBadge } from "@/components/status-badge";
 import { PnjInfo } from "@/components/pnj-info";
-import { ModelPreview } from "@/components/model-preview";
 import { cn } from "@/lib/utils";
+
+const ModelPreview = dynamic(
+  () => import("@/components/model-preview").then((mod) => mod.ModelPreview),
+  { ssr: false }
+);
 
 const PNJ_FORMATS = [".json", ".xml", ".yaml", ".yml", ".txt", ".csv"];
 const MAP_FORMATS = [".obj", ".fbx", ".glb", ".gltf"];
