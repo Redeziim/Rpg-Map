@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG World Map — Leitor de Reinos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════
+           THEME: Ancient Tome — Medieval RPG Aesthetic
+           ═══════════════════════════════════════════════ */
+
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f0d878;
+            --gold-dark: #8a6e1c;
+            --parchment: #f4e4bc;
+            --ink: #1a1510;
+            --ink-light: #2a2018;
+            --blood: #8b0000;
+            --fog: rgba(200, 190, 170, 0.03);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--ink);
+            overflow: hidden;
+            font-family: 'EB Garamond', 'Cormorant Garamond', serif;
+            width: 100vw; height: 100vh;
+            position: relative;
+        }
+
+        /* ─── Loading Screen ─── */
+        #loading-screen {
+            position: fixed; inset: 0;
+            background: var(--ink);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 1s ease, visibility 1s ease;
+        }
+        #loading-screen.hidden {
+            opacity: 0; visibility: hidden; pointer-events: none;
+        }
+        .loading-ornament {
+            width: 80px; height: 80px;
+            border: 2px solid var(--gold-dark);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+        }
+        .loading-text {
+            margin-top: 24px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            color: var(--gold-dark);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        /* ─── Fog / Atmosphere Layer ─── */
+        #atmosphere {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            background:
+                radial-gradient(ellipse at 20% 80%, rgba(212,175,55,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(139,0,0,0.03) 0%, transparent 50%);
+            animation: atmosphereShift 20s ease-in-out infinite alternate;
+        }
+        @keyframes atmosphereShift {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        /* ─── Particle Canvas ─── */
+        #particles {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            z-index: 6;
+        }
+
+        /* ─── Map Container ─── */
+        #map-container {
+            position: relative;
+            width: 100vw; height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .layer {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+            filter: drop-shadow(0 0 30px rgba(0,0,0,0.8));
+        }
+
+        /* ─── SVG Polygons (Kingdoms) ─── */
+        polygon {
+            fill: transparent;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        polygon:hover {
+            fill: rgba(212, 175, 55, 0.12);
+            stroke: var(--gold);
+            stroke-width: 2.5px;
+            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6))
+                    drop-shadow(0 0 40px rgba(212, 175, 55, 0.2));
+        }
+
+        /* ─── Info Box (Glassmorphism) ─── */
+        #info-box {
+            position: fixed;
+            top: 24px; right: 24px;
+            width: 340px;
+            padding: 0;
+            background: rgba(26, 21, 16, 0.75);
+            background-blend-mode: multiply;
+            color: var(--parchment);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 12px;
+            display: none;
+            z-index: 100;
+            backdrop-filter: blur(16px) saturate(1.2);
+            box-shadow:
+                0 20px 60px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+            overflow: hidden;
+            animation: slideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px) scale(0.95); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+
+        #info-box .info-image {
+            width: 100%; height: 180px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            border-bottom: 2px solid var(--gold-dark);
+        }
+        #info-box .info-image::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, transparent 40%, rgba(26,21,16,0.9) 100%);
+        }
+
+        #info-box .info-content {
+            padding: 20px 24px 24px;
+        }
+
+        #info-box h2 {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--gold-light);
+            margin: 0 0 12px 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        #info-box .divider {
+            width: 40px; height: 2px;
+            background: var(--gold-dark);
+            margin-bottom: 14px;
+            border-radius: 1px;
+        }
+
+        #info-box p {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: rgba(244, 228, 188, 0.85);
+            font-style: italic;
+        }
+
+        /* ─── Navigation Header ─── */
+        #nav-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 90;
+            background: linear-gradient(to bottom, rgba(26,21,16,0.9) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        #nav-header > * { pointer-events: auto; }
+
+        .nav-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            color: var(--gold-dark);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex; gap: 12px;
+        }
+        .nav-links a {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            color: var(--gold-dark);
+            text-decoration: none;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border: 1px solid rgba(212,175,55,0.15);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .nav-links a:hover {
+            color: var(--gold);
+            border-color: var(--gold-dark);
+            background: rgba(212,175,55,0.08);
+        }
+
+        /* ─── Reset Button ─── */
+        #reset-btn {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 14px 36px;
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: none;
+            z-index: 100;
+            border-radius: 6px;
+            backdrop-filter: blur(8px);
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        #reset-btn.visible {
+            display: block;
+            animation: buttonRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @keyframes buttonRise {
+            from { transform: translateX(-50%) translateY(60px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        #reset-btn:hover {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--gold);
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+            letter-spacing: 4px;
+        }
+
+        /* ─── Corner Ornaments ─── */
+        .corner {
+            position: fixed;
+            width: 60px; height: 60px;
+            pointer-events: none;
+            z-index: 80;
+            opacity: 0.3;
+        }
+        .corner-tl { top: 12px; left: 12px; border-top: 1px solid var(--gold-dark); border-left: 1px solid var(--gold-dark); }
+        .corner-tr { top: 12px; right: 12px; border-top: 1px solid var(--gold-dark); border-right: 1px solid var(--gold-dark); }
+        .corner-bl { bottom: 12px; left: 12px; border-bottom: 1px solid var(--gold-dark); border-left: 1px solid var(--gold-dark); }
+        .corner-br { bottom: 12px; right: 12px; border-bottom: 1px solid var(--gold-dark); border-right: 1px solid var(--gold-dark); }
+
+        /* ─── Hint Text ─── */
+        .hint {
+            position: fixed;
+            bottom: 24px; left: 24px;
+            font-family: 'EB Garamond', serif;
+            font-size: 0.8rem;
+            font-style: italic;
+            color: rgba(244, 228, 188, 0.3);
+            z-index: 80;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        .hint.hidden { opacity: 0; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-ornament"></div>
+        <div class="loading-text">Desvendando os reinos...</div>
+    </div>
+
+    <!-- Atmosphere -->
+    <div id="atmosphere"></div>
+    <canvas id="particles"></canvas>
+
+    <!-- Corner Ornaments -->
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <!-- Navigation -->
+    <div id="nav-header">
+        <div class="nav-title">🜲 Atlas do Mundo</div>
+        <div class="nav-links">
+            <a href="../Mapa/index.html">Mapa V1</a>
+            <a href="Map.html">Mapeador</a>
+        </div>
+    </div>
+
+    <!-- Map -->
+    <div id="map-container">
+        <img id="world-img" class="layer" src="Mapa%20mundo.png" alt="Mapa do Mundo">
+        <svg id="world-svg" class="layer"></svg>
+    </div>
+
+    <!-- Info Box -->
+    <div id="info-box">
+        <div class="info-image" id="k-img-container"></div>
+        <div class="info-content">
+            <h2 id="k-name">Nome</h2>
+            <div class="divider"></div>
+            <p id="k-desc">Descrição...</p>
+        </div>
+    </div>
+
+    <!-- Reset Button -->
+    <button id="reset-btn" onclick="resetZoom()">⟲ Voltar ao Mapa</button>
+
+    <!-- Hint -->
+    <div class="hint" id="hint-text">Clique sobre um reino para explorar</div>
+
+    <script src="database.js"></script>
+
+    <script>
+        const img = document.getElementById('world-img');
+        const svg = document.getElementById('world-svg');
+        const container = document.getElementById('map-container');
+        const loadingScreen = document.getElementById('loading-screen');
+        const hintText = document.getElementById('hint-text');
+
+        // ─── Loading ───
+        img.onload = () => {
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+            renderKingdoms();
+            setTimeout(() => loadingScreen.classList.add('hidden'), 800);
+        };
+
+        // ─── Render Kingdoms ───
+        function renderKingdoms() {
+            if (typeof kingdomData === 'undefined') {
+                console.warn("database.js não carregado — usando dados de demonstração");
+                return;
+            }
+            kingdomData.forEach(kingdom => {
+                const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                poly.setAttribute("points", kingdom.points);
+                poly.setAttribute("id", kingdom.id);
+                poly.onclick = () => focusOnKingdom(kingdom, poly);
+                svg.appendChild(poly);
+            });
+        }
+
+        // ─── Focus & Zoom ───
+        function focusOnKingdom(data, element) {
+            const bbox = element.getBBox();
+            const cx = bbox.x + (bbox.width / 2);
+            const cy = bbox.y + (bbox.height / 2);
+            const mapW = img.naturalWidth;
+            const mapH = img.naturalHeight;
+            const originX = (cx / mapW) * 100;
+            const originY = (cy / mapH) * 100;
+            const zoomLevel = 3.5;
+
+            const layers = document.querySelectorAll('.layer');
+            layers.forEach(el => {
+                el.style.transformOrigin = `${originX}% ${originY}%`;
+                el.style.transform = `scale(${zoomLevel})`;
+            });
+
+            showInfo(data);
+            hintText.classList.add('hidden');
+        }
+
+        function showInfo(data) {
+            document.getElementById('k-name').innerText = data.name;
+            document.getElementById('k-desc').innerText = data.description;
+            const imgContainer = document.getElementById('k-img-container');
+            if (data.image) {
+                imgContainer.style.backgroundImage = `url('${data.image}')`;
+            }
+            const box = document.getElementById('info-box');
+            box.style.display = 'block';
+            document.getElementById('reset-btn').classList.add('visible');
+        }
+
+        function resetZoom() {
+            const layers = document.querySelectorAll('.layer');
+            layers.forEach(el => { el.style.transform = `scale(1)`; });
+            document.getElementById('info-box').style.display = 'none';
+            document.getElementById('reset-btn').classList.remove('visible');
+            hintText.classList.remove('hidden');
+        }
+
+        // ─── Particles ───
+        (function initParticles() {
+            const canvas = document.getElementById('particles');
+            const ctx = canvas.getContext('2d');
+            let W, H, particles = [];
+
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            class Particle {
+                constructor() {
+                    this.reset();
+                }
+                reset() {
+                    this.x = Math.random() * W;
+                    this.y = Math.random() * H;
+                    this.size = Math.random() * 1.5 + 0.3;
+                    this.speedX = (Math.random() - 0.5) * 0.15;
+                    this.speedY = -Math.random() * 0.2 - 0.05;
+                    this.alpha = Math.random() * 0.3 + 0.05;
+                    this.life = Math.random() * 200 + 100;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    this.life--;
+                    if (this.life <= 0 || this.y < -10) this.reset();
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(212, 175, 55, ${this.alpha})`;
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+            function animate() {
+                ctx.clearRect(0, 0, W, H);
+                particles.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+    </script>
+</body>
+</html>

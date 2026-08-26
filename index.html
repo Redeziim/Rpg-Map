@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Map - Preview Hub</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0a0a0c;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 20px;
+        }
+        h1 {
+            color: #ffd700;
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(20, 20, 24, 0.95);
+            border: 1px solid #c9a959;
+            border-radius: 8px;
+            padding: 20px 40px;
+            width: 300px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        .card:hover {
+            background: rgba(201, 169, 89, 0.1);
+            box-shadow: 0 0 20px rgba(201, 169, 89, 0.3);
+            transform: translateY(-3px);
+        }
+        .card h2 {
+            color: #ffd700;
+            margin: 0 0 8px 0;
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+        }
+        .card span {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <h1>RPG Map Explorer</h1>
+    <p>Visualização do estado atual do projeto</p>
+    <a class="card" href="Mapa/index.html">
+        <h2>🗺️ Mapa Interativo V1</h2>
+        <span>Mapa com zoom e modal central</span>
+    </a>
+    <a class="card" href="Leitor_reinos/Leitor.html">
+        <h2>📖 Leitor de Reinos</h2>
+        <span>Mapa com info-box lateral</span>
+    </a>
+    <a class="card" href="Leitor_reinos/Map.html">
+        <h2>🛠️ Mapeador RPG</h2>
+        <span>Ferramenta de criação de polígonos</span>
+    </a>
+</body>
+</html>
