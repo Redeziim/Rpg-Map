@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Stage, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { STLLoader } from "three/addons/loaders/STLLoader.js";
 
 interface Model3DViewerProps {
   file: File;
@@ -16,26 +17,27 @@ function ModelLoader({ url }: { url: string }) {
 
   useEffect(() => {
     if (fileExtension === "stl") {
-      import("three/examples/jsm/loaders/STLLoader").then(({ STLLoader }) => {
-        const loader = new STLLoader();
-        loader.load(url, (geo) => {
-          geo.center();
-          setGeometry(geo);
-        });
+      const loader = new STLLoader();
+      loader.load(url, (geo) => {
+        geo.center();
+        setGeometry(geo);
       });
     }
   }, [url, fileExtension]);
 
   if (fileExtension === "gltf" || fileExtension === "glb") {
     const { scene } = useGLTF(url);
-    return <primitive object={scene} />;
+    const Primitive = "primitive" as any;
+    return <Primitive object={scene} />;
   }
 
   if (fileExtension === "stl" && geometry) {
+    const Mesh = "mesh" as any;
+    const MeshStandardMaterial = "meshStandardMaterial" as any;
     return (
-      <mesh geometry={geometry}>
-        <meshStandardMaterial color="#8b7355" metalness={0.3} roughness={0.7} />
-      </mesh>
+      <Mesh geometry={geometry}>
+        <MeshStandardMaterial color="#8b7355" metalness={0.3} roughness={0.7} />
+      </Mesh>
     );
   }
 
@@ -43,11 +45,15 @@ function ModelLoader({ url }: { url: string }) {
 }
 
 function LoadingFallback() {
+  const Mesh = "mesh" as any;
+  const BoxGeometry = "boxGeometry" as any;
+  const MeshStandardMaterial = "meshStandardMaterial" as any;
+
   return (
-    <mesh>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#444" wireframe />
-    </mesh>
+    <Mesh>
+      <BoxGeometry args={[1, 1, 1]} />
+      <MeshStandardMaterial color="#444" wireframe />
+    </Mesh>
   );
 }
 
@@ -71,13 +77,15 @@ export function Model3DViewer({ file, className = "" }: Model3DViewerProps) {
     );
   }
 
+  const Color = "color" as any;
+
   return (
     <div className={`rounded-lg border border-border/60 bg-card/50 overflow-hidden ${className}`}>
       <Canvas
         camera={{ position: [0, 0, 50], fov: 50 }}
         style={{ width: "100%", height: "400px" }}
       >
-        <color attach="background" args={["#0a0a0c"]} />
+        <Color attach="background" args={["#0a0a0c"]} />
         <Suspense fallback={<LoadingFallback />}>
           <Stage environment="city" intensity={0.6}>
             <ModelLoader url={objectURL} />
