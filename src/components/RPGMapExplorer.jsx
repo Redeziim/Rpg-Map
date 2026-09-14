@@ -13,12 +13,13 @@ const RPGMapExplorer = () => {
     set: async (key, val) => { try { localStorage.setItem(key, val); } catch {} }
   };
 
-  console.log('RPGMapExplorer montado');
+  const [selectedPlayer, setSelectedPlayer] = useState('');
+  const [masterNotes, setMasterNotes] = useState(() => localStorage.getItem('rpg-master-notes') || '');
   const [mapImage, setMapImage] = useState(null);
   const [points, setPoints] = useState([]);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [viewMode, setViewMode] = useState('player'); // 'player' ou 'master'
-  const [activeTab, setActiveTab] = useState('mapa'); // 'mapa' ou 'ficha'
+  const [activeTab, setActiveTab] = useState('ficha'); // 'mapa' ou 'ficha'
   const [showPointModal, setShowPointModal] = useState(false);
   const [newPoint, setNewPoint] = useState({ x: 0, y: 0, name: '', description: '', type: 'cidade' });
   const [show3DScene, setShow3DScene] = useState(null);
@@ -36,7 +37,7 @@ const RPGMapExplorer = () => {
   const mapRef = useRef(null);
 
   const pointTypes = [
-    { value: 'cidade', label: 'Cidade', icon: Castle, color: '#d4af37' },
+    { value: 'cidade', label: 'Cidade', icon: Castle, color: '#c7ab76' },
     { value: 'dungeon', label: 'Dungeon', icon: Skull, color: '#8b0000' },
     { value: 'taverna', label: 'Taverna', icon: Scroll, color: '#cd853f' },
     { value: 'floresta', label: 'Floresta', icon: Grid, color: '#228b22' },
@@ -149,6 +150,7 @@ const RPGMapExplorer = () => {
 
   const savePlayerName = async (name) => {
     setPlayerName(name);
+    if (!playerSheets[name]) await updatePlayerSheet(name, {});
     try {
       await storage.set('rpg-player-name', name, false);
     } catch (error) {
@@ -303,7 +305,7 @@ const RPGMapExplorer = () => {
         // Círculo
         ctx.beginPath();
         ctx.arc(point.x, point.y, 12, 0, Math.PI * 2);
-        ctx.fillStyle = typeInfo?.color || '#d4af37';
+        ctx.fillStyle = typeInfo?.color || '#c7ab76';
         ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 3;
@@ -313,7 +315,7 @@ const RPGMapExplorer = () => {
 
         // Nome
         ctx.font = 'bold 14px "Cinzel", serif';
-        ctx.fillStyle = '#150f28';
+        ctx.fillStyle = '#191c1a';
         ctx.textAlign = 'center';
         ctx.fillText(point.name, point.x, point.y - 20);
       });
@@ -322,16 +324,20 @@ const RPGMapExplorer = () => {
     img.src = mapImage;
   }, [mapImage, points, scale, position]);
 
+  const playerNames = Array.from(new Set([...Object.keys(playerSheets), ...Object.keys(statusBarsData)]));
+  const groupEntries = Object.fromEntries(playerNames.map(name => [name, {
+    ...(statusBarsData[name] || {}),
+    bars: [...(statusBarsData[name]?.bars || []), ...sheetFields.filter(f => f.type === 'status').map((f,i) => ({ id: f.id, label: f.label, color: ['#b88464','#d4bd8a','#e2d6bf'][i%3], ...(playerSheets[name]?.values?.[f.id] || {current:0,max:0}) }))]
+  }]));
   return (
-    <div className="rpg-container">
-      <div className="parchment-bg"></div>
+    <div className="rpg-container mist-theme">
+      <a className="skip-link" href="#main-content">Pular para o conteúdo</a><div className="parchment-bg" aria-hidden="true"></div>
       
       {/* Header */}
       <header className="header">
         <div className="header-content">
           <div className="logo">
-            <Map size={32} />
-            <h1>Grimório Cartográfico</h1>
+            <div className="brand-mark"><ScrollText size={25} /></div><div><span className="brand-kicker">UM REFÚGIO PARA SUAS HISTÓRIAS</span><h1>Grimório</h1></div>
           </div>
           <div className="header-controls">
             <button 
@@ -347,7 +353,7 @@ const RPGMapExplorer = () => {
             </div>
           </div>
         </div>
-        <div className="tab-nav">
+        <nav className="tab-nav" aria-label="Navegação principal">
           <button
             className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
             onClick={() => setActiveTab('mapa')}
@@ -369,10 +375,11 @@ const RPGMapExplorer = () => {
             <Heart size={18} />
             Status do Grupo
           </button>
-        </div>
+        </nav>
+        <div className="nav-footer"><span>✦</span><small>Entre mundos,<br />a sua mesa.</small></div>
       </header>
 
-      <div className="main-content">
+      <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1}>
         {activeTab === 'mapa' ? (
           <>
             {/* Sidebar */}
@@ -401,13 +408,13 @@ const RPGMapExplorer = () => {
                     const Icon = typeInfo?.icon || Castle;
                     return (
                       <div key={point.id} className="point-item">
-                        <div className="point-info" onClick={() => handlePointClick(point)}>
+                        <button className="point-info" onClick={() => handlePointClick(point)}>
                           <Icon size={16} style={{ color: typeInfo?.color }} />
                           <div>
                             <strong>{point.name}</strong>
                             <small>{point.type}</small>
                           </div>
-                        </div>
+                        </button>
                         {viewMode === 'master' && (
                           <button 
                             className="delete-btn"
@@ -441,7 +448,7 @@ const RPGMapExplorer = () => {
                 <div className="empty-state">
                   <Map size={64} />
                   <h2>Nenhum mapa carregado</h2>
-                  <p>Faça upload de uma imagem para começar a exploração</p>
+                  <p>{viewMode === 'master' ? 'Envie um mapa pelo painel para começar a exploração.' : 'O mestre ainda não revelou o mapa desta jornada.'}</p>
                 </div>
               ) : (
                 <div 
@@ -469,15 +476,19 @@ const RPGMapExplorer = () => {
           <>
             {/* Área principal da Ficha de Personagem */}
             <main className="sheet-area">
-              <StatusBars
+              <CharacterSheet
+                selectedPlayer={selectedPlayer}
+                onSelectPlayer={setSelectedPlayer}
+                playerNames={playerNames}
+                profile={<StatusBars
+                selectedPlayer={selectedPlayer}
                 viewMode={viewMode}
                 playerName={playerName}
                 onPlayerNameChange={savePlayerName}
                 allPlayersBars={statusBarsData}
                 onUpdatePlayerBars={updatePlayerBars}
                 onUpdatePlayerAvatar={updatePlayerAvatar}
-              />
-              <CharacterSheet
+              />}
                 viewMode={viewMode}
                 sheetFields={sheetFields}
                 onFieldsChange={saveSheetFields}
@@ -496,12 +507,14 @@ const RPGMapExplorer = () => {
             </aside>
           </>
         ) : (
-          <main className="group-status-area">
+          <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>A mesa</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} jogadores</span></div>
             <GroupStatus
               viewMode={viewMode}
-              allPlayersBars={statusBarsData}
+              allPlayersBars={groupEntries}
+              onOpenSheet={name => {setSelectedPlayer(name);setActiveTab('ficha');}}
               onUpdatePlayerBars={updatePlayerBars}
             />
+            {viewMode === 'master' && <section className="observations-panel master-notes"><div className="section-heading"><h3>Notas do mestre</h3><span>Visíveis no modo mestre</span></div><label className="sr-only" htmlFor="master-notes">Notas do mestre</label><textarea id="master-notes" rows={6} value={masterNotes} onChange={e => {setMasterNotes(e.target.value);localStorage.setItem('rpg-master-notes',e.target.value);}} placeholder="Prepare encontros, pistas e lembretes para a próxima sessão…" /></section>}
           </main>
         )}
       </div>
@@ -589,8 +602,8 @@ const RPGMapExplorer = () => {
           width: 100%;
           height: 100vh;
           font-family: 'Crimson Pro', serif;
-          background: linear-gradient(135deg, #0c0918 0%, #241a42 100%);
-          color: #e4dcf5;
+          background: linear-gradient(135deg, #121413 0%, #222321 100%);
+          color: #e9dfcd;
           position: relative;
           overflow: hidden;
         }
@@ -602,16 +615,16 @@ const RPGMapExplorer = () => {
           right: 0;
           bottom: 0;
           background-image: 
-            repeating-linear-gradient(90deg, rgba(74, 58, 122, 0.05) 0px, transparent 1px, transparent 2px, rgba(74, 58, 122, 0.05) 3px),
-            repeating-linear-gradient(0deg, rgba(74, 58, 122, 0.05) 0px, transparent 1px, transparent 2px, rgba(74, 58, 122, 0.05) 3px);
+            repeating-linear-gradient(90deg, rgba(151, 126, 96, 0.05) 0px, transparent 1px, transparent 2px, rgba(151, 126, 96, 0.05) 3px),
+            repeating-linear-gradient(0deg, rgba(151, 126, 96, 0.05) 0px, transparent 1px, transparent 2px, rgba(151, 126, 96, 0.05) 3px);
           opacity: 0.3;
           pointer-events: none;
         }
 
         .header {
-          background: linear-gradient(180deg, rgba(21, 15, 40, 0.95) 0%, rgba(21, 15, 40, 0.85) 100%);
-          border-bottom: 3px solid #d4af37;
-          box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
+          background: linear-gradient(180deg, rgba(25, 28, 26, 0.95) 0%, rgba(25, 28, 26, 0.85) 100%);
+          border-bottom: 3px solid #c7ab76;
+          box-shadow: 0 4px 20px rgba(199, 171, 118, 0.2);
           position: relative;
           z-index: 10;
         }
@@ -632,15 +645,15 @@ const RPGMapExplorer = () => {
         }
 
         .logo svg {
-          color: #d4af37;
-          filter: drop-shadow(0 2px 4px rgba(212, 175, 55, 0.5));
+          color: #c7ab76;
+          filter: drop-shadow(0 2px 4px rgba(199, 171, 118, 0.5));
         }
 
         .logo h1 {
           font-family: 'Cinzel', serif;
           font-size: 1.8rem;
           font-weight: 700;
-          color: #d4af37;
+          color: #c7ab76;
           text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
           letter-spacing: 1px;
         }
@@ -656,29 +669,29 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem 1.5rem;
-          background: rgba(74, 58, 122, 0.3);
-          border: 2px solid #4a3a7a;
+          background: rgba(151, 126, 96, 0.3);
+          border: 2px solid #51493e;
           border-radius: 8px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-family: 'Crimson Pro', serif;
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .mode-btn:hover {
-          background: rgba(74, 58, 122, 0.5);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.5);
+          border-color: #c7ab76;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+          box-shadow: 0 4px 12px rgba(199, 171, 118, 0.3);
         }
 
         .mode-btn.active {
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border-color: #d4af37;
-          color: #150f28;
-          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.5);
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border-color: #c7ab76;
+          color: #191c1a;
+          box-shadow: 0 4px 16px rgba(199, 171, 118, 0.5);
         }
 
         .user-indicator {
@@ -688,7 +701,7 @@ const RPGMapExplorer = () => {
           padding: 0.75rem 1rem;
           background: rgba(0, 0, 0, 0.3);
           border-radius: 8px;
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          border: 1px solid rgba(199, 171, 118, 0.3);
         }
 
         .tab-nav {
@@ -705,41 +718,41 @@ const RPGMapExplorer = () => {
           gap: 0.5rem;
           padding: 0.6rem 1.25rem;
           background: rgba(0, 0, 0, 0.25);
-          border: 2px solid rgba(74, 58, 122, 0.6);
+          border: 2px solid rgba(151, 126, 96, 0.6);
           border-bottom: none;
           border-radius: 8px 8px 0 0;
-          color: #9a8fc4;
+          color: #b9b09f;
           font-family: 'Cinzel', serif;
           font-size: 0.9rem;
           font-weight: 600;
           letter-spacing: 0.5px;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .tab-btn:hover {
-          color: #e4dcf5;
-          background: rgba(74, 58, 122, 0.3);
+          color: #e9dfcd;
+          background: rgba(151, 126, 96, 0.3);
         }
 
         .tab-btn.active {
-          color: #150f28;
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border-color: #d4af37;
-          box-shadow: 0 -2px 12px rgba(212, 175, 55, 0.4);
+          color: #191c1a;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border-color: #c7ab76;
+          box-shadow: 0 -2px 12px rgba(199, 171, 118, 0.4);
         }
 
         .sheet-area {
           flex: 1;
           position: relative;
           overflow-y: auto;
-          background: radial-gradient(circle at center, #150f28 0%, #0c0918 100%);
+          background: radial-gradient(circle at center, #191c1a 0%, #121413 100%);
         }
 
         .sheet-sidebar {
           width: 320px;
-          background: linear-gradient(180deg, rgba(21, 15, 40, 0.95) 0%, rgba(15, 10, 31, 0.95) 100%);
-          border-left: 3px solid #4a3a7a;
+          background: linear-gradient(180deg, rgba(25, 28, 26, 0.95) 0%, rgba(20, 23, 21, 0.95) 100%);
+          border-left: 3px solid #51493e;
           padding: 1.5rem;
           overflow-y: auto;
           box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
@@ -763,7 +776,7 @@ const RPGMapExplorer = () => {
           height: 48px;
           border-radius: 50%;
           object-fit: cover;
-          border: 2px solid #d4af37;
+          border: 2px solid #c7ab76;
         }
 
         .status-avatar-placeholder {
@@ -771,7 +784,7 @@ const RPGMapExplorer = () => {
           align-items: center;
           justify-content: center;
           background: rgba(0, 0, 0, 0.3);
-          color: #7a6ea3;
+          color: #a39988;
         }
 
         .status-avatar-upload-btn {
@@ -783,11 +796,11 @@ const RPGMapExplorer = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #d4af37;
-          color: #150f28;
+          background: #c7ab76;
+          color: #191c1a;
           border-radius: 50%;
           cursor: pointer;
-          border: 2px solid #0c0918;
+          border: 2px solid #121413;
         }
 
         .status-avatar-upload-btn input {
@@ -798,7 +811,7 @@ const RPGMapExplorer = () => {
           flex: 1;
           padding: 2rem;
           overflow-y: auto;
-          background: radial-gradient(circle at center, #150f28 0%, #0c0918 100%);
+          background: radial-gradient(circle at center, #191c1a 0%, #121413 100%);
         }
 
         .group-status-empty {
@@ -815,7 +828,7 @@ const RPGMapExplorer = () => {
 
         .group-status-card {
           background: rgba(0, 0, 0, 0.3);
-          border: 2px solid rgba(212, 175, 55, 0.35);
+          border: 2px solid rgba(199, 171, 118, 0.35);
           border-radius: 12px;
           padding: 1.1rem;
           transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
@@ -834,7 +847,7 @@ const RPGMapExplorer = () => {
           gap: 0.75rem;
           margin-bottom: 1rem;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+          border-bottom: 1px solid rgba(199, 171, 118, 0.2);
         }
 
         .group-status-avatar {
@@ -842,7 +855,7 @@ const RPGMapExplorer = () => {
           height: 44px;
           border-radius: 50%;
           object-fit: cover;
-          border: 2px solid #d4af37;
+          border: 2px solid #c7ab76;
           flex-shrink: 0;
         }
 
@@ -850,13 +863,13 @@ const RPGMapExplorer = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(74, 58, 122, 0.3);
-          color: #7a6ea3;
+          background: rgba(151, 126, 96, 0.3);
+          color: #a39988;
         }
 
         .group-status-card-header h4 {
           font-family: 'Cinzel', serif;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 1rem;
         }
 
@@ -943,7 +956,7 @@ const RPGMapExplorer = () => {
           margin: 0 auto 1.5rem;
           padding: 1.25rem 1.5rem;
           background: rgba(0, 0, 0, 0.3);
-          border: 2px solid rgba(212, 175, 55, 0.35);
+          border: 2px solid rgba(199, 171, 118, 0.35);
           border-radius: 12px;
         }
 
@@ -952,7 +965,7 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.5rem;
           font-family: 'Cinzel', serif;
-          color: #d4af37;
+          color: #c7ab76;
           font-size: 1rem;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -960,13 +973,13 @@ const RPGMapExplorer = () => {
         }
 
         .status-bars-hint {
-          color: #9a8fc4;
+          color: #b9b09f;
           font-size: 0.85rem;
           margin-bottom: 0.75rem;
         }
 
         .status-bars-hint strong {
-          color: #d4af37;
+          color: #c7ab76;
         }
 
         .status-name-row,
@@ -980,15 +993,15 @@ const RPGMapExplorer = () => {
         .status-master-select-row select {
           padding: 0.55rem 0.75rem;
           background: rgba(0, 0, 0, 0.4);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 0.9rem;
         }
 
         .status-master-select-row {
           margin-bottom: 1rem;
-          color: #9a8fc4;
+          color: #b9b09f;
           font-size: 0.85rem;
         }
 
@@ -1017,12 +1030,12 @@ const RPGMapExplorer = () => {
         }
 
         .status-bar-label {
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-weight: 600;
         }
 
         .status-bar-numbers {
-          color: #9a8fc4;
+          color: #b9b09f;
         }
 
         .status-bar-track {
@@ -1030,7 +1043,7 @@ const RPGMapExplorer = () => {
           width: 100%;
           height: 14px;
           background: rgba(0, 0, 0, 0.4);
-          border: 1px solid rgba(212, 175, 55, 0.25);
+          border: 1px solid rgba(199, 171, 118, 0.25);
           border-radius: 8px;
           overflow: visible;
         }
@@ -1053,16 +1066,16 @@ const RPGMapExplorer = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(74, 58, 122, 0.3);
-          border: 1px solid #4a3a7a;
+          background: rgba(151, 126, 96, 0.3);
+          border: 1px solid #51493e;
           border-radius: 4px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           cursor: pointer;
         }
 
         .status-bar-controls button:hover {
-          background: rgba(74, 58, 122, 0.5);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.5);
+          border-color: #c7ab76;
         }
 
         .status-bar-controls input[type="number"] {
@@ -1070,9 +1083,9 @@ const RPGMapExplorer = () => {
           padding: 0.3rem;
           text-align: center;
           background: rgba(0, 0, 0, 0.4);
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          border: 1px solid rgba(199, 171, 118, 0.3);
           border-radius: 4px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 0.85rem;
         }
 
@@ -1099,7 +1112,7 @@ const RPGMapExplorer = () => {
           flex-wrap: wrap;
           align-items: center;
           padding-top: 0.75rem;
-          border-top: 1px solid rgba(212, 175, 55, 0.2);
+          border-top: 1px solid rgba(199, 171, 118, 0.2);
         }
 
         .status-bar-add-row input[type="text"] {
@@ -1107,9 +1120,9 @@ const RPGMapExplorer = () => {
           min-width: 160px;
           padding: 0.5rem 0.7rem;
           background: rgba(0, 0, 0, 0.4);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 0.85rem;
         }
 
@@ -1118,7 +1131,7 @@ const RPGMapExplorer = () => {
           height: 36px;
           padding: 2px;
           background: transparent;
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
           cursor: pointer;
         }
@@ -1163,8 +1176,8 @@ const RPGMapExplorer = () => {
         }
 
         .save-status-saving {
-          background: rgba(74, 58, 122, 0.3);
-          color: #d4af37;
+          background: rgba(151, 126, 96, 0.3);
+          color: #c7ab76;
         }
 
         .save-status-saved {
@@ -1177,20 +1190,20 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.5rem;
           padding: 0.6rem 1.1rem;
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border: 2px solid #d4af37;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border: 2px solid #c7ab76;
           border-radius: 8px;
-          color: #150f28;
+          color: #191c1a;
           font-family: 'Cinzel', serif;
           font-weight: 700;
           font-size: 0.85rem;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .sheet-tool-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 14px rgba(212, 175, 55, 0.4);
+          box-shadow: 0 4px 14px rgba(199, 171, 118, 0.4);
         }
 
         .font-picker-panel {
@@ -1200,7 +1213,7 @@ const RPGMapExplorer = () => {
           margin-bottom: 1.25rem;
           padding: 1rem;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          border: 1px solid rgba(199, 171, 118, 0.3);
           border-radius: 10px;
         }
 
@@ -1210,43 +1223,43 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.3rem;
           padding: 0.9rem 0.5rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 8px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 1.3rem;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .font-swatch-btn:hover {
-          background: rgba(74, 58, 122, 0.4);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.4);
+          border-color: #c7ab76;
         }
 
         .font-swatch-btn.active {
-          border-color: #d4af37;
-          background: rgba(212, 175, 55, 0.15);
-          box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+          border-color: #c7ab76;
+          background: rgba(199, 171, 118, 0.15);
+          box-shadow: 0 0 12px rgba(199, 171, 118, 0.3);
         }
 
         .font-swatch-btn small {
           font-family: 'Crimson Pro', serif;
           font-size: 0.7rem;
-          color: #9a8fc4;
+          color: #b9b09f;
         }
 
         .field-builder-panel {
           margin-bottom: 1.5rem;
           padding: 1.25rem;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          border: 1px solid rgba(199, 171, 118, 0.3);
           border-radius: 10px;
         }
 
         .field-builder-panel h4 {
           font-family: 'Cinzel', serif;
-          color: #d4af37;
+          color: #c7ab76;
           font-size: 0.95rem;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -1265,23 +1278,23 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.4rem;
           padding: 0.55rem 0.7rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 0.8rem;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .field-type-btn:hover {
-          background: rgba(74, 58, 122, 0.4);
+          background: rgba(151, 126, 96, 0.4);
         }
 
         .field-type-btn.active {
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border-color: #d4af37;
-          color: #150f28;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border-color: #c7ab76;
+          color: #191c1a;
         }
 
         .field-add-row {
@@ -1294,15 +1307,15 @@ const RPGMapExplorer = () => {
           flex: 1;
           padding: 0.6rem 0.85rem;
           background: rgba(0, 0, 0, 0.4);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 0.9rem;
         }
 
         .field-add-row input:focus {
           outline: none;
-          border-color: #d4af37;
+          border-color: #c7ab76;
         }
 
         .field-add-btn {
@@ -1310,10 +1323,10 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.4rem;
           padding: 0.6rem 1rem;
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
           border: none;
           border-radius: 6px;
-          color: #150f28;
+          color: #191c1a;
           font-weight: 700;
           font-size: 0.85rem;
           cursor: pointer;
@@ -1329,7 +1342,7 @@ const RPGMapExplorer = () => {
         .auto-cat-hint {
           font-family: 'Crimson Pro', serif;
           font-size: 0.78rem;
-          color: #d4af37;
+          color: #c7ab76;
           white-space: nowrap;
           font-style: italic;
           animation: hintPulse 1.4s ease-in-out infinite;
@@ -1351,13 +1364,13 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.5rem;
           padding: 0.5rem 0.6rem;
-          background: rgba(74, 58, 122, 0.15);
-          border: 1px solid rgba(212, 175, 55, 0.2);
+          background: rgba(151, 126, 96, 0.15);
+          border: 1px solid rgba(199, 171, 118, 0.2);
           border-radius: 6px;
         }
 
         .field-list-icon {
-          color: #d4af37;
+          color: #c7ab76;
           flex-shrink: 0;
         }
 
@@ -1365,21 +1378,21 @@ const RPGMapExplorer = () => {
           flex: 1;
           padding: 0.35rem 0.5rem;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(212, 175, 55, 0.25);
+          border: 1px solid rgba(199, 171, 118, 0.25);
           border-radius: 4px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-size: 0.85rem;
           min-width: 100px;
         }
 
         .field-list-label-input:focus {
           outline: none;
-          border-color: #d4af37;
+          border-color: #c7ab76;
         }
 
         .field-list-type {
           font-size: 0.72rem;
-          color: #7a6ea3;
+          color: #a39988;
           white-space: nowrap;
         }
 
@@ -1390,16 +1403,16 @@ const RPGMapExplorer = () => {
           align-items: center;
           justify-content: center;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid #4a3a7a;
+          border: 1px solid #51493e;
           border-radius: 4px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           cursor: pointer;
           flex-shrink: 0;
         }
 
         .field-list-row button:hover:not(:disabled) {
-          background: rgba(74, 58, 122, 0.5);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.5);
+          border-color: #c7ab76;
         }
 
         .field-list-row button:disabled {
@@ -1426,17 +1439,17 @@ const RPGMapExplorer = () => {
           width: 100px;
           padding: 0.35rem 0.5rem;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(212, 175, 55, 0.25);
+          border: 1px solid rgba(199, 171, 118, 0.25);
           border-radius: 4px;
-          color: #9a8fc4;
+          color: #b9b09f;
           font-size: 0.75rem;
           flex-shrink: 0;
         }
 
         .field-list-tab-input:focus {
           outline: none;
-          border-color: #d4af37;
-          color: #e4dcf5;
+          border-color: #c7ab76;
+          color: #e9dfcd;
         }
 
         .sheet-subtab-nav {
@@ -1445,30 +1458,30 @@ const RPGMapExplorer = () => {
           gap: 0.5rem;
           margin-bottom: 1.25rem;
           padding-bottom: 0.75rem;
-          border-bottom: 2px solid rgba(212, 175, 55, 0.25);
+          border-bottom: 2px solid rgba(199, 171, 118, 0.25);
         }
 
         .sheet-subtab-btn {
           padding: 0.5rem 1.1rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 20px;
-          color: #9a8fc4;
+          color: #b9b09f;
           font-family: 'Cinzel', serif;
           font-size: 0.82rem;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .sheet-subtab-btn:hover {
-          background: rgba(74, 58, 122, 0.4);
-          color: #e4dcf5;
+          background: rgba(151, 126, 96, 0.4);
+          color: #e9dfcd;
         }
 
         .sheet-subtab-btn.active {
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border-color: #d4af37;
-          color: #150f28;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border-color: #c7ab76;
+          color: #191c1a;
           font-weight: 700;
         }
 
@@ -1488,7 +1501,7 @@ const RPGMapExplorer = () => {
           gap: 0.5rem;
           padding: 1rem;
           background: rgba(0, 0, 0, 0.25);
-          border: 1px solid rgba(74, 58, 122, 0.5);
+          border: 1px solid rgba(151, 126, 96, 0.5);
           border-radius: 10px;
           /* Light animation on attribute borders — subtle golden pulse */
           animation: borderGlow 3s ease-in-out infinite;
@@ -1496,12 +1509,12 @@ const RPGMapExplorer = () => {
 
         @keyframes borderGlow {
           0%, 100% {
-            border-color: rgba(74, 58, 122, 0.5);
-            box-shadow: 0 0 0px rgba(212, 175, 55, 0);
+            border-color: rgba(151, 126, 96, 0.5);
+            box-shadow: 0 0 0px rgba(199, 171, 118, 0);
           }
           50% {
-            border-color: rgba(212, 175, 55, 0.7);
-            box-shadow: 0 0 8px rgba(212, 175, 55, 0.15);
+            border-color: rgba(199, 171, 118, 0.7);
+            box-shadow: 0 0 8px rgba(199, 171, 118, 0.15);
           }
         }
 
@@ -1514,7 +1527,7 @@ const RPGMapExplorer = () => {
         }
 
         .sheet-field label {
-          color: #d4af37;
+          color: #c7ab76;
           font-size: 1rem;
           letter-spacing: 0.5px;
         }
@@ -1547,7 +1560,7 @@ const RPGMapExplorer = () => {
           grid-column: 1 / -1;
           margin-top: 1.5rem;
           padding-top: 1.25rem;
-          border-top: 1px dashed rgba(212, 175, 55, 0.3);
+          border-top: 1px dashed rgba(199, 171, 118, 0.3);
         }
 
         .sheet-field input[type="text"],
@@ -1555,7 +1568,7 @@ const RPGMapExplorer = () => {
         .sheet-field textarea {
           padding: 0.6rem 0.75rem;
           background: rgba(0, 0, 0, 0.35);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
           color: #ece6f7;
           font-size: 0.95rem;
@@ -1566,7 +1579,7 @@ const RPGMapExplorer = () => {
         .sheet-field input:focus,
         .sheet-field textarea:focus {
           outline: none;
-          border-color: #d4af37;
+          border-color: #c7ab76;
         }
 
         .sheet-field-image {
@@ -1582,7 +1595,7 @@ const RPGMapExplorer = () => {
           aspect-ratio: 1;
           object-fit: cover;
           border-radius: 8px;
-          border: 2px solid #d4af37;
+          border: 2px solid #c7ab76;
         }
 
         .sheet-field-image-placeholder {
@@ -1593,9 +1606,9 @@ const RPGMapExplorer = () => {
           align-items: center;
           justify-content: center;
           background: rgba(0, 0, 0, 0.3);
-          border: 2px dashed rgba(212, 175, 55, 0.4);
+          border: 2px dashed rgba(199, 171, 118, 0.4);
           border-radius: 8px;
-          color: #7a6ea3;
+          color: #a39988;
         }
 
         .sheet-image-upload-btn {
@@ -1618,7 +1631,7 @@ const RPGMapExplorer = () => {
           flex: 1;
           padding: 0.5rem 0.7rem;
           background: rgba(0, 0, 0, 0.35);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
           color: #ece6f7;
           font-family: 'Crimson Pro', serif;
@@ -1626,7 +1639,7 @@ const RPGMapExplorer = () => {
 
         .sheet-list-item input:focus {
           outline: none;
-          border-color: #d4af37;
+          border-color: #c7ab76;
         }
 
         .sheet-list-item button {
@@ -1647,16 +1660,16 @@ const RPGMapExplorer = () => {
           justify-content: center;
           gap: 0.4rem;
           padding: 0.5rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 1px dashed rgba(212, 175, 55, 0.4);
+          background: rgba(151, 126, 96, 0.2);
+          border: 1px dashed rgba(199, 171, 118, 0.4);
           border-radius: 6px;
-          color: #d4af37;
+          color: #c7ab76;
           font-size: 0.8rem;
           cursor: pointer;
         }
 
         .sheet-list-add-btn:hover {
-          background: rgba(74, 58, 122, 0.4);
+          background: rgba(151, 126, 96, 0.4);
         }
 
         .formula-input {
@@ -1669,7 +1682,7 @@ const RPGMapExplorer = () => {
           gap: 0.6rem;
           padding: 0.6rem 0.75rem;
           background: rgba(0, 0, 0, 0.35);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
         }
 
@@ -1677,12 +1690,12 @@ const RPGMapExplorer = () => {
           font-family: 'Cinzel', serif;
           font-size: 1.3rem;
           font-weight: 700;
-          color: #d4af37;
+          color: #c7ab76;
         }
 
         .formula-expr {
           font-size: 0.75rem;
-          color: #7a6ea3;
+          color: #a39988;
           font-family: 'Crimson Pro', serif;
         }
 
@@ -1702,7 +1715,7 @@ const RPGMapExplorer = () => {
           flex-direction: column;
           gap: 0.25rem;
           font-size: 0.72rem;
-          color: #9a8fc4;
+          color: #b9b09f;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -1710,7 +1723,7 @@ const RPGMapExplorer = () => {
         .attack-mini-label input {
           padding: 0.45rem 0.6rem;
           background: rgba(0, 0, 0, 0.35);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
           color: #ece6f7;
           font-family: 'Crimson Pro', serif;
@@ -1727,10 +1740,10 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.4rem;
           padding: 0.45rem 0.8rem;
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
           border: none;
           border-radius: 6px;
-          color: #150f28;
+          color: #191c1a;
           font-weight: 700;
           font-size: 0.78rem;
           cursor: pointer;
@@ -1752,13 +1765,13 @@ const RPGMapExplorer = () => {
           flex-direction: column;
           gap: 0.25rem;
           font-size: 0.8rem;
-          color: #e4dcf5;
+          color: #e9dfcd;
           padding-top: 0.4rem;
-          border-top: 1px dashed rgba(212, 175, 55, 0.25);
+          border-top: 1px dashed rgba(199, 171, 118, 0.25);
         }
 
         .attack-result-row strong {
-          color: #d4af37;
+          color: #c7ab76;
         }
 
         .sheet-field-checklist {
@@ -1776,7 +1789,7 @@ const RPGMapExplorer = () => {
         .checklist-item-row input[type="checkbox"] {
           width: 18px;
           height: 18px;
-          accent-color: #d4af37;
+          accent-color: #c7ab76;
           flex-shrink: 0;
         }
 
@@ -1784,7 +1797,7 @@ const RPGMapExplorer = () => {
           flex: 1;
           padding: 0.45rem 0.65rem;
           background: rgba(0, 0, 0, 0.35);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
           color: #ece6f7;
           font-family: 'Crimson Pro', serif;
@@ -1812,7 +1825,7 @@ const RPGMapExplorer = () => {
         .dice-roller h3 {
           font-family: 'Cinzel', serif;
           font-size: 1.1rem;
-          color: #d4af37;
+          color: #c7ab76;
           margin-bottom: 1rem;
           display: flex;
           align-items: center;
@@ -1828,17 +1841,17 @@ const RPGMapExplorer = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(74, 58, 122, 0.25);
-          border: 2px solid rgba(212, 175, 55, 0.4);
+          background: rgba(151, 126, 96, 0.25);
+          border: 2px solid rgba(199, 171, 118, 0.4);
           border-radius: 8px;
-          color: #d4af37;
+          color: #c7ab76;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .pouch-btn:hover {
-          background: rgba(74, 58, 122, 0.5);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.5);
+          border-color: #c7ab76;
           transform: scale(1.05);
         }
 
@@ -1849,7 +1862,7 @@ const RPGMapExplorer = () => {
           margin-bottom: 1rem;
           padding: 0.75rem;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          border: 1px solid rgba(199, 171, 118, 0.3);
           border-radius: 10px;
         }
 
@@ -1864,16 +1877,16 @@ const RPGMapExplorer = () => {
           border: 2px solid transparent;
           border-radius: 8px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.2s ease;
         }
 
         .pouch-skin-btn:hover:not(:disabled) {
-          background: rgba(74, 58, 122, 0.25);
+          background: rgba(151, 126, 96, 0.25);
         }
 
         .pouch-skin-btn.active {
-          border-color: #d4af37;
-          background: rgba(212, 175, 55, 0.15);
+          border-color: #c7ab76;
+          background: rgba(199, 171, 118, 0.15);
         }
 
         .pouch-skin-btn:disabled {
@@ -1886,7 +1899,7 @@ const RPGMapExplorer = () => {
           height: 44px;
           object-fit: cover;
           border-radius: 6px;
-          border: 1px solid rgba(212, 175, 55, 0.4);
+          border: 1px solid rgba(199, 171, 118, 0.4);
         }
 
         .pouch-skin-btn span {
@@ -1899,8 +1912,8 @@ const RPGMapExplorer = () => {
           position: absolute;
           top: 2px;
           right: 2px;
-          background: #d4af37;
-          color: #150f28;
+          background: #c7ab76;
+          color: #191c1a;
           border-radius: 50%;
           padding: 1px;
         }
@@ -1915,7 +1928,7 @@ const RPGMapExplorer = () => {
 
         .dice-formula-empty {
           font-size: 0.85rem;
-          color: #7a6ea3;
+          color: #a39988;
           font-style: italic;
         }
 
@@ -1924,13 +1937,13 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.35rem;
           padding: 0.3rem 0.4rem;
-          background: rgba(74, 58, 122, 0.25);
-          border: 1px solid rgba(212, 175, 55, 0.4);
+          background: rgba(151, 126, 96, 0.25);
+          border: 1px solid rgba(199, 171, 118, 0.4);
           border-radius: 20px;
         }
 
         .term-sign {
-          color: #d4af37;
+          color: #c7ab76;
           font-weight: 700;
           font-size: 0.9rem;
           padding-left: 0.15rem;
@@ -1943,9 +1956,9 @@ const RPGMapExplorer = () => {
           align-items: center;
           justify-content: center;
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid #4a3a7a;
+          border: 1px solid #51493e;
           border-radius: 50%;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-weight: 700;
           font-size: 0.8rem;
           line-height: 1;
@@ -1954,8 +1967,8 @@ const RPGMapExplorer = () => {
         }
 
         .dice-term-chip button:hover:not(:disabled) {
-          background: rgba(74, 58, 122, 0.5);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.5);
+          border-color: #c7ab76;
         }
 
         .dice-term-chip button:disabled {
@@ -1967,7 +1980,7 @@ const RPGMapExplorer = () => {
           font-family: 'Cinzel', serif;
           font-size: 0.85rem;
           font-weight: 600;
-          color: #e4dcf5;
+          color: #e9dfcd;
           min-width: 2.4rem;
           text-align: center;
         }
@@ -1988,30 +2001,30 @@ const RPGMapExplorer = () => {
           gap: 0.5rem;
           margin-bottom: 0.75rem;
           font-size: 0.8rem;
-          color: #9a8fc4;
+          color: #b9b09f;
         }
 
         .dice-op-toggle button {
           width: 28px;
           height: 28px;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .dice-op-toggle button:hover:not(:disabled) {
-          background: rgba(74, 58, 122, 0.4);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.4);
+          border-color: #c7ab76;
         }
 
         .dice-op-toggle button.active {
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border-color: #d4af37;
-          color: #150f28;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border-color: #c7ab76;
+          color: #191c1a;
         }
 
         .dice-type-grid {
@@ -2023,20 +2036,20 @@ const RPGMapExplorer = () => {
 
         .dice-type-btn {
           padding: 0.5rem 0.25rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-family: 'Cinzel', serif;
           font-weight: 600;
           font-size: 0.85rem;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: background-color 0.25s ease;
         }
 
         .dice-type-btn:hover:not(:disabled) {
-          background: rgba(74, 58, 122, 0.4);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.4);
+          border-color: #c7ab76;
         }
 
         .dice-type-btn:disabled {
@@ -2064,10 +2077,10 @@ const RPGMapExplorer = () => {
           position: relative;
           width: 150px;
           height: 150px;
-          background: linear-gradient(135deg, #241a42 0%, #150f28 100%);
-          border: 3px solid #d4af37;
+          background: linear-gradient(135deg, #222321 0%, #191c1a 100%);
+          border: 3px solid #c7ab76;
           border-radius: 16px;
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(212, 175, 55, 0.12);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(199, 171, 118, 0.12);
           overflow: hidden;
         }
 
@@ -2100,8 +2113,8 @@ const RPGMapExplorer = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #d4af37;
-          color: #150f28;
+          background: #c7ab76;
+          color: #191c1a;
           border-radius: 50%;
           font-weight: 700;
           font-size: 0.75rem;
@@ -2125,7 +2138,7 @@ const RPGMapExplorer = () => {
           transform: translateX(-50%);
           font-family: 'Cinzel', serif;
           font-size: 0.75rem;
-          color: #9a8fc4;
+          color: #b9b09f;
           text-transform: uppercase;
           letter-spacing: 1px;
           text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
@@ -2145,7 +2158,7 @@ const RPGMapExplorer = () => {
           font-family: 'Cinzel', serif;
           font-size: 1.4rem;
           font-weight: 700;
-          color: #d4af37;
+          color: #c7ab76;
           text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.9);
           background: rgba(0, 0, 0, 0.4);
           padding: 0.1rem 0.7rem;
@@ -2163,11 +2176,11 @@ const RPGMapExplorer = () => {
         .dice-total-line {
           font-family: 'Cinzel', serif;
           font-size: 1rem;
-          color: #9a8fc4;
+          color: #b9b09f;
         }
 
         .dice-total-line strong {
-          color: #d4af37;
+          color: #c7ab76;
           font-size: 1.2rem;
         }
 
@@ -2181,7 +2194,7 @@ const RPGMapExplorer = () => {
           justify-content: center;
           gap: 0.4rem;
           font-size: 0.8rem;
-          color: #9a8fc4;
+          color: #b9b09f;
           text-align: center;
         }
 
@@ -2192,7 +2205,7 @@ const RPGMapExplorer = () => {
         }
 
         .breakdown-sign {
-          color: #d4af37;
+          color: #c7ab76;
           font-weight: 700;
         }
 
@@ -2203,21 +2216,21 @@ const RPGMapExplorer = () => {
           justify-content: center;
           gap: 0.5rem;
           padding: 0.85rem;
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border: 2px solid #d4af37;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border: 2px solid #c7ab76;
           border-radius: 8px;
-          color: #150f28;
+          color: #191c1a;
           font-family: 'Cinzel', serif;
           font-weight: 700;
           font-size: 1rem;
           letter-spacing: 0.5px;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .roll-btn:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.5);
+          box-shadow: 0 4px 16px rgba(199, 171, 118, 0.5);
         }
 
         .roll-btn:disabled {
@@ -2237,13 +2250,13 @@ const RPGMapExplorer = () => {
         .dice-history {
           margin-top: 1.5rem;
           padding-top: 1rem;
-          border-top: 1px solid rgba(74, 58, 122, 0.3);
+          border-top: 1px solid rgba(151, 126, 96, 0.3);
         }
 
         .dice-history h4 {
           font-family: 'Cinzel', serif;
           font-size: 0.85rem;
-          color: #9a8fc4;
+          color: #b9b09f;
           text-transform: uppercase;
           letter-spacing: 1px;
           margin-bottom: 0.6rem;
@@ -2253,13 +2266,13 @@ const RPGMapExplorer = () => {
           display: flex;
           justify-content: space-between;
           font-size: 0.85rem;
-          color: #e4dcf5;
+          color: #e9dfcd;
           padding: 0.4rem 0;
-          border-bottom: 1px dashed rgba(74, 58, 122, 0.3);
+          border-bottom: 1px dashed rgba(151, 126, 96, 0.3);
         }
 
         .dice-history-item strong {
-          color: #d4af37;
+          color: #c7ab76;
         }
 
         .main-content {
@@ -2271,8 +2284,8 @@ const RPGMapExplorer = () => {
 
         .sidebar {
           width: 320px;
-          background: linear-gradient(180deg, rgba(21, 15, 40, 0.95) 0%, rgba(15, 10, 31, 0.95) 100%);
-          border-right: 3px solid #4a3a7a;
+          background: linear-gradient(180deg, rgba(25, 28, 26, 0.95) 0%, rgba(20, 23, 21, 0.95) 100%);
+          border-right: 3px solid #51493e;
           padding: 1.5rem;
           overflow-y: auto;
           box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
@@ -2281,7 +2294,7 @@ const RPGMapExplorer = () => {
         .sidebar-section {
           margin-bottom: 2rem;
           padding-bottom: 1.5rem;
-          border-bottom: 1px solid rgba(74, 58, 122, 0.3);
+          border-bottom: 1px solid rgba(151, 126, 96, 0.3);
         }
 
         .sidebar-section:last-child {
@@ -2291,7 +2304,7 @@ const RPGMapExplorer = () => {
         .sidebar-section h3 {
           font-family: 'Cinzel', serif;
           font-size: 1.1rem;
-          color: #d4af37;
+          color: #c7ab76;
           margin-bottom: 1rem;
           display: flex;
           align-items: center;
@@ -2305,20 +2318,20 @@ const RPGMapExplorer = () => {
           align-items: center;
           justify-content: center;
           padding: 0.75rem;
-          background: linear-gradient(135deg, #4a3a7a 0%, #2e2354 100%);
-          border: 2px solid #d4af37;
+          background: linear-gradient(135deg, #51493e 0%, #2e2354 100%);
+          border: 2px solid #c7ab76;
           border-radius: 8px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
           text-align: center;
         }
 
         .upload-btn:hover {
-          background: linear-gradient(135deg, #6654a0 0%, #4a3a7a 100%);
+          background: linear-gradient(135deg, #6654a0 0%, #51493e 100%);
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+          box-shadow: 0 4px 12px rgba(199, 171, 118, 0.4);
         }
 
         .upload-btn input {
@@ -2336,15 +2349,15 @@ const RPGMapExplorer = () => {
           align-items: center;
           padding: 0.75rem;
           margin-bottom: 0.5rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 1px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 1px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .point-item:hover {
-          background: rgba(74, 58, 122, 0.4);
-          border-color: #d4af37;
+          background: rgba(151, 126, 96, 0.4);
+          border-color: #c7ab76;
           transform: translateX(4px);
         }
 
@@ -2363,12 +2376,12 @@ const RPGMapExplorer = () => {
 
         .point-info strong {
           font-size: 0.95rem;
-          color: #e4dcf5;
+          color: #e9dfcd;
         }
 
         .point-info small {
           font-size: 0.8rem;
-          color: #9a8fc4;
+          color: #b9b09f;
           text-transform: capitalize;
         }
 
@@ -2379,7 +2392,7 @@ const RPGMapExplorer = () => {
           padding: 0.4rem;
           color: #ff6b6b;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.2s ease;
         }
 
         .delete-btn:hover {
@@ -2391,7 +2404,7 @@ const RPGMapExplorer = () => {
           background: rgba(0, 0, 0, 0.3);
           padding: 1rem;
           border-radius: 6px;
-          border: 1px solid rgba(212, 175, 55, 0.2);
+          border: 1px solid rgba(199, 171, 118, 0.2);
         }
 
         .controls-info p {
@@ -2404,9 +2417,9 @@ const RPGMapExplorer = () => {
           text-align: center;
           font-size: 1.1rem;
           font-weight: 600;
-          color: #d4af37;
+          color: #c7ab76;
           padding: 0.5rem;
-          background: rgba(212, 175, 55, 0.1);
+          background: rgba(199, 171, 118, 0.1);
           border-radius: 4px;
         }
 
@@ -2414,7 +2427,7 @@ const RPGMapExplorer = () => {
           flex: 1;
           position: relative;
           overflow: hidden;
-          background: radial-gradient(circle at center, #150f28 0%, #0c0918 100%);
+          background: radial-gradient(circle at center, #191c1a 0%, #121413 100%);
         }
 
         .empty-state {
@@ -2424,7 +2437,7 @@ const RPGMapExplorer = () => {
           justify-content: center;
           height: 100%;
           gap: 1rem;
-          color: #7a6ea3;
+          color: #a39988;
         }
 
         .empty-state svg {
@@ -2434,7 +2447,7 @@ const RPGMapExplorer = () => {
         .empty-state h2 {
           font-family: 'Cinzel', serif;
           font-size: 1.8rem;
-          color: #9a8fc4;
+          color: #b9b09f;
         }
 
         .canvas-wrapper {
@@ -2450,7 +2463,7 @@ const RPGMapExplorer = () => {
           transform-origin: center;
           transition: transform 0.1s ease-out;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-          border: 4px solid #4a3a7a;
+          border: 4px solid #51493e;
           border-radius: 4px;
         }
 
@@ -2474,8 +2487,8 @@ const RPGMapExplorer = () => {
         }
 
         .modal {
-          background: linear-gradient(180deg, #150f28 0%, #0f0a1f 100%);
-          border: 3px solid #d4af37;
+          background: linear-gradient(180deg, #191c1a 0%, #141715 100%);
+          border: 3px solid #c7ab76;
           border-radius: 12px;
           width: 90%;
           max-width: 500px;
@@ -2499,25 +2512,25 @@ const RPGMapExplorer = () => {
           justify-content: space-between;
           align-items: center;
           padding: 1.5rem;
-          border-bottom: 2px solid #4a3a7a;
+          border-bottom: 2px solid #51493e;
         }
 
         .modal-header h2 {
           font-family: 'Cinzel', serif;
           font-size: 1.5rem;
-          color: #d4af37;
+          color: #c7ab76;
         }
 
         .modal-header button {
           background: transparent;
           border: none;
-          color: #e4dcf5;
+          color: #e9dfcd;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background-color 0.2s ease;
         }
 
         .modal-header button:hover {
-          color: #d4af37;
+          color: #c7ab76;
           transform: rotate(90deg);
         }
 
@@ -2533,7 +2546,7 @@ const RPGMapExplorer = () => {
           display: block;
           margin-bottom: 0.5rem;
           font-weight: 600;
-          color: #d4af37;
+          color: #c7ab76;
           font-family: 'Cinzel', serif;
           font-size: 0.9rem;
           text-transform: uppercase;
@@ -2544,21 +2557,21 @@ const RPGMapExplorer = () => {
         .form-group textarea {
           width: 100%;
           padding: 0.75rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-family: 'Crimson Pro', serif;
           font-size: 1rem;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .form-group input:focus,
         .form-group textarea:focus {
           outline: none;
-          border-color: #d4af37;
-          background: rgba(74, 58, 122, 0.3);
-          box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+          border-color: #c7ab76;
+          background: rgba(151, 126, 96, 0.3);
+          box-shadow: 0 0 0 3px rgba(199, 171, 118, 0.1);
         }
 
         .type-grid {
@@ -2572,18 +2585,18 @@ const RPGMapExplorer = () => {
           align-items: center;
           gap: 0.5rem;
           padding: 0.75rem;
-          background: rgba(74, 58, 122, 0.2);
-          border: 2px solid rgba(212, 175, 55, 0.3);
+          background: rgba(151, 126, 96, 0.2);
+          border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
-          color: #e4dcf5;
+          color: #e9dfcd;
           font-family: 'Crimson Pro', serif;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .type-btn:hover {
-          background: rgba(74, 58, 122, 0.4);
+          background: rgba(151, 126, 96, 0.4);
           border-color: var(--type-color);
           transform: translateY(-2px);
         }
@@ -2600,7 +2613,7 @@ const RPGMapExplorer = () => {
           justify-content: flex-end;
           gap: 1rem;
           padding: 1.5rem;
-          border-top: 2px solid #4a3a7a;
+          border-top: 2px solid #51493e;
         }
 
         .btn-secondary,
@@ -2613,30 +2626,30 @@ const RPGMapExplorer = () => {
           font-family: 'Crimson Pro', serif;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .btn-secondary {
-          background: rgba(74, 58, 122, 0.3);
-          border: 2px solid #4a3a7a;
-          color: #e4dcf5;
+          background: rgba(151, 126, 96, 0.3);
+          border: 2px solid #51493e;
+          color: #e9dfcd;
         }
 
         .btn-secondary:hover {
-          background: rgba(74, 58, 122, 0.5);
+          background: rgba(151, 126, 96, 0.5);
           transform: translateY(-2px);
         }
 
         .btn-primary {
-          background: linear-gradient(135deg, #d4af37 0%, #c9a961 100%);
-          border: 2px solid #d4af37;
-          color: #150f28;
+          background: linear-gradient(135deg, #c7ab76 0%, #b98867 100%);
+          border: 2px solid #c7ab76;
+          color: #191c1a;
         }
 
         .btn-primary:hover {
-          background: linear-gradient(135deg, #e0bf47 0%, #d4af37 100%);
+          background: linear-gradient(135deg, #e0bf47 0%, #c7ab76 100%);
           transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.5);
+          box-shadow: 0 4px 16px rgba(199, 171, 118, 0.5);
         }
 
         .scene-overlay {
@@ -2657,8 +2670,8 @@ const RPGMapExplorer = () => {
           width: 90%;
           height: 90%;
           max-width: 1200px;
-          background: linear-gradient(180deg, #150f28 0%, #0f0a1f 100%);
-          border: 4px solid #d4af37;
+          background: linear-gradient(180deg, #191c1a 0%, #141715 100%);
+          border: 4px solid #c7ab76;
           border-radius: 12px;
           display: flex;
           flex-direction: column;
@@ -2671,19 +2684,19 @@ const RPGMapExplorer = () => {
           justify-content: space-between;
           align-items: center;
           padding: 1.5rem;
-          background: rgba(21, 15, 40, 0.8);
-          border-bottom: 2px solid #4a3a7a;
+          background: rgba(25, 28, 26, 0.8);
+          border-bottom: 2px solid #51493e;
         }
 
         .scene-header h2 {
           font-family: 'Cinzel', serif;
           font-size: 1.8rem;
-          color: #d4af37;
+          color: #c7ab76;
           margin-bottom: 0.5rem;
         }
 
         .scene-header p {
-          color: #9a8fc4;
+          color: #b9b09f;
           font-size: 1rem;
         }
 
@@ -2694,7 +2707,7 @@ const RPGMapExplorer = () => {
           padding: 0.5rem;
           color: #ff6b6b;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.3s ease;
         }
 
         .close-btn:hover {
@@ -2704,13 +2717,13 @@ const RPGMapExplorer = () => {
 
         .scene-canvas {
           flex: 1;
-          background: radial-gradient(circle at center, #0c0918 0%, #000 100%);
+          background: radial-gradient(circle at center, #121413 0%, #000 100%);
         }
 
         .scene-footer {
           padding: 1rem 1.5rem;
-          background: rgba(21, 15, 40, 0.8);
-          border-top: 2px solid #4a3a7a;
+          background: rgba(25, 28, 26, 0.8);
+          border-top: 2px solid #51493e;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -2719,10 +2732,10 @@ const RPGMapExplorer = () => {
         .scene-type {
           display: inline-block;
           padding: 0.5rem 1rem;
-          background: rgba(212, 175, 55, 0.2);
-          border: 1px solid #d4af37;
+          background: rgba(199, 171, 118, 0.2);
+          border: 1px solid #c7ab76;
           border-radius: 20px;
-          color: #d4af37;
+          color: #c7ab76;
           font-weight: 600;
           text-transform: uppercase;
           font-size: 0.9rem;
@@ -2734,16 +2747,16 @@ const RPGMapExplorer = () => {
         }
 
         ::-webkit-scrollbar-track {
-          background: rgba(21, 15, 40, 0.3);
+          background: rgba(25, 28, 26, 0.3);
         }
 
         ::-webkit-scrollbar-thumb {
-          background: #4a3a7a;
+          background: #51493e;
           border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-          background: #d4af37;
+          background: #c7ab76;
         }
       `}</style>
     </div>

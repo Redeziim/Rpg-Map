@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, Eye, Edit3, Plus, X, ImageIcon, Minus } from 'lucide-react';
 
-const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars }) => {
+const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet }) => {
   const isMaster = viewMode === 'master';
-  const playerNames = Object.keys(allPlayersBars || {}).filter(
-    n => (allPlayersBars[n]?.bars || []).length > 0 || allPlayersBars[n]?.avatar
-  );
+  const playerNames = Object.keys(allPlayersBars || {});
 
   // Detecta mudanças de valor nas barras (dano/cura) comparando com o snapshot anterior,
   // e dispara uma animação flutuante tipo "-12" / "+8" sobre a barra afetada
@@ -64,7 +62,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars }) => {
     <div className="group-status-grid">
       {playerNames.map(name => {
         const entry = allPlayersBars[name] || { avatar: null, bars: [] };
-        const cardHasDamage = entry.bars.some(bar => effects[`${name}::${bar.id}`]?.kind === 'damage');
+        const cardHasDamage = (entry.bars || []).some(bar => effects[`${name}::${bar.id}`]?.kind === 'damage');
         return (
           <div key={name} className={`group-status-card ${cardHasDamage ? 'card-hit-shake' : ''}`}>
             <div className="group-status-card-header">
@@ -78,6 +76,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars }) => {
               <h4>{name}</h4>
             </div>
 
+            {isMaster && <button className="sheet-tool-btn" onClick={() => onOpenSheet(name)}><Eye size={15} />Consultar ficha</button>}
             <div className="group-status-bars">
               {entry.bars.length === 0 && (
                 <p className="status-bars-hint">Sem barras configuradas.</p>
@@ -93,7 +92,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars }) => {
                     <div className={`status-bar-track ${effect ? `bar-flash-${effect.kind}` : ''}`}>
                       <div
                         className="status-bar-fill"
-                        style={{ width: `${Math.min(100, (bar.current / bar.max) * 100)}%`, background: bar.color }}
+                        style={{ width: `${Math.min(100, (bar.max > 0 ? bar.current / bar.max : 0) * 100)}%`, background: bar.color }}
                       />
                       {effect && (
                         <span key={effect.key} className={`bar-float-text bar-float-${effect.kind}`}>
@@ -104,14 +103,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars }) => {
                         <span className="bar-down-badge" title="Caído">☠</span>
                       )}
                     </div>
-                    {isMaster && (
-                      <div className="status-bar-controls">
-                        <button onClick={() => adjustBar(name, bar, -5)} className="status-bar-quick">-5</button>
-                        <button onClick={() => adjustBar(name, bar, -1)}><Minus size={13} /></button>
-                        <button onClick={() => adjustBar(name, bar, 1)}><Plus size={13} /></button>
-                        <button onClick={() => adjustBar(name, bar, 5)} className="status-bar-quick">+5</button>
-                      </div>
-                    )}
+
                   </div>
                 );
               })}

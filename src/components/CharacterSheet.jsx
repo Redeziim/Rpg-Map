@@ -1,50 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
-import { SHEET_FONTS, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
+import { DICE_SKINS } from './Dice3D.jsx';
+import RolledDie from './RolledDie.jsx';
+import { SHEET_FONTS, FIELD_TYPES, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 
-const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet }) => {
+const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [fontPickerOpen, setFontPickerOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('text');
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldFormula, setNewFieldFormula] = useState('');
   const [newFieldTab, setNewFieldTab] = useState('');
-  const [extraBuilderOpen, setExtraBuilderOpen] = useState(false);
-  const [newExtraType, setNewExtraType] = useState('text');
-  const [newExtraLabel, setNewExtraLabel] = useState('');
-  const [newExtraFormula, setNewExtraFormula] = useState('');
-  const [newExtraTab, setNewExtraTab] = useState('');
-  const [masterSelectedPlayer, setMasterSelectedPlayer] = useState('');
+  const masterSelectedPlayer = selectedPlayer;
+  const setMasterSelectedPlayer = onSelectPlayer;
   const [attackRolls, setAttackRolls] = useState({});
-  const [activeSheetTab, setActiveSheetTab] = useState('Geral');
 
   const DEFAULT_TAB = 'Geral';
 
   const isMaster = viewMode === 'master';
   const fontFamily = (SHEET_FONTS.find(f => f.id === sheetFont) || SHEET_FONTS[0]).family;
-  const playerNames = Object.keys(playerSheets || {});
+  const playerNames = knownPlayers;
   const activePlayer = isMaster ? masterSelectedPlayer : playerName;
   const activeEntry = (playerSheets && playerSheets[activePlayer]) || { extraFields: [], values: {} };
   const extraFields = activeEntry.extraFields || [];
 
-  // Rascunho local dos VALORES do jogador ativo: digitar atualiza a UI na hora,
-  // o storage só grava após uma pausa (debounce). Reseta ao trocar de jogador (Mestre).
-  const [draftValues, setDraftValues] = useState(activeEntry.values || {});
+  const draftValues = activeEntry.values || {};
+  const draftRef = { current: draftValues };
   const [saveStatus, setSaveStatus] = useState('idle');
-  const saveTimeoutRef = useRef(null);
-  const draftRef = useRef(activeEntry.values || {});
-
-  useEffect(() => {
-    draftRef.current = activeEntry.values || {};
-    setDraftValues(activeEntry.values || {});
-    setSaveStatus('idle');
-  }, [activePlayer]);
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, []);
 
   // --- Campos BASE (modelo do Mestre) ---
   const addField = () => {
@@ -71,53 +52,12 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
     onFieldsChange(next);
   };
 
-  // --- Campos EXTRAS (cada jogador monta os seus, por cima do modelo base) ---
-  const addExtraField = () => {
-    const label = newExtraLabel.trim();
-    if (!label || !activePlayer) return;
-    // Auto-categorização também vale pros campos extras
-    const tab = newExtraTab.trim() || suggestTab(label);
-    const field = { id: `x_${Date.now()}`, type: newExtraType, label, tab };
-    if (newExtraType === 'formula') field.formula = newExtraFormula.trim();
-    onUpdatePlayerSheet(activePlayer, { extraFields: [...extraFields, field] });
-    setNewExtraLabel('');
-    setNewExtraFormula('');
-    setNewExtraTab('');
-  };
-
-  const removeExtraField = (id) => {
-    onUpdatePlayerSheet(activePlayer, { extraFields: extraFields.filter(f => f.id !== id) });
-  };
-
-  const renameExtraField = (id, label) => {
-    onUpdatePlayerSheet(activePlayer, { extraFields: extraFields.map(f => f.id === id ? { ...f, label } : f) });
-  };
-
-  const setExtraFieldTab = (id, tab) => {
-    onUpdatePlayerSheet(activePlayer, { extraFields: extraFields.map(f => f.id === id ? { ...f, tab: tab || DEFAULT_TAB } : f) });
-  };
-
-  const moveExtraField = (index, dir) => {
-    const target = index + dir;
-    if (target < 0 || target >= extraFields.length) return;
-    const next = [...extraFields];
-    [next[index], next[target]] = [next[target], next[index]];
-    onUpdatePlayerSheet(activePlayer, { extraFields: next });
-  };
-
   // --- Valores preenchidos (base + extras, mesmo objeto de valores) ---
-  const setValue = (id, value) => {
-    const next = { ...draftRef.current, [id]: value };
-    draftRef.current = next;
-    setDraftValues(next);
+  const setValue = async (id, value) => {
+    if (isMaster || !activePlayer) return;
     setSaveStatus('saving');
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      await onUpdatePlayerSheet(activePlayer, { values: next });
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus(prev => (prev === 'saved' ? 'idle' : prev)), 1800);
-    }, 700);
+    await onUpdatePlayerSheet(activePlayer, { values: { ...draftValues, [id]: value } });
+    setSaveStatus('saved');
   };
 
   const handleImageField = (id, e) => {
@@ -162,43 +102,27 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   };
 
   const rollAttack = (id) => {
-    const current = draftRef.current[id] || { bonus: 0, damage: '' };
-    const bonus = Number(current.bonus) || 0;
-    setAttackRolls(prev => ({
-      ...prev,
-      [id]: { ...prev[id], atkRolling: true, atkSpin: (prev[id]?.atkSpin || 0) + 1, atk: null }
-    }));
-    setTimeout(() => {
-      const d20 = 1 + Math.floor(Math.random() * 20);
-      setAttackRolls(prev => ({
-        ...prev,
-        [id]: { ...prev[id], atkRolling: false, atk: { d20, bonus, total: d20 + bonus } }
-      }));
-    }, 1200);
+    if(isMaster) return;
+    const bonus=Number(draftValues[id]?.bonus)||0;
+    setAttackRolls(prev=>({...prev,[id]:{...prev[id],atkRolling:true,atkSpin:(prev[id]?.atkSpin||0)+1,atk:null,bonus}}));
   };
-
   const rollDamage = (id) => {
-    const current = draftRef.current[id] || { bonus: 0, damage: '' };
-    const cleaned = (current.damage || '').replace(/\s/g, '');
-    const match = cleaned.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
-    if (!match) return;
-    const qty = Math.min(parseInt(match[1], 10), 10);
-    const sides = parseInt(match[2], 10);
-    const mod = match[3] ? parseInt(match[3], 10) : 0;
-
-    setAttackRolls(prev => ({
-      ...prev,
-      [id]: { ...prev[id], dmgRolling: true, dmgSpin: (prev[id]?.dmgSpin || 0) + 1, dmgDice: { qty, sides, mod }, dmg: null }
-    }));
-    setTimeout(() => {
-      const rolls = Array.from({ length: qty }, () => 1 + Math.floor(Math.random() * sides));
-      const total = rolls.reduce((a, b) => a + b, 0) + mod;
-      setAttackRolls(prev => ({
-        ...prev,
-        [id]: { ...prev[id], dmgRolling: false, dmg: { rolls, mod, total } }
-      }));
-    }, 1200);
+    if(isMaster)return;
+    const match=(draftValues[id]?.damage || '').replace(/\s/g,'').match(/^(\d+)d(4|6|8|10|12|20|100)([+-]\d+)?$/i);
+    if(!match||Number(match[1])<1)return;
+    const qty=Math.min(Number(match[1]),10),sides=Number(match[2]),mod=Number(match[3]||0);
+    setAttackRolls(prev=>({...prev,[id]:{...prev[id],dmgRolling:true,dmgSpin:(prev[id]?.dmgSpin||0)+1,dmgDice:{qty,sides,mod},dmg:null,dmgValues:{}}}));
   };
+  const receiveAttack=(id,value,trigger)=>setAttackRolls(prev=>{
+    const roll=prev[id];if(!roll?.atkRolling||roll.atkSpin!==trigger)return prev;
+    return {...prev,[id]:{...roll,atkRolling:false,atk:{d20:value,bonus:roll.bonus,total:value+roll.bonus}}};
+  });
+  const receiveDamage=(id,index,value,trigger)=>setAttackRolls(prev=>{
+    const roll=prev[id];if(!roll?.dmgRolling||roll.dmgSpin!==trigger)return prev;
+    const values={...roll.dmgValues,[index]:value};const done=Object.keys(values).length===roll.dmgDice.qty;
+    const rolls=Array.from({length:roll.dmgDice.qty},(_,i)=>values[i]);
+    return {...prev,[id]:{...roll,dmgValues:values,dmgRolling:!done,dmg:done?{rolls,mod:roll.dmgDice.mod,total:rolls.reduce((a,b)=>a+b,0)+roll.dmgDice.mod}:null}};
+  });
 
   // Todos os campos (base + extras) — usado para resolver fórmulas por nome
   const allFieldsForFormulas = [...sheetFields, ...extraFields];
@@ -206,25 +130,25 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   // Nomes de abas já usados em qualquer campo (base ou extra) — sugestões para o datalist
   const allTabNames = Array.from(new Set(allFieldsForFormulas.map(f => f.tab).filter(Boolean)));
 
-  const renderField = (f, { removable }) => (
-    <div key={f.id} className={`sheet-field sheet-field-${f.type}`}>
+  const renderField = (f) => (
+    <fieldset disabled={isMaster} key={f.id} className={`sheet-field sheet-field-${f.type}`}>
       <div className="sheet-field-label-row">
-        <label style={{ fontFamily }}>{f.label}</label>
-        {removable && (
-          <button className="sheet-field-remove-mini" onClick={() => removeExtraField(f.id)} title="Remover meu campo">
-            <Trash2 size={12} />
-          </button>
-        )}
+        <label htmlFor={`field-${f.id}`} style={{ fontFamily }}>{f.label}</label>
+
       </div>
 
+      {f.type === 'status' && (() => {
+        const value = draftValues[f.id] || { current: 0, max: 0 };
+        return <div className="resource-field"><div className="status-bar-track"><div className="status-bar-fill" style={{width: `${value.max > 0 ? Math.min(100,Math.max(0,value.current/value.max*100)) : 0}%`}} /></div><div className="resource-inputs"><label>Atual<input type="number" min="0" value={value.current} onChange={e => setValue(f.id,{...value,current:Math.max(0,Math.min(value.max,Number(e.target.value)))})} /></label><span>/</span><label>Máximo<input type="number" min="0" value={value.max} onChange={e => {const max=Math.max(0,Number(e.target.value));setValue(f.id,{max,current:Math.min(value.current,max)});}} /></label></div></div>;
+      })()}
       {f.type === 'text' && (
-        <input type="text" value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui..." />
+        <input id={`field-${f.id}`} type="text" value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui…" />
       )}
       {f.type === 'number' && (
-        <input type="number" value={draftValues[f.id] ?? ''} onChange={e => setValue(f.id, e.target.value)} placeholder="0" />
+        <input id={`field-${f.id}`} type="number" value={draftValues[f.id] ?? ''} onChange={e => setValue(f.id, e.target.value)} placeholder="0" />
       )}
       {f.type === 'textarea' && (
-        <textarea value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui..." rows={4} />
+        <textarea id={`field-${f.id}`} value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui…" rows={4} />
       )}
       {f.type === 'image' && (
         <div className="sheet-field-image">
@@ -277,14 +201,14 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
                 <input type="number" value={val.bonus ?? 0} onChange={e => setAttackField(f.id, 'bonus', e.target.value)} />
               </label>
               <label className="attack-mini-label">Dano
-                <input type="text" placeholder="1d8+2" value={val.damage || ''} onChange={e => setAttackField(f.id, 'damage', e.target.value)} />
+                <input type="text" placeholder="1d8+2" title="Use d4, d6, d8, d10, d12, d20 ou d100. Ex.: 2d6+3." value={val.damage || ''} onChange={e => setAttackField(f.id, 'damage', e.target.value)} />
               </label>
             </div>
             <div className="attack-roll-row">
               <button className="attack-roll-btn" onClick={() => rollAttack(f.id)} disabled={rolls.atkRolling}>
                 <Dices size={14} /> Rolar Ataque
               </button>
-              <button className="attack-roll-btn" onClick={() => rollDamage(f.id)} disabled={!val.damage || rolls.dmgRolling}>
+              <button className="attack-roll-btn" onClick={() => rollDamage(f.id)} disabled={!/^[1-9]\d*d(4|6|8|10|12|20|100)([+-]\d+)?$/i.test((val.damage || '').replace(/\s/g,'')) || rolls.dmgRolling}>
                 <Dices size={14} /> Rolar Dano
               </button>
             </div>
@@ -292,7 +216,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
             {showAtkDice && (
               <div className="attack-dice-row">
                 <div className="dice-face-3d dice-face-3d-mini">
-                  <Dice3D diceType={20} skinId={DICE_SKINS[0].id} spinTrigger={rolls.atkSpin} />
+                  <RolledDie sides={20} skinId={DICE_SKINS[0].id} spinTrigger={rolls.atkRolling ? rolls.atkSpin : 0} onResult={(value,trigger)=>receiveAttack(f.id,value,trigger)} />
                   <span className="dice-face-label">d20</span>
                   {rolls.atk && <span className={`dice-face-value dice-face-value-mini ${rolls.atkRolling ? 'flicker' : ''}`}>{rolls.atk.d20}</span>}
                 </div>
@@ -302,7 +226,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
               <div className="attack-dice-row">
                 {Array.from({ length: rolls.dmgDice.qty }).map((_, i) => (
                   <div key={i} className="dice-face-3d dice-face-3d-mini">
-                    <Dice3D diceType={rolls.dmgDice.sides} skinId={DICE_SKINS[0].id} spinTrigger={rolls.dmgSpin} />
+                    <RolledDie sides={rolls.dmgDice.sides} skinId={DICE_SKINS[0].id} spinTrigger={rolls.dmgRolling ? rolls.dmgSpin : 0} onResult={(value,trigger)=>receiveDamage(f.id,i,value,trigger)} />
                     <span className="dice-face-label">d{rolls.dmgDice.sides}</span>
                     {rolls.dmg && <span className={`dice-face-value dice-face-value-mini ${rolls.dmgRolling ? 'flicker' : ''}`}>{rolls.dmg.rolls[i]}</span>}
                   </div>
@@ -340,275 +264,71 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
           </button>
         </div>
       )}
-    </div>
+    </fieldset>
   );
 
+  const categories = Array.from(new Set([...sheetFields, ...extraFields].map(f => f.tab || 'Geral')));
+  const makeId = () => `f_${crypto.randomUUID()}`;
+  const createStarter = () => {
+    if (sheetFields.length) return;
+    const fields = [
+      ['text', 'Personagem', 'Identidade'], ['text', 'Origem', 'Identidade'], ['text', 'Classe', 'Identidade'],
+      ...['Força', 'Agilidade', 'Intelecto', 'Presença', 'Vigor'].map(n => ['number', n, 'Atributos']),
+      ['number', 'Defesa', 'Combate'], ['number', 'Deslocamento', 'Combate'],
+      ['number', 'Percepção', 'Perícias'], ['number', 'Investigação', 'Perícias'], ['number', 'Furtividade', 'Perícias'],
+      ['textarea', 'Habilidades', 'Habilidades'], ['list', 'Inventário', 'Equipamento'],
+      ['status', 'Vida', 'Recursos'], ['status', 'Sanidade', 'Recursos'], ['status', 'Esforço', 'Recursos'],
+    ].map(([type, label, tab]) => ({ id: makeId(), type, label, tab }));
+    onFieldsChange(fields);
+  };
+
   return (
-    <div className="character-sheet" style={{ fontFamily }}>
-      <datalist id="sheet-tab-options">
-        {allTabNames.map(t => <option key={t} value={t} />)}
-      </datalist>
-      {activePlayer && (
-        <div className={`save-status save-status-${saveStatus}`}>
-          {saveStatus === 'saving' && <>Salvando...</>}
-          {saveStatus === 'saved' && <><Check size={14} /> Salvo</>}
+    <div className="character-sheet">
+      <datalist id="sheet-tab-options">{Array.from(new Set([...DEFAULT_TABS, ...categories])).map(t => <option key={t} value={t} />)}</datalist>
+      <div className="sheet-heading">
+        <div><span className="eyebrow">{isMaster ? 'O arquivo da mesa' : 'Seu lugar nesta história'}</span><h2>{isMaster ? 'Fichas da campanha' : 'Ficha de personagem'}</h2></div>
+        <span className="sheet-seal"><ScrollText size={18} /> {isMaster ? 'Mestre' : 'Jogador'}</span>
+      </div>
+      {isMaster && <div className="sheet-master-toolbar">
+        <button className="sheet-tool-btn" onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}><Settings2 size={16} />{builderOpen ? 'Fechar modelo' : 'Editar modelo da ficha'}</button>
+        <label className="font-choice">Tipografia<select value={sheetFont} onChange={e => onFontChange(e.target.value)}>{SHEET_FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}</select></label>
+      </div>}
+      {isMaster && (builderOpen || !sheetFields.length) && <section className="field-builder-panel">
+        <div className="section-heading"><h3>Modelo da campanha</h3><span>{sheetFields.length} campos</span></div>
+        <p className="status-bars-hint">Defina os campos e suas categorias. Cada jogador preenche os próprios valores.</p>
+        {!sheetFields.length && <button className="sheet-tool-btn starter-button" onClick={createStarter}><Plus size={16} /> Começar com uma ficha base</button>}
+        <div className="field-type-grid">{FIELD_TYPES.map(ft => { const Icon=ft.icon; return <button key={ft.id} className={`field-type-btn ${newFieldType===ft.id?'active':''}`} onClick={() => setNewFieldType(ft.id)}><Icon size={15} />{ft.label}</button>; })}</div>
+        <form className="field-add-row" onSubmit={e => { e.preventDefault(); addField(); }}>
+          <label>Nome do campo<input value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)} placeholder="Ex.: Força…" required /></label>
+          <label>Categoria<input value={newFieldTab} onChange={e => setNewFieldTab(e.target.value)} list="sheet-tab-options" placeholder={newFieldLabel ? suggestTab(newFieldLabel) : 'Escolha ou crie uma categoria…'} /></label>
+          {newFieldType==='formula' && <label>Fórmula<input value={newFieldFormula} onChange={e => setNewFieldFormula(e.target.value)} placeholder="Ex.: (Força-10)/2…" /></label>}
+          <button className="field-add-btn" type="submit"><Plus size={16} />Adicionar campo</button>
+        </form>
+        <div className="field-list">{sheetFields.map((f,i) => <div className="field-list-row" key={f.id}>
+          <input aria-label={`Nome de ${f.label}`} value={f.label} onChange={e => renameField(f.id,e.target.value)} />
+          <span className="field-list-type">{FIELD_TYPES.find(t => t.id===f.type)?.label}</span>
+          <input aria-label={`Categoria de ${f.label}`} value={f.tab || 'Geral'} list="sheet-tab-options" onChange={e => setFieldTab(f.id,e.target.value)} />
+          <button aria-label={`Subir ${f.label}`} onClick={() => moveField(i,-1)} disabled={i===0}><ArrowUp size={14} /></button>
+          <button aria-label={`Descer ${f.label}`} onClick={() => moveField(i,1)} disabled={i===sheetFields.length-1}><ArrowDown size={14} /></button>
+          <button aria-label={`Remover ${f.label}`} onClick={() => { if(window.confirm(`Remover o campo “${f.label}” do modelo?`)) removeField(f.id); }}><Trash2 size={14} /></button>
+        </div>)}</div>
+      </section>}
+      {isMaster && <label className="player-select">Consultar personagem<select value={selectedPlayer} onChange={e => onSelectPlayer(e.target.value)}><option value="">Selecione um jogador…</option>{playerNames.map(n => <option key={n}>{n}</option>)}</select><span><Eye size={14} /> Somente leitura</span></label>}
+      <div className="dossier-layout">
+        <aside className="dossier-profile">{profile}<div className="profile-footnote"><span>✦</span><p>Cada marca, uma escolha.<br />Cada escolha, um caminho.</p></div></aside>
+        <div className="dossier-content">
+          {!activePlayer ? <div className="empty-state sheet-empty"><ScrollText size={42} /><h3>{isMaster ? 'Um olhar sobre a mesa' : 'Sua ficha começa aqui'}</h3><p>{isMaster ? 'Selecione um jogador para consultar seus atributos, recursos e observações.' : 'Informe seu nome ao lado para acessar a ficha da campanha.'}</p></div> : <>
+            <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : 'Sua ficha'}</span></div>
+            {!categories.length && <div className="empty-state sheet-empty"><ScrollText size={36} /><h3>O modelo ainda está em branco</h3><p>{isMaster ? 'Adicione campos no modelo da campanha acima.' : 'O mestre irá definir os campos da campanha. Você já pode registrar observações abaixo.'}</p></div>}
+            <div className="category-layout">{categories.map((category,i) => <section key={category} className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''}`}>
+              <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
+              <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
+            </section>)}</div>
+            <section className="observations-panel"><div className="section-heading"><h3><Edit3 size={16} />Observações</h3><span>Do jogador</span></div><label className="sr-only" htmlFor="player-observations">Observações do jogador</label><textarea id="player-observations" readOnly={isMaster} rows={5} value={activeEntry.observations || ''} placeholder={isMaster ? 'Nenhuma observação registrada.' : 'Lembretes, detalhes e anotações da sessão…'} onChange={e => onUpdatePlayerSheet(activePlayer,{observations:e.target.value})} /></section>
+          </>}
         </div>
-      )}
-
-      {isMaster && (
-        <div className="sheet-master-toolbar">
-          <button className="sheet-tool-btn" onClick={() => setBuilderOpen(o => !o)}>
-            <Settings2 size={16} />
-            {builderOpen ? 'Fechar construtor' : 'Configurar modelo base'}
-          </button>
-          <button className="sheet-tool-btn" onClick={() => setFontPickerOpen(o => !o)}>
-            <Palette size={16} />
-            Fonte da ficha
-          </button>
-        </div>
-      )}
-
-      {isMaster && fontPickerOpen && (
-        <div className="font-picker-panel">
-          {SHEET_FONTS.map(f => (
-            <button
-              key={f.id}
-              className={`font-swatch-btn ${sheetFont === f.id ? 'active' : ''}`}
-              style={{ fontFamily: f.family }}
-              onClick={() => { onFontChange(f.id); setFontPickerOpen(false); }}
-            >
-              Abc 123
-              <small>{f.label}</small>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isMaster && builderOpen && (
-        <div className="field-builder-panel">
-          <h4>Adicionar campo ao modelo base (todos os jogadores recebem)</h4>
-          <div className="field-type-grid">
-            {FIELD_TYPES.map(ft => {
-              const Icon = ft.icon;
-              return (
-                <button key={ft.id} className={`field-type-btn ${newFieldType === ft.id ? 'active' : ''}`} onClick={() => setNewFieldType(ft.id)}>
-                  <Icon size={16} /> {ft.label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="field-add-row">
-            <input
-              type="text"
-              placeholder="Nome do campo (ex: Força, Retrato, Inventário...)"
-              value={newFieldLabel}
-              onChange={e => setNewFieldLabel(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addField()}
-            />
-            {newFieldType === 'formula' && (
-              <input
-                type="text"
-                placeholder="Fórmula (ex: (Força-10)/2)"
-                value={newFieldFormula}
-                onChange={e => setNewFieldFormula(e.target.value)}
-                className="formula-input"
-              />
-            )}
-            <input
-              type="text"
-              placeholder="Aba (opcional)"
-              value={newFieldTab}
-              onChange={e => setNewFieldTab(e.target.value)}
-              list="sheet-tab-options"
-              className="field-tab-input"
-            />
-            {newFieldLabel.trim() && !newFieldTab.trim() && (
-              <span className="auto-cat-hint">→ Auto: {suggestTab(newFieldLabel)}</span>
-            )}
-
-            <button className="field-add-btn" onClick={addField} disabled={!newFieldLabel.trim()}>
-              <Plus size={16} /> Adicionar
-            </button>
-          </div>
-          {newFieldType === 'formula' && (
-            <p className="status-bars-hint">Use os nomes de outros campos numéricos na fórmula, ex: (Força-10)/2</p>
-          )}
-
-          {sheetFields.length > 0 && (
-            <div className="field-list">
-              {sheetFields.map((f, i) => {
-                const ft = FIELD_TYPES.find(t => t.id === f.type) || FIELD_TYPES[0];
-                const Icon = ft.icon;
-                return (
-                  <div key={f.id} className="field-list-row">
-                    <Icon size={15} className="field-list-icon" />
-                    <input type="text" value={f.label} onChange={e => renameField(f.id, e.target.value)} className="field-list-label-input" />
-                    <span className="field-list-type">{ft.label}</span>
-                    <input
-                      type="text"
-                      value={f.tab || DEFAULT_TAB}
-                      onChange={e => setFieldTab(f.id, e.target.value)}
-                      list="sheet-tab-options"
-                      className="field-list-tab-input"
-                      title="Aba desta ficha"
-                    />
-                    <button onClick={() => moveField(i, -1)} disabled={i === 0} title="Mover para cima"><ArrowUp size={14} /></button>
-                    <button onClick={() => moveField(i, 1)} disabled={i === sheetFields.length - 1} title="Mover para baixo"><ArrowDown size={14} /></button>
-                    <button onClick={() => removeField(f.id)} className="field-remove-btn" title="Remover campo"><Trash2 size={14} /></button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {isMaster && (
-        <div className="status-master-select-row">
-          <span>Ver/editar ficha de:</span>
-          <select value={masterSelectedPlayer} onChange={e => setMasterSelectedPlayer(e.target.value)}>
-            <option value="">Selecione um jogador...</option>
-            {playerNames.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </div>
-      )}
-
-      {!isMaster && !playerName && (
-        <p className="status-bars-hint">Defina seu nome de jogador na seção "Barras de Status" acima para habilitar sua ficha.</p>
-      )}
-
-      {isMaster && !masterSelectedPlayer && (
-        <p className="status-bars-hint">
-          {playerNames.length === 0 ? 'Nenhum jogador se identificou ainda.' : 'Escolha um jogador acima para ver a ficha completa dele.'}
-        </p>
-      )}
-
-      {activePlayer && (
-        <div className="sheet-fields-area">
-          {sheetFields.length === 0 && extraFields.length === 0 ? (
-            <div className="empty-state">
-              <ScrollText size={64} />
-              <h2>Ficha ainda não configurada</h2>
-              <p>{isMaster ? 'Clique em "Configurar modelo base" para começar.' : 'Aguarde o Mestre configurar o modelo base, ou adicione seus próprios campos abaixo.'}</p>
-            </div>
-          ) : (() => {
-            const allCombined = [...sheetFields, ...extraFields];
-            const tabNames = Array.from(new Set(allCombined.map(f => f.tab || DEFAULT_TAB)));
-            if (tabNames.length === 0) tabNames.push(DEFAULT_TAB);
-            const currentTab = tabNames.includes(activeSheetTab) ? activeSheetTab : tabNames[0];
-            const visibleBase = sheetFields.filter(f => (f.tab || DEFAULT_TAB) === currentTab);
-            const visibleExtra = extraFields.filter(f => (f.tab || DEFAULT_TAB) === currentTab);
-            return (
-              <>
-                {tabNames.length > 1 && (
-                  <div className="sheet-subtab-nav">
-                    {tabNames.map(t => (
-                      <button
-                        key={t}
-                        className={`sheet-subtab-btn ${t === currentTab ? 'active' : ''}`}
-                        onClick={() => setActiveSheetTab(t)}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="sheet-fields-grid">
-                  {visibleBase.map(f => renderField(f, { removable: false }))}
-                  {visibleExtra.map(f => renderField(f, { removable: !isMaster }))}
-                </div>
-              </>
-            );
-          })()}
-
-          {!isMaster && (
-            <div className="extra-field-builder">
-              <button className="sheet-tool-btn" onClick={() => setExtraBuilderOpen(o => !o)}>
-                <Plus size={16} />
-                {extraBuilderOpen ? 'Fechar' : 'Adicionar meu próprio campo'}
-              </button>
-              {extraBuilderOpen && (
-                <div className="field-builder-panel">
-                  <div className="field-type-grid">
-                    {FIELD_TYPES.map(ft => {
-                      const Icon = ft.icon;
-                      return (
-                        <button key={ft.id} className={`field-type-btn ${newExtraType === ft.id ? 'active' : ''}`} onClick={() => setNewExtraType(ft.id)}>
-                          <Icon size={16} /> {ft.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="field-add-row">
-                    <input
-                      type="text"
-                      placeholder="Nome do seu campo (ex: Talentos, Foto extra...)"
-                      value={newExtraLabel}
-                      onChange={e => setNewExtraLabel(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && addExtraField()}
-                    />
-                    {newExtraType === 'formula' && (
-                      <input
-                        type="text"
-                        placeholder="Fórmula (ex: (Força-10)/2)"
-                        value={newExtraFormula}
-                        onChange={e => setNewExtraFormula(e.target.value)}
-                        className="formula-input"
-                      />
-                    )}
-                    <input
-                      type="text"
-                      placeholder="Aba (opcional)"
-                      value={newExtraTab}
-                      onChange={e => setNewExtraTab(e.target.value)}
-                      list="sheet-tab-options"
-                      className="field-tab-input"
-                    />
-                    {newExtraLabel.trim() && !newExtraTab.trim() && (
-                      <span className="auto-cat-hint">→ Auto: {suggestTab(newExtraLabel)}</span>
-                    )}
-                    <button className="field-add-btn" onClick={addExtraField} disabled={!newExtraLabel.trim()}>
-                      <Plus size={16} /> Adicionar
-                    </button>
-                  </div>
-                  {newExtraType === 'formula' && (
-                    <p className="status-bars-hint">Use os nomes de outros campos numéricos na fórmula, ex: (Força-10)/2</p>
-                  )}
-                  {extraFields.length > 0 && (
-                    <div className="field-list">
-                      {extraFields.map((f, i) => {
-                        const ft = FIELD_TYPES.find(t => t.id === f.type) || FIELD_TYPES[0];
-                        const Icon = ft.icon;
-                        return (
-                          <div key={f.id} className="field-list-row">
-                            <Icon size={15} className="field-list-icon" />
-                            <input type="text" value={f.label} onChange={e => renameExtraField(f.id, e.target.value)} className="field-list-label-input" />
-                            <input
-                              type="text"
-                              value={f.tab || DEFAULT_TAB}
-                              onChange={e => setExtraFieldTab(f.id, e.target.value)}
-                              list="sheet-tab-options"
-                              className="field-list-tab-input"
-                              title="Aba desta ficha"
-                            />
-                            <button onClick={() => moveExtraField(i, -1)} disabled={i === 0}><ArrowUp size={14} /></button>
-                            <button onClick={() => moveExtraField(i, 1)} disabled={i === extraFields.length - 1}><ArrowDown size={14} /></button>
-                            <button onClick={() => removeExtraField(f.id)} className="field-remove-btn"><Trash2 size={14} /></button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 };
-
-// Componente principal
-
 export default CharacterSheet;

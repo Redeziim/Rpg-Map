@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Dice3D, { DICE_SKINS } from './Dice3D.jsx';
+import { DICE_SKINS } from './Dice3D.jsx';
+import RolledDie from './RolledDie.jsx';
 import { Dices, RotateCw, ArrowUp, ArrowDown, Hash, ListChecks, ShoppingBag, X, Check } from 'lucide-react';
 
 const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
@@ -13,6 +14,7 @@ const DiceRoller = () => {
   const [spinTrigger, setSpinTrigger] = useState(0);
   const [skinId, setSkinId] = useState(DICE_SKINS[0].id);
   const [pouchOpen, setPouchOpen] = useState(false);
+  const pendingRoll = useRef(null);
 
   const addTerm = (sides) => {
     if (rolling) return;
@@ -39,43 +41,25 @@ const DiceRoller = () => {
     setTerms(prev => prev.filter(t => t.id !== id));
   };
 
-  const computeRoll = () => {
-    const parts = terms.map(t => ({
-      sign: t.sign,
-      sides: t.sides,
-      qty: t.qty,
-      rolls: Array.from({ length: t.qty }, () => 1 + Math.floor(Math.random() * t.sides))
-    }));
-    const total = parts.reduce((sum, p) => sum + p.sign * p.rolls.reduce((a, b) => a + b, 0), 0);
-    return { parts, total };
-  };
-
   const formula = terms
     .map((t, i) => `${i === 0 ? (t.sign === 1 ? '' : '− ') : (t.sign === 1 ? '+ ' : '− ')}${t.qty}d${t.sides}`)
     .join(' ');
 
   const rollDice = () => {
     if (rolling || terms.length === 0) return;
-    setRolling(true);
-    setBreakdown(null);
-    setSpinTrigger(t => t + 1);
-
-    let tickCount = 0;
-    const maxTicks = 16;
-    const tickInterval = setInterval(() => {
-      setBreakdown(computeRoll());
-      tickCount++;
-      if (tickCount >= maxTicks) {
-        clearInterval(tickInterval);
-        const final = computeRoll();
-        setBreakdown(final);
-        setRolling(false);
-        setHistory(prev => [
-          { id: Date.now(), formula, total: final.total },
-          ...prev.slice(0, 7)
-        ]);
-      }
-    }, 75);
+    const trigger = spinTrigger + 1;
+    pendingRoll.current = {trigger, formula, terms: terms.map(t=>({...t})), values: new Map()};
+    setRolling(true); setBreakdown(null); setSpinTrigger(trigger);
+  };
+  const receiveResult = (termIndex,dieIndex,value,trigger) => {
+    const pending=pendingRoll.current;
+    if(!pending || pending.trigger!==trigger)return;
+    pending.values.set(`${termIndex}:${dieIndex}`,value);
+    if(pending.values.size!==pending.terms.reduce((sum,t)=>sum+t.qty,0))return;
+    const parts=pending.terms.map((t,i)=>({...t,rolls:Array.from({length:t.qty},(_,j)=>pending.values.get(`${i}:${j}`))}));
+    const total=parts.reduce((sum,p)=>sum+p.sign*p.rolls.reduce((a,b)=>a+b,0),0);
+    pendingRoll.current=null;setBreakdown({parts,total});setRolling(false);
+    setHistory(prev=>[{id:crypto.randomUUID(),formula:pending.formula,total},...prev.slice(0,7)]);
   };
 
   return (
@@ -101,7 +85,7 @@ const DiceRoller = () => {
               onClick={() => { setSkinId(skin.id); setPouchOpen(false); }}
               disabled={rolling}
             >
-              <img src={skin.tex} alt={skin.label} />
+              <span className="skin-preview" style={{background:skin.color}} aria-hidden="true" />
               <span>{skin.label}</span>
               {skinId === skin.id && <Check size={14} className="pouch-check" />}
             </button>
@@ -116,10 +100,10 @@ const DiceRoller = () => {
           terms.map((t, i) => (
             <div key={t.id} className="dice-term-chip">
               {i > 0 && <span className="term-sign">{t.sign === 1 ? '+' : '−'}</span>}
-              <button onClick={() => updateTermQty(t.id, -1)} disabled={rolling}>-</button>
+              <button aria-label={`Diminuir quantidade de d${t.sides}`} onClick={() => updateTermQty(t.id, -1)} disabled={rolling}>-</button>
               <span className="term-label">{t.qty}d{t.sides}</span>
-              <button onClick={() => updateTermQty(t.id, 1)} disabled={rolling}>+</button>
-              <button className="term-remove" onClick={() => removeTerm(t.id)} disabled={rolling}>
+              <button aria-label={`Aumentar quantidade de d${t.sides}`} onClick={() => updateTermQty(t.id, 1)} disabled={rolling}>+</button>
+              <button aria-label={`Remover d${t.sides}`} className="term-remove" onClick={() => removeTerm(t.id)} disabled={rolling}>
                 <X size={12} />
               </button>
             </div>
@@ -153,21 +137,11 @@ const DiceRoller = () => {
           </div>
         ) : (
           <div className="dice-multi-row">
-            {terms.map((t, i) => {
-              const part = breakdown ? breakdown.parts[i] : null;
-              return (
-                <div key={t.id} className="dice-face-3d dice-face-3d-mini">
-                  {i > 0 && <span className="dice-mini-sign">{t.sign === 1 ? '+' : '−'}</span>}
-                  <Dice3D diceType={t.sides} skinId={skinId} spinTrigger={spinTrigger} />
-                  <span className="dice-face-label">{t.qty}d{t.sides}</span>
-                  {part && (
-                    <span className={`dice-face-value dice-face-value-mini ${rolling ? 'flicker' : ''}`}>
-                      {part.rolls.join('+')}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+            {terms.flatMap((t,i) => Array.from({length:t.qty},(_,j) => <div key={`${t.id}-${j}`} className="dice-face-3d dice-face-3d-mini">
+              <RolledDie sides={t.sides} skinId={skinId} spinTrigger={rolling ? spinTrigger : 0} onResult={(value,trigger)=>receiveResult(i,j,value,trigger)} />
+              <span className="dice-face-label">{t.sign===-1?'− ':''}d{t.sides}{t.sides===100?' · dezenas / unidades':''}</span>
+              {breakdown && <span className="dice-face-value dice-face-value-mini">{breakdown.parts[i].rolls[j]}</span>}
+            </div>))}
           </div>
         )}
         {breakdown && (
@@ -180,7 +154,7 @@ const DiceRoller = () => {
                 </span>
               ))}
             </div>
-            <div className="dice-total-line">
+            <div className="dice-total-line" aria-live="polite">
               Total: <strong>{breakdown.total}</strong>
             </div>
           </>

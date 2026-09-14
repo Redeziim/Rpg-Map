@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Camera, Heart, Image as ImageIcon, Minus, Plus, Trash2, GripVertical, Type, ListPlus } from 'lucide-react';
 
-const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, onUpdatePlayerBars, onUpdatePlayerAvatar }) => {
+const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, onUpdatePlayerBars, onUpdatePlayerAvatar, selectedPlayer }) => {
   const [nameDraft, setNameDraft] = useState(playerName || '');
   const [newLabel, setNewLabel] = useState('');
   const [newColor, setNewColor] = useState('#c0392b');
   const [newMax, setNewMax] = useState(100);
-  const [masterSelectedPlayer, setMasterSelectedPlayer] = useState('');
+  const masterSelectedPlayer = selectedPlayer;
 
   const isMaster = viewMode === 'master';
   const playerNames = Object.keys(allPlayersBars || {});
@@ -20,6 +20,7 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
   };
 
   const addBar = () => {
+    if(isMaster) return;
     const label = newLabel.trim();
     if (!label || !activePlayer) return;
     const bar = { id: `bar_${Date.now()}`, label, color: newColor, max: Number(newMax) || 100, current: Number(newMax) || 100 };
@@ -29,15 +30,18 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
   };
 
   const removeBar = (barId) => {
+    if (isMaster) return;
     onUpdatePlayerBars(activePlayer, activeBars.filter(b => b.id !== barId));
   };
 
   const setBarValue = (barId, value) => {
+    if (isMaster) return;
     const clamped = Math.max(0, Math.min(value, activeBars.find(b => b.id === barId)?.max ?? value));
     onUpdatePlayerBars(activePlayer, activeBars.map(b => b.id === barId ? { ...b, current: clamped } : b));
   };
 
   const handleAvatarUpload = (e) => {
+    if (isMaster) return;
     const file = e.target.files[0];
     if (!file || !activePlayer) return;
     const reader = new FileReader();
@@ -55,12 +59,14 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
   if (!isMaster && !playerName) {
     return (
       <div className="status-bars-panel">
-        <h3><Heart size={17} /> Barras de Status</h3>
-        <p className="status-bars-hint">Defina seu nome de jogador para criar suas barras (vida, sanidade, etc).</p>
+        <h3><Heart size={17} /> Personagem</h3>
+        <p className="status-bars-hint">Seu nome identifica a ficha nesta mesa. Os campos são preparados pelo mestre.</p>
         <div className="status-name-row">
           <input
             type="text"
-            placeholder="Seu nome de jogador"
+            aria-label="Seu nome de jogador"
+            autoComplete="nickname"
+            placeholder="Seu nome de jogador…"
             value={nameDraft}
             onChange={e => setNameDraft(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && confirmName()}
@@ -73,32 +79,22 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
 
   return (
     <div className="status-bars-panel">
-      <h3><Heart size={17} /> Barras de Status</h3>
+      <h3><Heart size={17} /> Personagem</h3>
 
-      {isMaster && (
-        <div className="status-master-select-row">
-          <span>Ver/editar barras de:</span>
-          <select value={masterSelectedPlayer} onChange={e => setMasterSelectedPlayer(e.target.value)}>
-            <option value="">Selecione um jogador...</option>
-            {playerNames.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </div>
-      )}
-
-      {!isMaster && (
+      {activePlayer && (
         <div className="status-player-header">
           <div className="status-avatar-wrap">
             {activeEntry.avatar ? (
-              <img src={activeEntry.avatar} alt={playerName} className="status-avatar-img" />
+              <img src={activeEntry.avatar} alt={activePlayer} className="status-avatar-img" />
             ) : (
               <div className="status-avatar-placeholder"><ImageIcon size={20} /></div>
             )}
-            <label className="status-avatar-upload-btn" title="Foto do personagem">
+            {!isMaster && <label className="status-avatar-upload-btn" title="Foto do personagem">
               <input type="file" accept="image/*" onChange={handleAvatarUpload} />
               <Camera size={13} />
-            </label>
+            </label>}
           </div>
-          <p className="status-bars-hint">Jogando como <strong>{playerName}</strong></p>
+          <p className="status-bars-hint"><span className="eyebrow">{isMaster ? 'Personagem em consulta' : 'Jogando como'}</span><strong>{activePlayer}</strong></p>
         </div>
       )}
 
@@ -106,7 +102,7 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
         <p className="status-bars-hint">
           {playerNames.length === 0
             ? 'Nenhum jogador criou barras de status ainda.'
-            : 'Escolha um jogador acima para visualizar e ajustar suas barras.'}
+            : 'Escolha um jogador acima para consultar seus recursos.'}
         </p>
       )}
 
@@ -121,11 +117,11 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
                 </div>
                 <div className="status-bar-track">
                   <div
-                    className="status-bar-fill"
+                    className="status-bar-fill legacy-resource"
                     style={{ width: `${Math.min(100, (bar.current / bar.max) * 100)}%`, background: bar.color }}
                   />
                 </div>
-                <div className="status-bar-controls">
+                {!isMaster && <div className="status-bar-controls">
                   <button onClick={() => adjustBar(bar.id, -1)}><Minus size={13} /></button>
                   <input
                     type="number"
@@ -136,38 +132,12 @@ const StatusBars = ({ viewMode, playerName, onPlayerNameChange, allPlayersBars, 
                   <button onClick={() => adjustBar(bar.id, -5)} className="status-bar-quick">-5</button>
                   <button onClick={() => adjustBar(bar.id, 5)} className="status-bar-quick">+5</button>
                   <button onClick={() => removeBar(bar.id)} className="status-bar-remove"><Trash2 size={13} /></button>
-                </div>
+                </div>}
               </div>
             ))}
           </div>
 
-          {!isMaster && (
-            <div className="status-bar-add-row">
-              <input
-                type="text"
-                placeholder="Nome (ex: Vida, Sanidade)"
-                value={newLabel}
-                onChange={e => setNewLabel(e.target.value)}
-              />
-              <input
-                type="color"
-                value={newColor}
-                onChange={e => setNewColor(e.target.value)}
-                title="Cor da barra"
-              />
-              <input
-                type="number"
-                placeholder="Máx"
-                value={newMax}
-                onChange={e => setNewMax(e.target.value)}
-                className="status-bar-max-input"
-              />
-              <button className="field-add-btn" onClick={addBar} disabled={!newLabel.trim()}>
-                <Plus size={14} />
-                Adicionar barra
-              </button>
-            </div>
-          )}
+
         </>
       )}
     </div>

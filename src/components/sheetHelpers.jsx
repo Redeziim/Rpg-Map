@@ -1,5 +1,5 @@
 import React from 'react';
-import { Type, ScrollText, Hash, Image as QIcon, ListPlus, Calculator, Sword, ListChecks } from 'lucide-react';
+import { Type, ScrollText, Hash, Image as QIcon, ListPlus, Calculator, Sword, ListChecks, Heart } from 'lucide-react';
 
 const SHEET_FONTS = [
   { id: 'cinzel', label: 'Cinzel', family: "'Cinzel', serif" },
@@ -12,6 +12,7 @@ const SHEET_FONTS = [
 
 // Tipos de campo que o Mestre (ou o jogador, nos seus campos extras) pode adicionar à ficha
 const FIELD_TYPES = [
+  { id: 'status', label: 'Recurso / barra', icon: Heart },
   { id: 'text', label: 'Texto curto', icon: Type },
   { id: 'textarea', label: 'Texto longo', icon: ScrollText },
   { id: 'number', label: 'Número', icon: Hash },
@@ -19,7 +20,7 @@ const FIELD_TYPES = [
   { id: 'list', label: 'Lista', icon: ListPlus },
   { id: 'formula', label: 'Fórmula', icon: Calculator },
   { id: 'attack', label: 'Ataque/Habilidade', icon: Sword },
-  { id: 'checklist', label: 'Lista de marcação', icon: ListChecks },
+  { id: 'checklist', label: 'Lista de marcação', icon: ListChecks, Heart },
 ];
 
 // Avalia uma fórmula simples com referências a outros campos pelo nome (ex: "(Força-10)/2).
@@ -52,8 +53,8 @@ const CATEGORY_RULES = [
   { tab: 'Status', keywords: ['vida', 'hp', 'sanidade', 'esforço', 'esforco', 'corpo', 'mente', 'alma', 'energia', 'fadiga', 'mp', 'sp', 'fp'] },
   { tab: 'Habilidades', keywords: ['habilidade', 'magia', 'pericia', 'especialidade', 'talento', 'artefato', 'mag', 'skill'] },
   { tab: 'Equipamento', keywords: ['arma', 'armadura', 'escudo', 'peça', 'peca', 'inventario', 'inventário', 'bolso', 'mochila', 'item'] },
-  { tab: 'Aparência', keywords: ['foto', 'retrato', 'descrição', 'desconto', 'biografia', 'historia', 'personagem', 'imagem', 'avatar', 'rosto'] },
-  { tab: 'Notas', keywords: ['nota', 'observacao', 'observações', 'diario', 'comentario', 'anotacao', 'historia', 'historia'] },
+  { tab: 'Aparência', keywords: ['foto', 'retrato', 'descrição', 'desconto', 'personagem', 'imagem', 'avatar', 'rosto'] },
+  { tab: 'Notas', keywords: ['nota', 'observacao', 'observações', 'diario', 'comentario', 'anotacao'] },
 ];
 
 // Determina a aba sugerida a partir do nome do campo
