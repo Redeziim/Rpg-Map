@@ -1,3 +1,1 @@
-import RPGMapExplorer from './components/RPGMapExplorer.jsx';
-
-export default RPGMapExplorer;
+export { default } from './components/AccountApp.jsx';

@@ -5,7 +5,8 @@ import { Dices, RotateCw, ArrowUp, ArrowDown, Hash, ListChecks, ShoppingBag, X, 
 
 const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
 
-const DiceRoller = () => {
+const DiceRoller = ({onTrayRoll}) => {
+  const [useTray,setUseTray]=useState(false),[trayBusy,setTrayBusy]=useState(false),[trayError,setTrayError]=useState('');
   const [terms, setTerms] = useState([{ id: 'init', sign: 1, qty: 1, sides: 20 }]);
   const [nextSign, setNextSign] = useState(1);
   const [breakdown, setBreakdown] = useState(null);
@@ -45,7 +46,14 @@ const DiceRoller = () => {
     .map((t, i) => `${i === 0 ? (t.sign === 1 ? '' : '− ') : (t.sign === 1 ? '+ ' : '− ')}${t.qty}d${t.sides}`)
     .join(' ');
 
-  const rollDice = () => {
+  const rollDice = async () => {
+    if(useTray&&onTrayRoll){
+      if(terms.reduce((n,t)=>n+t.qty*(t.sides===100?2:1),0)>20){setTrayError('A mão comporta até 20 dados físicos (d100 usa dois).');return;}
+      if(trayBusy||terms.length===0)return;
+      setTrayBusy(true);setTrayError('');
+      try{const result=await onTrayRoll(terms,skinId);if(result===false)setTrayError('Não foi possível rolar. Confira a mensagem da mesa e tente novamente.');}finally{setTrayBusy(false);}
+      return;
+    }
     if (rolling || terms.length === 0) return;
     const trigger = spinTrigger + 1;
     pendingRoll.current = {trigger, formula, terms: terms.map(t=>({...t})), values: new Map()};
@@ -130,7 +138,8 @@ const DiceRoller = () => {
         ))}
       </div>
 
-      <div className="dice-display-area">
+      {onTrayRoll&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja · visível para a mesa</label>}
+      {!useTray&&<div className="dice-display-area">
         {terms.length === 0 ? (
           <div className="dice-face-3d dice-face-3d-empty">
             <span className="dice-face-label">Adicione um dado</span>
@@ -159,11 +168,12 @@ const DiceRoller = () => {
             </div>
           </>
         )}
-      </div>
+      </div>}
 
-      <button className="roll-btn" onClick={rollDice} disabled={rolling || terms.length === 0}>
+      {trayError&&<p className="tray-send-error" role="alert">{trayError}</p>}
+      <button className="roll-btn" onClick={rollDice} disabled={rolling || trayBusy || terms.length === 0}>
         <RotateCw size={18} className={rolling ? 'spin' : ''} />
-        {rolling ? 'Rolando...' : 'Rolar'}
+        {trayBusy?'Enviando…':rolling ? 'Rolando...' : useTray?'Pegar dados na mão':'Rolar'}
       </button>
 
       {history.length > 0 && (

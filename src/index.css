@@ -7,7 +7,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #0a0a0c;
+  background: #101010;
   color: #e0e0e0;
   min-height: 100vh;
 }
@@ -18,14 +18,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1e;
+  background: #171717;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c9a959;
+  background: #9f824b;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ffd700;
+  background: #c8a65e;
 }

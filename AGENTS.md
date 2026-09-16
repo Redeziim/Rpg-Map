@@ -10,7 +10,8 @@ Estas instruções se aplicam a todo o repositório `Rpg-Map`.
 - `src/components/StatusBars.jsx` e `GroupStatus.jsx`: barras individuais e visão do grupo.
 - `src/components/DiceRoller.jsx` e `Dice3D.jsx`: expressão, histórico e renderização tridimensional dos dados.
 - `src/components/Scene3D.jsx`: cena tridimensional associada aos pontos do mapa.
-- O armazenamento usa `window.storage` quando disponível e `localStorage` como alternativa local.
+- O servidor Node.js em `server/` usa SQLite para contas e mesas, com permissões validadas na API e sincronização SSE.
+- `npm run dev` inicia Vite e API; Node.js 24 ou superior é necessário.
 
 Use `npm` e `package-lock.json`. Não troque framework, gerenciador de pacotes ou estratégia de persistência sem autorização explícita.
 
@@ -57,4 +58,4 @@ Prefira uma linguagem visual específica: cartografia impressa, marginalia, inst
 5. Revise a mudança com as skills correspondentes.
 6. Teste as páginas alteradas em um servidor HTTP local e em larguras desktop e mobile.
 
-Para validar a aplicação, execute `npm run build` e teste `npm run dev -- --host 127.0.0.1` no navegador. Não declare sucesso apenas com inspeção estática.
+Para validar a aplicação, execute `npm run build` e teste `npm run dev` no navegador. Não declare sucesso apenas com inspeção estática.

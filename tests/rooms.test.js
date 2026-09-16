@@ -1,0 +1,88 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync,rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createApplication } from '../server/app.js';
+
+test('accounts, room isolation, role enforcement, invites, live updates and persistence',async()=>{
+  const directory=mkdtempSync(join(tmpdir(),'grimorio-test-'));
+  const dbPath=join(directory,'test.sqlite');
+  let app=createApplication({dbPath,rateLimit:false});
+  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
+  let base=`http://127.0.0.1:${app.server.address().port}`;
+  const clients={};
+  async function request(who,path,method='GET',data){
+    const res=await fetch(base+'/api'+path,{method,headers:{...(clients[who]?{Cookie:clients[who]}:{}),...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});
+    if(res.headers.get('set-cookie'))clients[who]=res.headers.get('set-cookie').split(';')[0];
+    return {status:res.status,body:await res.json(),headers:res.headers};
+  }
+  try{
+    assert.equal((await request('anonymous','/rooms')).status,401);
+    for(const name of ['owner','master','alice','bob','outsider']){
+      const result=await request(name,'/auth/register','POST',{username:name,password:'a-test-password-123'});assert.equal(result.status,200);
+      assert.match(result.headers.get('set-cookie'),/HttpOnly/);assert.match(result.headers.get('set-cookie'),/SameSite=Lax/);
+    }
+    assert.equal((await request('anonymous','/auth/login','POST',{username:'alice',password:'wrong-password'})).status,401);
+    const created=await request('owner','/rooms','POST',{name:'Mesa de teste'});assert.equal(created.status,201);const room=created.body.id;
+    assert.equal(created.body.role,'admin');
+    assert.equal((await request('outsider',`/rooms/${room}`)).status,403);
+    for(const [username,role] of [['master','master'],['alice','player'],['bob','player']])assert.equal((await request('owner',`/rooms/${room}/members`,'POST',{username,role})).status,200);
+    assert.equal((await request('outsider',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:1,sign:1}]})).status,403);
+    assert.equal((await request('alice',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:21,sign:1}]})).status,400);
+    const tray=(await request('alice',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:2,sign:1},{sides:100,qty:1,sign:-1}],skinId:'carmesim'}));
+    assert.equal(tray.status,201);assert.equal(tray.body.trayRoll.username,'alice');assert.equal(tray.body.trayRoll.dice.length,4);
+    assert.deepEqual((await request('bob',`/rooms/${room}`)).body.trayRoll,tray.body.trayRoll);
+    assert.equal((await request('bob',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:1,sign:1}]})).status,409);
+    const model={sheetFields:[{id:'force',label:'Força',type:'number',tab:'Atributos'},{id:'life',label:'Vida',type:'status',tab:'Recursos'}],masterNotes:'Segredo do mestre'};
+    assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',model)).status,200);
+    assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',{sheetFields:[{id:'bad',label:'Inválido',type:'text',tab:{}}]})).status,400);
+    assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',{sheetFields:[model.sheetFields[0],model.sheetFields[0]]})).status,400);
+    for(const type of ['list','checklist']){
+      assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',{sheetFields:[...model.sheetFields,{id:'items',label:'Itens',type}]})).status,200);
+      assert.equal((await request('alice',`/rooms/${room}/sheets/alice`,'PATCH',{values:{items:[null]}})).status,400);
+    }
+    assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',model)).status,200);
+    assert.equal((await request('alice',`/rooms/${room}/state`,'PATCH',{masterNotes:'roubado'})).status,403);
+    assert.equal((await request('alice',`/rooms/${room}/sheets/alice`,'PATCH',{values:{force:3,life:{current:4,max:5}},observations:'Nota de Alice'})).status,200);
+    assert.equal((await request('bob',`/rooms/${room}/sheets/bob`,'PATCH',{observations:'Nota de Bob'})).status,200);
+    assert.equal((await request('alice',`/rooms/${room}/sheets/bob`,'PATCH',{observations:'invasão'})).status,403);
+    assert.equal((await request('master',`/rooms/${room}/sheets/alice`,'PATCH',{values:{force:20}})).status,403);
+    assert.equal((await request('alice',`/rooms/${room}/sheets/alice`,'PATCH',{extraFields:[]})).status,400);
+    assert.equal((await request('alice',`/rooms/${room}/sheets/alice`,'PATCH',{values:{fake:99}})).status,400);
+    assert.equal((await request('alice',`/rooms/${room}/profiles/bob`,'PATCH',{bars:[]})).status,403);
+    const playerView=(await request('alice',`/rooms/${room}`)).body;
+    assert.equal(playerView.state.masterNotes,undefined);assert.equal(playerView.state.playerSheets.bob,undefined);assert.equal(playerView.state.playerSheets.alice.values.force,3);
+    assert.equal(playerView.groupBars.alice.bars[0].current,4);
+    assert.equal((await request('master',`/rooms/${room}`)).body.state.masterNotes,'Segredo do mestre');
+    assert.equal((await request('owner',`/rooms/${room}/sheets/alice`,'PATCH',{values:{force:4}})).status,200);
+    const masterMember=playerView.members.find(m=>m.username==='master'),aliceMember=playerView.members.find(m=>m.username==='alice'),ownerMember=playerView.members.find(m=>m.username==='owner');
+    assert.equal((await request('alice',`/rooms/${room}/members/${aliceMember.id}`,'PATCH',{role:'master'})).status,403);
+    assert.equal((await request('master',`/rooms/${room}/invites`,'POST',{role:'master'})).status,403);
+    assert.equal((await request('owner',`/rooms/${room}/members/${ownerMember.id}`,'DELETE')).status,400);
+    const invitation=(await request('master',`/rooms/${room}/invites`,'POST',{role:'player'})).body;
+    assert.ok(invitation.code);
+    const joined=await request('outsider','/join','POST',{code:invitation.code,role:'admin'});assert.equal(joined.status,200);assert.equal(joined.body.role,'player');
+    assert.equal((await request('master',`/rooms/${room}/invites/${invitation.id}`,'DELETE')).status,200);
+    assert.equal((await request('bob','/join','POST',{code:invitation.code})).status,404);
+    const controller=new AbortController();
+    const events=await fetch(`${base}/api/rooms/${room}/events`,{headers:{Cookie:clients.alice},signal:controller.signal});const reader=events.body.getReader();
+    let buffer='';const decoder=new TextDecoder();
+    async function event(){while(!buffer.includes('\n\n')){const chunk=await reader.read();if(chunk.done)throw Error('SSE closed');buffer+=decoder.decode(chunk.value,{stream:true});}const end=buffer.indexOf('\n\n');const result=buffer.slice(0,end);buffer=buffer.slice(end+2);return result;}
+    const first=await event();assert.match(first,/event: room/);assert.ok(!first.includes('Segredo do mestre'));assert.ok(!first.includes('Nota de Bob'));
+    await request('master',`/rooms/${room}/state`,'PATCH',{sheetFont:'fell'});
+    const change=await event();assert.match(change,/"sheetFont":"fell"/);
+    await request('owner',`/rooms/${room}/members/${aliceMember.id}`,'DELETE');
+    const revoked=await event();assert.match(revoked,/event: revoked/);controller.abort();
+    assert.equal((await request('alice',`/rooms/${room}`)).status,403);
+    await request('owner',`/rooms/${room}/members/${masterMember.id}`,'PATCH',{role:'player'});
+    assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',{masterNotes:'no'})).status,403);
+    const other=(await request('owner','/rooms','POST',{name:'Outra mesa'})).body;
+    assert.equal(Object.keys(other.state.playerSheets).length,1);assert.equal(other.state.sheetFields.length,0);
+    assert.equal((await request('bob',`/rooms/${other.id}`)).status,403);
+    const badOrigin=await fetch(`${base}/api/rooms`,{method:'POST',headers:{Cookie:clients.owner,Origin:'https://evil.example','Content-Type':'application/json'},body:JSON.stringify({name:'CSRF'})});assert.equal(badOrigin.status,403);
+    app.close();app=createApplication({dbPath,rateLimit:false});await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));base=`http://127.0.0.1:${app.server.address().port}`;
+    const restored=await request('owner',`/rooms/${room}`);assert.equal(restored.status,200);assert.equal(restored.body.state.playerSheets.bob.observations,'Nota de Bob');assert.equal(restored.body.state.sheetFont,'fell');
+    await request('owner','/auth/logout','POST');assert.equal((await request('owner','/rooms')).status,401);
+  }finally{app.close();rmSync(directory,{recursive:true,force:true});}
+});

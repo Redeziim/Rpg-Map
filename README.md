@@ -4,23 +4,23 @@ Aplicação web para condução e acompanhamento de campanhas de RPG. Reúne map
 
 ## Requisitos
 
-- Node.js 18 ou superior
+- Node.js 24 ou superior
 - npm
 
 ## Execução local
 
 ```bash
 npm ci
-npm run dev -- --host 127.0.0.1
+npm run dev
 ```
 
-O Vite informa a URL local após iniciar o servidor.
+O comando inicia o site em http://localhost:5173 e a API na porta 3001. Crie uma conta para começar.
 
 ## Validação
 
 ```bash
 npm run build
-npm run preview -- --host 127.0.0.1
+npm test
 ```
 
 O resultado de produção é gerado em `dist/` e não deve ser versionado.
@@ -38,7 +38,9 @@ O resultado de produção é gerado em `dist/` e não deve ser versionado.
 
 ## Persistência
 
-A aplicação usa `window.storage` quando o ambiente fornece essa API. No navegador comum, usa `localStorage`. Mapas enviados, pontos, fichas e barras permanecem apenas no armazenamento disponível no cliente; não existe servidor de dados neste repositório.
+O servidor Node.js armazena contas e mesas em SQLite. Salas online têm permissões de jogador, mestre e ADM e eventos em tempo real, incluindo a bandeja 3D de dados compartilhada.
+
+Consulte [ONLINE.md](ONLINE.md) para publicar com Docker, configurar armazenamento persistente e convidar jogadores. Banco local, sessões, dependências e arquivos de ambiente não são versionados.
 
 ## Orientação para agentes
 

@@ -71,3 +71,18 @@ export function settleOrientation(sides, orientation) {
 export function percentileValue(tens, units) {
   return ((tens % 10) * 10 + units % 10) || 100;
 }
+
+// Presentation only: face the recorded result toward the viewer, without rerolling.
+export function resultPresentationOrientation(sides,value,direction){
+  const face=getDieDefinition(sides).faces.find(f=>f.value===value);
+  if(!face)throw new Error('Resultado de dado inválido.');
+  const toward=direction.clone().normalize();
+  const normal=face.normal.clone().multiplyScalar(sides===4?-1:1);
+  const rotation=new THREE.Quaternion().setFromUnitVectors(normal,toward);
+  if(sides===4)return rotation;
+  const labelRotation=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),face.normal);
+  const up=new THREE.Vector3(0,1,0).applyQuaternion(labelRotation).applyQuaternion(rotation);
+  const desired=new THREE.Vector3(0,1,0).addScaledVector(toward,-toward.y).normalize();
+  const angle=Math.atan2(toward.dot(up.clone().cross(desired)),up.dot(desired));
+  return new THREE.Quaternion().setFromAxisAngle(toward,angle).multiply(rotation);
+}

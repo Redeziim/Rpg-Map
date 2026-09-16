@@ -1,5 +1,9 @@
+import DiceFocus from './DiceFocus.jsx';
+import DiceTray from './DiceTray.jsx';
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
+import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
+import RoomManagement from './RoomManagement.jsx';
+import { ROLE_LABELS } from '../api.js';
 import Scene3D from './Scene3D.jsx';
 import DiceRoller from './DiceRoller.jsx';
 import GroupStatus from './GroupStatus.jsx';
@@ -7,34 +11,41 @@ import StatusBars from './StatusBars.jsx';
 import CharacterSheet from './CharacterSheet.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula } from './sheetHelpers.jsx';
 
-const RPGMapExplorer = () => {
-  const storage = (typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function') ? window.storage : {
-    get: async (key) => { try { return { value: localStorage.getItem(key) }; } catch { return null; } },
-    set: async (key, val) => { try { localStorage.setItem(key, val); } catch {} }
+const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) => {
+  const [heldDice,setHeldDice]=useState(null);
+  const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId});return true;};
+  const throwHeldDice=async (gesture,physics)=>{if(!heldDice)return false;const result=await mutate('/tray-rolls',{...heldDice,gesture,physics},'POST');if(result)setHeldDice(null);return result;};
+  const [selectedPlayer,setSelectedPlayer]=useState('');
+  const [adminMode,setAdminMode]=useState('master');
+  const viewMode=room.role==='admin'?adminMode:room.role==='master'?'master':'player';
+  const [activeTab,setActiveTab]=useState('mesa');
+  const {masterNotes='',mapImage,points,sheetFields,sheetFont,playerSheets,statusBarsData}=room.state;
+  const playerName=user.username;
+  const [selectedPoint,setSelectedPoint]=useState(null);
+  const [showPointModal,setShowPointModal]=useState(false);
+  const [newPoint,setNewPoint]=useState({x:0,y:0,name:'',description:'',type:'cidade'});
+  const [show3DScene,setShow3DScene]=useState(null);
+  const [scale,setScale]=useState(1);
+  const [position,setPosition]=useState({x:0,y:0});
+  const [dragging,setDragging]=useState(false);
+  const [dragStart,setDragStart]=useState({x:0,y:0});
+  const canvasRef=useRef(null),mapRef=useRef(null);
+  const saveShared=patch=>mutate('/state',patch,'PATCH',current=>({...current,state:{...current.state,...patch}}));
+  const saveSheetFields=sheetFields=>saveShared({sheetFields});
+  const saveSheetFont=sheetFont=>saveShared({sheetFont});
+  const savePlayerName=()=>{};
+  const updatePlayerSheet=(name,updates)=>mutate(`/sheets/${encodeURIComponent(name)}`,updates,'PATCH',current=>{
+    const previous=current.state.playerSheets[name]||{values:{},extraFields:[]};
+    return {...current,state:{...current.state,playerSheets:{...current.state.playerSheets,[name]:{...previous,...updates,values:{...previous.values,...updates.values}}}}};
+  });
+  const updateProfile=(name,updates)=>mutate(`/profiles/${encodeURIComponent(name)}`,updates,'PATCH',current=>({...current,state:{...current.state,statusBarsData:{...current.state.statusBarsData,[name]:{...current.state.statusBarsData[name],...updates}}}}));
+  const updatePlayerBars=(name,bars)=>updateProfile(name,{bars});
+  const updatePlayerAvatar=(name,avatar)=>updateProfile(name,{avatar});
+  const savePoints=points=>saveShared({points});
+  const handleImageUpload=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();reader.onload=()=>saveShared({mapImage:reader.result});reader.readAsDataURL(file);
   };
-
-  const [selectedPlayer, setSelectedPlayer] = useState('');
-  const [masterNotes, setMasterNotes] = useState(() => localStorage.getItem('rpg-master-notes') || '');
-  const [mapImage, setMapImage] = useState(null);
-  const [points, setPoints] = useState([]);
-  const [selectedPoint, setSelectedPoint] = useState(null);
-  const [viewMode, setViewMode] = useState('player'); // 'player' ou 'master'
-  const [activeTab, setActiveTab] = useState('ficha'); // 'mapa' ou 'ficha'
-  const [showPointModal, setShowPointModal] = useState(false);
-  const [newPoint, setNewPoint] = useState({ x: 0, y: 0, name: '', description: '', type: 'cidade' });
-  const [show3DScene, setShow3DScene] = useState(null);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [users, setUsers] = useState([]);
-  const [sheetFields, setSheetFields] = useState([]);
-  const [sheetFont, setSheetFont] = useState('cinzel');
-  const [playerSheets, setPlayerSheets] = useState({});
-  const [playerName, setPlayerName] = useState('');
-  const [statusBarsData, setStatusBarsData] = useState({});
-  const canvasRef = useRef(null);
-  const mapRef = useRef(null);
 
   const pointTypes = [
     { value: 'cidade', label: 'Cidade', icon: Castle, color: '#c7ab76' },
@@ -43,171 +54,6 @@ const RPGMapExplorer = () => {
     { value: 'floresta', label: 'Floresta', icon: Grid, color: '#228b22' },
     { value: 'evento', label: 'Evento', icon: Sword, color: '#ff4500' },
   ];
-
-  // Carregar dados do storage compartilhado
-  useEffect(() => {
-    loadSharedData();
-    loadPersonalData(); // apenas uma vez: dados pessoais não sofrem alteração externa
-    const interval = setInterval(loadSharedData, 2000); // Atualizar a cada 2 segundos
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadSharedData = async () => {
-    try {
-      const pointsData = await storage.get('rpg-map-points', true);
-      if (pointsData && pointsData.value) {
-        const parsed = JSON.parse(pointsData.value);
-        setPoints(Array.isArray(parsed) ? parsed : []);
-      }
-
-      const mapData = await storage.get('rpg-map-image', true);
-      if (mapData) {
-        setMapImage(mapData.value);
-      }
-    } catch (error) {
-      console.log('Primeira vez carregando dados:', error);
-    }
-
-    try {
-      const fieldsData = await storage.get('rpg-sheet-fields', true);
-      if (fieldsData && fieldsData.value) {
-        const parsed = JSON.parse(fieldsData.value);
-        setSheetFields(Array.isArray(parsed) ? parsed : []);
-      }
-      const fontData = await storage.get('rpg-sheet-font', true);
-      if (fontData) {
-        setSheetFont(fontData.value);
-      }
-    } catch (error) {
-      console.log('Primeira vez carregando estrutura da ficha:', error);
-    }
-
-    try {
-      const barsData = await storage.get('rpg-status-bars', true);
-      if (barsData && barsData.value) {
-        const parsed = JSON.parse(barsData.value);
-        setStatusBarsData(typeof parsed === 'object' && parsed !== null ? parsed : {});
-      }
-    } catch (error) {
-      console.log('Primeira vez carregando barras de status:', error);
-    }
-
-    try {
-      const sheetsData = await storage.get('rpg-player-sheets', true);
-      if (sheetsData && sheetsData.value) {
-        const parsed = JSON.parse(sheetsData.value);
-        setPlayerSheets(typeof parsed === 'object' && parsed !== null ? parsed : {});
-      }
-    } catch (error) {
-      console.log('Primeira vez carregando fichas dos jogadores:', error);
-    }
-  };
-
-  // Apenas o nome do jogador é pessoal — carregado só uma vez
-  const loadPersonalData = async () => {
-    try {
-      const nameData = await storage.get('rpg-player-name', false);
-      if (nameData) {
-        setPlayerName(nameData.value);
-      }
-    } catch (error) {
-      console.log('Primeira vez carregando nome do jogador:', error);
-    }
-  };
-
-  const saveSheetFields = async (newFields) => {
-    setSheetFields(newFields);
-    try {
-      await storage.set('rpg-sheet-fields', JSON.stringify(newFields), true);
-    } catch (error) {
-      console.error('Erro ao salvar campos da ficha:', error);
-    }
-  };
-
-  const saveSheetFont = async (fontId) => {
-    setSheetFont(fontId);
-    try {
-      await storage.set('rpg-sheet-font', fontId, true);
-    } catch (error) {
-      console.error('Erro ao salvar fonte da ficha:', error);
-    }
-  };
-
-  // Atualiza parcialmente a ficha de UM jogador (extraFields e/ou values) dentro do
-  // objeto compartilhado, preservando o que não foi alterado
-  const updatePlayerSheet = async (targetPlayerName, updates) => {
-    if (!targetPlayerName) return;
-    const prevEntry = playerSheets[targetPlayerName] || { extraFields: [], values: {} };
-    const nextEntry = { ...prevEntry, ...updates };
-    const next = { ...playerSheets, [targetPlayerName]: nextEntry };
-    setPlayerSheets(next);
-    try {
-      await storage.set('rpg-player-sheets', JSON.stringify(next), true);
-    } catch (error) {
-      console.error('Erro ao salvar ficha do jogador:', error);
-    }
-  };
-
-  const savePlayerName = async (name) => {
-    setPlayerName(name);
-    if (!playerSheets[name]) await updatePlayerSheet(name, {});
-    try {
-      await storage.set('rpg-player-name', name, false);
-    } catch (error) {
-      console.error('Erro ao salvar nome do jogador:', error);
-    }
-  };
-
-  // Atualiza as barras de UM jogador dentro do objeto compartilhado (todos os jogadores),
-  // preservando o avatar já salvo
-  const updatePlayerBars = async (targetPlayerName, newBars) => {
-    const prevEntry = statusBarsData[targetPlayerName] || { avatar: null, bars: [] };
-    const next = { ...statusBarsData, [targetPlayerName]: { ...prevEntry, bars: newBars } };
-    setStatusBarsData(next);
-    try {
-      await storage.set('rpg-status-bars', JSON.stringify(next), true);
-    } catch (error) {
-      console.error('Erro ao salvar barras de status:', error);
-    }
-  };
-
-  const updatePlayerAvatar = async (targetPlayerName, avatarDataUrl) => {
-    const prevEntry = statusBarsData[targetPlayerName] || { avatar: null, bars: [] };
-    const next = { ...statusBarsData, [targetPlayerName]: { ...prevEntry, avatar: avatarDataUrl } };
-    setStatusBarsData(next);
-    try {
-      await storage.set('rpg-status-bars', JSON.stringify(next), true);
-    } catch (error) {
-      console.error('Erro ao salvar avatar do jogador:', error);
-    }
-  };
-
-
-  const savePoints = async (newPoints) => {
-    try {
-      await storage.set('rpg-map-points', JSON.stringify(newPoints), true);
-      setPoints(newPoints);
-    } catch (error) {
-      console.error('Erro ao salvar pontos:', error);
-    }
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const imageData = event.target.result;
-        setMapImage(imageData);
-        try {
-          await storage.set('rpg-map-image', imageData, true);
-        } catch (error) {
-          console.error('Erro ao salvar mapa:', error);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleCanvasClick = (e) => {
     if (viewMode !== 'master' || dragging) return;
@@ -324,11 +170,8 @@ const RPGMapExplorer = () => {
     img.src = mapImage;
   }, [mapImage, points, scale, position]);
 
-  const playerNames = Array.from(new Set([...Object.keys(playerSheets), ...Object.keys(statusBarsData)]));
-  const groupEntries = Object.fromEntries(playerNames.map(name => [name, {
-    ...(statusBarsData[name] || {}),
-    bars: [...(statusBarsData[name]?.bars || []), ...sheetFields.filter(f => f.type === 'status').map((f,i) => ({ id: f.id, label: f.label, color: ['#b88464','#d4bd8a','#e2d6bf'][i%3], ...(playerSheets[name]?.values?.[f.id] || {current:0,max:0}) }))]
-  }]));
+  const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
+  const groupEntries=room.groupBars;
   return (
     <div className="rpg-container mist-theme">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a><div className="parchment-bg" aria-hidden="true"></div>
@@ -340,20 +183,17 @@ const RPGMapExplorer = () => {
             <div className="brand-mark"><ScrollText size={25} /></div><div><span className="brand-kicker">UM REFÚGIO PARA SUAS HISTÓRIAS</span><h1>Grimório</h1></div>
           </div>
           <div className="header-controls">
-            <button 
-              className={`mode-btn ${viewMode === 'master' ? 'active' : ''}`}
-              onClick={() => setViewMode(viewMode === 'master' ? 'player' : 'master')}
-            >
-              {viewMode === 'master' ? <Edit3 size={20} /> : <Eye size={20} />}
-              {viewMode === 'master' ? 'Modo Mestre' : 'Modo Jogador'}
-            </button>
+            <div className="room-title-nav">{room.name}</div>
+            {room.role==='admin'?<button className={`mode-btn ${viewMode==='master'?'active':''}`} onClick={()=>setAdminMode(viewMode==='master'?'player':'master')} title="Como ADM, você pode alternar entre jogador e mestre"><ShieldCheck size={18}/>{viewMode==='master'?'ADM · modo mestre':'ADM · modo jogador'}</button>:<div className="identity-label">{ROLE_LABELS[room.role]} · @{user.username}</div>}
+            <span className={`sync-status ${connection!=='online'?'offline':''}`} role="status">{saving?'Enviando alterações…':connection==='online'?'Conectado à mesa':connection==='connecting'?'Conectando…':'Reconectando ao servidor…'}</span>
+            <div className="account-nav-actions"><button onClick={onExit}>Minhas mesas</button><button onClick={onLogout}>Sair da conta</button></div>
             <div className="user-indicator">
               <Users size={20} />
               <span>{points.length} pontos</span>
             </div>
           </div>
         </div>
-        <nav className="tab-nav" aria-label="Navegação principal">
+        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} onClick={()=>setActiveTab('mesa')}><Users size={18}/>Mesa</button>
           <button
             className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
             onClick={() => setActiveTab('mapa')}
@@ -366,7 +206,7 @@ const RPGMapExplorer = () => {
             onClick={() => setActiveTab('ficha')}
           >
             <ScrollText size={18} />
-            Ficha de Personagem
+            {viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}
           </button>
           <button
             className={`tab-btn ${activeTab === 'grupo' ? 'active' : ''}`}
@@ -380,7 +220,7 @@ const RPGMapExplorer = () => {
       </header>
 
       <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1}>
-        {activeTab === 'mapa' ? (
+        {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate}/>:activeTab === 'mapa' ? (
           <>
             {/* Sidebar */}
             <aside className="sidebar">
@@ -477,6 +317,7 @@ const RPGMapExplorer = () => {
             {/* Área principal da Ficha de Personagem */}
             <main className="sheet-area">
               <CharacterSheet
+                canEditSelected={room.role==='admin'}
                 selectedPlayer={selectedPlayer}
                 onSelectPlayer={setSelectedPlayer}
                 playerNames={playerNames}
@@ -503,22 +344,26 @@ const RPGMapExplorer = () => {
 
             {/* Painel lateral com o Dado */}
             <aside className="sheet-sidebar">
-              <DiceRoller />
+              <DiceRoller onTrayRoll={onTrayRoll}/>
             </aside>
           </>
         ) : (
           <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>A mesa</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} jogadores</span></div>
+            <DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/>
+            <div className="group-dice-controls"><DiceRoller onTrayRoll={onTrayRoll}/></div>
             <GroupStatus
               viewMode={viewMode}
               allPlayersBars={groupEntries}
               onOpenSheet={name => {setSelectedPlayer(name);setActiveTab('ficha');}}
               onUpdatePlayerBars={updatePlayerBars}
             />
-            {viewMode === 'master' && <section className="observations-panel master-notes"><div className="section-heading"><h3>Notas do mestre</h3><span>Visíveis no modo mestre</span></div><label className="sr-only" htmlFor="master-notes">Notas do mestre</label><textarea id="master-notes" rows={6} value={masterNotes} onChange={e => {setMasterNotes(e.target.value);localStorage.setItem('rpg-master-notes',e.target.value);}} placeholder="Prepare encontros, pistas e lembretes para a próxima sessão…" /></section>}
+            {viewMode === 'master' && <section className="observations-panel master-notes"><div className="section-heading"><h3>Notas do mestre</h3><span>Visíveis no modo mestre</span></div><label className="sr-only" htmlFor="master-notes">Notas do mestre</label><textarea id="master-notes" rows={6} value={masterNotes} onChange={e => saveShared({masterNotes:e.target.value})} placeholder="Prepare encontros, pistas e lembretes para a próxima sessão…" /></section>}
           </main>
         )}
       </div>
 
+      {activeTab!=='grupo'&&<DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/>}
+      <DiceFocus roll={room.trayRoll} serverTime={room.serverTime} enabled={activeTab==='grupo'||room.trayRoll?.username===user.username}/>
       {/* Modal de adicionar ponto */}
       {showPointModal && (
         <div className="modal-overlay">

@@ -4,7 +4,7 @@ import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 
-const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile }) => {
+const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('text');
   const [newFieldLabel, setNewFieldLabel] = useState('');
@@ -17,6 +17,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   const DEFAULT_TAB = 'Geral';
 
   const isMaster = viewMode === 'master';
+  const readOnly = isMaster && !canEditSelected;
   const fontFamily = (SHEET_FONTS.find(f => f.id === sheetFont) || SHEET_FONTS[0]).family;
   const playerNames = knownPlayers;
   const activePlayer = isMaster ? masterSelectedPlayer : playerName;
@@ -54,10 +55,10 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
 
   // --- Valores preenchidos (base + extras, mesmo objeto de valores) ---
   const setValue = async (id, value) => {
-    if (isMaster || !activePlayer) return;
+    if (readOnly || !activePlayer) return;
     setSaveStatus('saving');
-    await onUpdatePlayerSheet(activePlayer, { values: { ...draftValues, [id]: value } });
-    setSaveStatus('saved');
+    const saved=await onUpdatePlayerSheet(activePlayer, { values: { [id]: value } });
+    setSaveStatus(saved===false?'error':'saved');
   };
 
   const handleImageField = (id, e) => {
@@ -102,12 +103,12 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   };
 
   const rollAttack = (id) => {
-    if(isMaster) return;
+    if(readOnly) return;
     const bonus=Number(draftValues[id]?.bonus)||0;
     setAttackRolls(prev=>({...prev,[id]:{...prev[id],atkRolling:true,atkSpin:(prev[id]?.atkSpin||0)+1,atk:null,bonus}}));
   };
   const rollDamage = (id) => {
-    if(isMaster)return;
+    if(readOnly)return;
     const match=(draftValues[id]?.damage || '').replace(/\s/g,'').match(/^(\d+)d(4|6|8|10|12|20|100)([+-]\d+)?$/i);
     if(!match||Number(match[1])<1)return;
     const qty=Math.min(Number(match[1]),10),sides=Number(match[2]),mod=Number(match[3]||0);
@@ -131,7 +132,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   const allTabNames = Array.from(new Set(allFieldsForFormulas.map(f => f.tab).filter(Boolean)));
 
   const renderField = (f) => (
-    <fieldset disabled={isMaster} key={f.id} className={`sheet-field sheet-field-${f.type}`}>
+    <fieldset disabled={readOnly} key={f.id} className={`sheet-field sheet-field-${f.type}`}>
       <div className="sheet-field-label-row">
         <label htmlFor={`field-${f.id}`} style={{ fontFamily }}>{f.label}</label>
 
@@ -313,18 +314,18 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
           <button aria-label={`Remover ${f.label}`} onClick={() => { if(window.confirm(`Remover o campo “${f.label}” do modelo?`)) removeField(f.id); }}><Trash2 size={14} /></button>
         </div>)}</div>
       </section>}
-      {isMaster && <label className="player-select">Consultar personagem<select value={selectedPlayer} onChange={e => onSelectPlayer(e.target.value)}><option value="">Selecione um jogador…</option>{playerNames.map(n => <option key={n}>{n}</option>)}</select><span><Eye size={14} /> Somente leitura</span></label>}
+      {isMaster && <label className="player-select">Consultar personagem<select value={selectedPlayer} onChange={e => onSelectPlayer(e.target.value)}><option value="">Selecione um jogador…</option>{playerNames.map(n => <option key={n}>{n}</option>)}</select><span><Eye size={14} /> {readOnly?'Somente leitura':'Acesso de ADM'}</span></label>}
       <div className="dossier-layout">
         <aside className="dossier-profile">{profile}<div className="profile-footnote"><span>✦</span><p>Cada marca, uma escolha.<br />Cada escolha, um caminho.</p></div></aside>
         <div className="dossier-content">
           {!activePlayer ? <div className="empty-state sheet-empty"><ScrollText size={42} /><h3>{isMaster ? 'Um olhar sobre a mesa' : 'Sua ficha começa aqui'}</h3><p>{isMaster ? 'Selecione um jogador para consultar seus atributos, recursos e observações.' : 'Informe seu nome ao lado para acessar a ficha da campanha.'}</p></div> : <>
-            <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : 'Sua ficha'}</span></div>
+            <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : saveStatus==='error' ? 'Falha ao salvar' : 'Sua ficha'}</span></div>
             {!categories.length && <div className="empty-state sheet-empty"><ScrollText size={36} /><h3>O modelo ainda está em branco</h3><p>{isMaster ? 'Adicione campos no modelo da campanha acima.' : 'O mestre irá definir os campos da campanha. Você já pode registrar observações abaixo.'}</p></div>}
             <div className="category-layout">{categories.map((category,i) => <section key={category} className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''}`}>
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
               <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
             </section>)}</div>
-            <section className="observations-panel"><div className="section-heading"><h3><Edit3 size={16} />Observações</h3><span>Do jogador</span></div><label className="sr-only" htmlFor="player-observations">Observações do jogador</label><textarea id="player-observations" readOnly={isMaster} rows={5} value={activeEntry.observations || ''} placeholder={isMaster ? 'Nenhuma observação registrada.' : 'Lembretes, detalhes e anotações da sessão…'} onChange={e => onUpdatePlayerSheet(activePlayer,{observations:e.target.value})} /></section>
+            <section className="observations-panel"><div className="section-heading"><h3><Edit3 size={16} />Observações</h3><span>Do jogador</span></div><label className="sr-only" htmlFor="player-observations">Observações do jogador</label><textarea id="player-observations" readOnly={readOnly} rows={5} value={activeEntry.observations || ''} placeholder={isMaster ? 'Nenhuma observação registrada.' : 'Lembretes, detalhes e anotações da sessão…'} onChange={e => onUpdatePlayerSheet(activePlayer,{observations:e.target.value})} /></section>
           </>}
         </div>
       </div>

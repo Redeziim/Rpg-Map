@@ -1,10 +1,7 @@
 node_modules/
 dist/
-.next/
-
+data/
 .env
-.env.local
-.env.*.local
-
+.env.*
+!.env.example
 *.log
-.DS_Store
