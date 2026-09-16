@@ -7,14 +7,6 @@ Aplicação web para condução e acompanhamento de campanhas de RPG. Reúne map
 - Node.js 24 ou superior
 - npm
 
-## Execução local
-
-```bash
-npm ci
-npm run dev
-```
-
-O comando inicia o site em http://localhost:5173 e a API na porta 3001. Crie uma conta para começar.
 
 ## Validação
 
