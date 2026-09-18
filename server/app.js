@@ -1,3 +1,6 @@
+import {tower} from './structurePhysics.js';
+import {validateStructure} from './structures.js';
+import {validateMapAsset,validateMapTransform} from './mapAssets.js';
 import { createTrayRoll } from './tray.js';
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
@@ -23,10 +26,10 @@ const string = (value, max, label, min=0) => {
 };
 const image = value => value===null || (typeof value==='string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value));
 const initialState = () => ({points:[],mapImage:null,sheetFields:[],sheetFont:'cinzel',masterNotes:'',playerSheets:{},statusBarsData:{}});
-async function body(req) {
+async function body(req,maxBytes=10*1024*1024) {
   if(!req.headers['content-type']?.startsWith('application/json')) fail(415,'Envie JSON.');
   let size=0,chunks=[];
-  for await (const chunk of req) { size+=chunk.length;if(size>10*1024*1024)fail(413,'Arquivo muito grande. Limite: 10 MB.');chunks.push(chunk); }
+  for await (const chunk of req) { size+=chunk.length;if(size>maxBytes)fail(413,'Arquivo muito grande para esta operação.');chunks.push(chunk); }
   let value;try{value=JSON.parse(Buffer.concat(chunks).toString());}catch{fail(400,'JSON inválido.');}
   if(!object(value))fail(400,'Dados inválidos.');safeKeys(value);return value;
 }
@@ -38,6 +41,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY,name TEXT NOT NULL,owner_id TEXT NOT NULL REFERENCES users(id),state TEXT NOT NULL,revision INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS members(room_id TEXT NOT NULL REFERENCES rooms(id),user_id TEXT NOT NULL REFERENCES users(id),role TEXT NOT NULL CHECK(role IN ('admin','master','player')),PRIMARY KEY(room_id,user_id));
+    CREATE TABLE IF NOT EXISTS dice_structures(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),name TEXT NOT NULL,mesh TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS map_assets(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),bundle TEXT NOT NULL,bytes INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS invites(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),token_hash TEXT NOT NULL UNIQUE,role TEXT NOT NULL CHECK(role IN ('master','player')),expires INTEGER NOT NULL,created_by TEXT NOT NULL REFERENCES users(id));
   `);
   const query=(sql,...params)=>db.prepare(sql).get(...params);
@@ -71,7 +76,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(m.role!=='player'||members.find(u=>u.id===userId)?.username===name)));
     state.statusBarsData=Object.fromEntries(Object.entries(state.statusBarsData).filter(([name])=>usernames.has(name)));
     if(m.role==='player')delete state.masterNotes;
-    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,members,state,groupBars,trayRoll:trayRolls.get(roomId)||null,serverTime:Date.now()};
+    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:trayRolls.get(roomId)||null,serverTime:Date.now()};
   }
   function send(client){
     try{
@@ -120,7 +125,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(req.headers['sec-fetch-site']==='cross-site')fail(403,'Origem não autorizada.');
     }
     // Read the entire payload before checking current permissions; slow requests must not retain revoked access.
-    const requestBody=['POST','PATCH'].includes(method)&&url.pathname!=='/api/auth/logout'?await body(req):{};
+    if(path[3]==='map-assets'&&method==='POST')privileged(membership(path[2],auth(req).id));
+    const requestBody=['POST','PATCH'].includes(method)&&url.pathname!=='/api/auth/logout'?await body(req,path[3]==='map-assets'?72*1024*1024:10*1024*1024):{};
     if(path[1]==='auth'&&['login','register'].includes(path[2])&&method==='POST'){
       limit(`auth:${ip}`,12);const data=requestBody;
       const username=string(data.username,30,'Usuário',3).trim().toLowerCase();
@@ -165,16 +171,55 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     if(path[1]!=='rooms'||!path[2])fail(404,'Rota não encontrada.');
     const roomId=path[2],m=membership(roomId,user.id);
     if(path.length===3&&method==='GET')return json(res,200,snapshot(roomId,user.id));
+    if(path[3]==='map-assets'){
+      if(method==='GET'&&path[4]){
+        const asset=query('SELECT bundle FROM map_assets WHERE id=? AND room_id=?',path[4],roomId);
+        if(!asset)fail(404,'Modelo não encontrado.');
+        return json(res,200,JSON.parse(asset.bundle));
+      }
+      if(method==='POST'&&path.length===4){
+        privileged(m);limit(`map-upload:${user.id}`,12);
+        const bundle=validateMapAsset(requestBody),state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+        const objects=state.mapObjects||[];
+        if(objects.length>=100)fail(400,'Limite de 100 objetos por mesa.');
+        const used=query('SELECT COALESCE(SUM(bytes),0) AS size FROM map_assets WHERE room_id=?',roomId).size;
+        if(used+bundle.bytes>300*1024*1024)fail(413,'Limite de 300 MB de modelos por mesa.');
+        const id=randomUUID();
+        state.mapObjects=[...objects,{id,assetId:id,name:bundle.main.split('/').pop().slice(0,120),position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}];
+        transaction(()=>{run('INSERT INTO map_assets VALUES(?,?,?,?)',id,roomId,JSON.stringify(bundle),bundle.bytes);saveState(roomId,state);});
+        broadcast(roomId);return json(res,201,snapshot(roomId,user.id));
+      }
+    }
+    if(path[3]==='map-objects'&&path[4]&&['PATCH','DELETE'].includes(method)){
+      privileged(m);const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+      const item=state.mapObjects?.find(o=>o.id===path[4]);if(!item)fail(404,'Objeto não encontrado.');
+      if(method==='PATCH')Object.assign(item,validateMapTransform(requestBody));
+      else state.mapObjects=state.mapObjects.filter(o=>o.id!==item.id);
+      transaction(()=>{saveState(roomId,state);if(method==='DELETE')run('DELETE FROM map_assets WHERE id=? AND room_id=?',item.assetId,roomId);});
+      broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+    }
     if(path[3]==='events'&&method==='GET'){
       if([...clients].filter(c=>c.userId===user.id).length>=10)fail(429,'Muitas salas abertas. Feche algumas abas.');
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
       const client={roomId,userId:user.id,tokenHash:user.token_hash,res};clients.add(client);send(client);res.on('close',()=>clients.delete(client));return;
     }
+    if(path[3]==='dice-structures'){
+      if(method==='GET'&&path[4]){const item=query('SELECT mesh FROM dice_structures WHERE id=? AND room_id=?',path[4],roomId);if(!item)fail(404,'Estrutura não encontrada.');return json(res,200,JSON.parse(item.mesh));}
+      if(method==='POST'&&path.length===4){
+        limit(`structure:${user.id}`,10);const data=validateStructure(requestBody);
+        if(query('SELECT count(*) AS n FROM dice_structures WHERE room_id=?',roomId).n>=10)fail(400,'Limite de 10 estruturas por mesa.');
+        const id=randomUUID();run('INSERT INTO dice_structures VALUES(?,?,?,?)',id,roomId,data.name,JSON.stringify(data));broadcast(roomId);return json(res,201,{id,...snapshot(roomId,user.id),structureId:id});
+      }
+    }
     if(path[3]==='tray-rolls'&&method==='POST'){
       const previous=trayRolls.get(roomId);
       if(previous&&Date.now()<previous.startedAt+previous.duration)fail(409,'Aguarde os dados da mesa pararem.');
       limit(`tray:${user.id}`,30);
-      const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics);
+      const structureId=requestBody.structureId||'tray';let structure=null;
+      if(structureId==='tower')structure=tower;
+      else if(structureId!=='tray'){const asset=query('SELECT mesh FROM dice_structures WHERE id=? AND room_id=?',structureId,roomId);if(!asset)fail(404,'Estrutura não encontrada nesta mesa.');structure=JSON.parse(asset.mesh);}
+      const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics,structure);
+      roll.structureId=structureId;
       trayRolls.set(roomId,roll);broadcast(roomId);return json(res,201,snapshot(roomId,user.id));
     }
     if(path[3]==='state'&&method==='PATCH'){

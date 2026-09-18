@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {createApplication} from '../server/app.js';
+import {validateMapAsset,validateMapTransform} from '../server/mapAssets.js';
+const bundle={main:'terrain.obj',kind:'terrain',files:[{name:'terrain.obj',data:'data:text/plain;base64,'+Buffer.from('v 0 0 0\nv 1 0 0\nv 0 0 1\nf 1 2 3').toString('base64')}]};
+test('map assets and object changes enforce permissions, isolate rooms, stream and persist',async()=>{
+  const dir=mkdtempSync(join(tmpdir(),'map-test-')),dbPath=join(dir,'db.sqlite');let app,base;const cookies={};
+  const start=async()=>{app=createApplication({dbPath,rateLimit:false});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));base=`http://127.0.0.1:${app.server.address().port}/api`;};
+  const call=async(who,path,method='GET',data)=>{const res=await fetch(base+path,{method,headers:{Cookie:cookies[who]||'','Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});if(res.headers.get('set-cookie'))cookies[who]=res.headers.get('set-cookie').split(';')[0];return {status:res.status,data:await res.json()};};
+  await start();let eventAbort;
+  try{
+    for(const username of ['owner','master','viewer','outsider'])await call(username,'/auth/register','POST',{username,password:'test-password-123'});
+    const room=(await call('owner','/rooms','POST',{name:'Tabletop'})).data.id;
+    for(const [username,role]of [['master','master'],['viewer','player']])await call('owner',`/rooms/${room}/members`,'POST',{username,role});
+    const root=`/rooms/${room}`;
+    assert.equal((await call('viewer',root+'/map-assets','POST',bundle)).status,403);
+    assert.equal((await call('outsider',root+'/map-assets','POST',bundle)).status,403);
+    const created=await call('master',root+'/map-assets','POST',bundle);assert.equal(created.status,201);
+    const shape={name:'Bandeja de teste',vertices:[[-5,0,-5],[5,0,-5],[0,0,5]],triangles:[[0,1,2]],spawn:[0,2,0]};
+    const imported=await call('viewer',root+'/dice-structures','POST',shape);assert.equal(imported.status,201);
+    const structureId=imported.data.structureId;
+    assert.deepEqual((await call('master',root+'/dice-structures/'+structureId)).data,shape);
+    assert.equal((await call('outsider',root+'/dice-structures/'+structureId)).status,403);
+    assert.equal((await call('outsider',root+'/dice-structures','POST',shape)).status,403);
+    assert.equal((await call('viewer',root+'/tray-rolls','POST',{terms:[{sides:6,qty:1,sign:1}],structureId:'invalid'})).status,404);
+    const structuredRoll=await call('viewer',root+'/tray-rolls','POST',{terms:[{sides:6,qty:1,sign:1}],structureId});
+    assert.equal(structuredRoll.status,201);assert.equal(structuredRoll.data.trayRoll.structureId,structureId);
+    assert.deepEqual((await call('master',root)).data.trayRoll,structuredRoll.data.trayRoll);
+    const item=created.data.state.mapObjects[0];assert.equal(item.name,'terrain.obj');
+    assert.deepEqual((await call('viewer',root+'/map-assets/'+item.assetId)).data.files,bundle.files);
+    assert.equal((await call('outsider',root+'/map-assets/'+item.assetId)).status,403);
+    const other=(await call('owner','/rooms','POST',{name:'Other'})).data.id;
+    assert.equal((await call('owner',`/rooms/${other}/map-assets/${item.assetId}`)).status,404);
+    assert.equal((await call('viewer',root+'/map-objects/'+item.id,'PATCH',{position:[2,3,4]})).status,403);
+    assert.equal((await call('viewer',root+'/map-objects/'+item.id,'DELETE')).status,403);
+    assert.equal((await call('master',root+'/map-objects/'+item.id,'PATCH',{scale:[0,1,1]})).status,400);
+    eventAbort=new AbortController();const events=await fetch(base+root+'/events',{headers:{Cookie:cookies.viewer},signal:eventAbort.signal});const reader=events.body.getReader();await reader.read();
+    assert.equal((await call('master',root+'/map-objects/'+item.id,'PATCH',{position:[2,3,4],rotation:[0,1,0]})).status,200);
+    const event=new TextDecoder().decode((await reader.read()).value);assert.match(event,/"position":\[2,3,4\]/);eventAbort.abort();
+    app.close();await start();
+    assert.deepEqual((await call('viewer',root)).data.state.mapObjects[0].position,[2,3,4]);
+    assert.equal((await call('viewer',root+'/map-assets/'+item.assetId)).status,200);
+    assert.equal((await call('owner',root+'/map-objects/'+item.id,'DELETE')).status,200);
+    assert.equal((await call('viewer',root+'/map-assets/'+item.assetId)).status,404);
+    assert.deepEqual((await call('viewer',root)).data.state.mapObjects,[]);
+  }finally{eventAbort?.abort();app.close();rmSync(dir,{recursive:true,force:true});}
+});
+test('map validation rejects unsafe paths, invalid bundles and transforms',()=>{
+  for(const name of ['../secret.obj','x.exe','/map.obj','x\\map.obj'])assert.throws(()=>validateMapAsset({...bundle,files:[{...bundle.files[0],name}]}));
+  assert.throws(()=>validateMapAsset({...bundle,main:'absent.glb'}));
+  assert.throws(()=>validateMapAsset({...bundle,files:[...bundle.files,...bundle.files]}));
+  for(const patch of [{assetId:'elsewhere'},{position:[1,2]},{rotation:[NaN,0,0]},{scale:[-1,1,1]}])assert.throws(()=>validateMapTransform(patch));
+});

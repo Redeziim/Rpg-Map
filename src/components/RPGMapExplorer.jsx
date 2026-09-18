@@ -1,3 +1,5 @@
+import DiceStructurePicker from './DiceStructurePicker.jsx';
+import TabletopMap from './tabletop/TabletopMap.jsx';
 import DiceFocus from './DiceFocus.jsx';
 import DiceTray from './DiceTray.jsx';
 import React, { useState, useEffect, useRef } from 'react';
@@ -13,12 +15,14 @@ import { SHEET_FONTS, FIELD_TYPES, evaluateFormula } from './sheetHelpers.jsx';
 
 const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) => {
   const [heldDice,setHeldDice]=useState(null);
-  const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId});return true;};
+  const [diceStructure,setDiceStructure]=useState('tray');
+  const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId,structureId:diceStructure});return true;};
   const throwHeldDice=async (gesture,physics)=>{if(!heldDice)return false;const result=await mutate('/tray-rolls',{...heldDice,gesture,physics},'POST');if(result)setHeldDice(null);return result;};
   const [selectedPlayer,setSelectedPlayer]=useState('');
   const [adminMode,setAdminMode]=useState('master');
   const viewMode=room.role==='admin'?adminMode:room.role==='master'?'master':'player';
   const [activeTab,setActiveTab]=useState('mesa');
+  const [mapMode,setMapMode]=useState('3d');
   const {masterNotes='',mapImage,points,sheetFields,sheetFont,playerSheets,statusBarsData}=room.state;
   const playerName=user.username;
   const [selectedPoint,setSelectedPoint]=useState(null);
@@ -168,7 +172,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
     };
     
     img.src = mapImage;
-  }, [mapImage, points, scale, position]);
+  }, [mapImage, points, scale, position, mapMode, activeTab]);
 
   const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
   const groupEntries=room.groupBars;
@@ -222,6 +226,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
       <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate}/>:activeTab === 'mapa' ? (
           <>
+            <div className="map-mode-tabs" role="group" aria-label="Visualização do mapa"><button aria-pressed={mapMode==='3d'} onClick={()=>setMapMode('3d')}>Mesa 3D</button><button aria-pressed={mapMode==='2d'} onClick={()=>setMapMode('2d')}>Mapa 2D e pontos</button></div>
+            {mapMode==='3d'?<TabletopMap room={room} mutate={mutate} editable={room.role==='admin'||room.role==='master'}/>:<div className="legacy-map-layout">
             {/* Sidebar */}
             <aside className="sidebar">
               <div className="sidebar-section">
@@ -311,6 +317,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 </div>
               )}
             </main>
+            </div>}
           </>
         ) : activeTab === 'ficha' ? (
           <>
@@ -349,8 +356,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           </>
         ) : (
           <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>A mesa</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} jogadores</span></div>
-            <DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/>
-            <div className="group-dice-controls"><DiceRoller onTrayRoll={onTrayRoll}/></div>
+            <DiceStructurePicker roomId={room.id} structures={room.diceStructures} value={diceStructure} onChange={id=>{setDiceStructure(id);setHeldDice(null);}} roll={room.trayRoll} serverTime={room.serverTime}/>
+            <DiceTray roll={room.trayRoll} serverTime={room.serverTime} roomId={room.id} structureId={diceStructure} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/>
+            <div className="group-dice-controls"><DiceRoller onTrayRoll={onTrayRoll} sharedOnly/></div>
             <GroupStatus
               viewMode={viewMode}
               allPlayersBars={groupEntries}
@@ -362,7 +370,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
         )}
       </div>
 
-      {activeTab!=='grupo'&&<DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/>}
+      {activeTab!=='grupo'&&<DiceTray roll={room.trayRoll} serverTime={room.serverTime} roomId={room.id} structureId={diceStructure} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/>}
       <DiceFocus roll={room.trayRoll} serverTime={room.serverTime} enabled={activeTab==='grupo'||room.trayRoll?.username===user.username}/>
       {/* Modal de adicionar ponto */}
       {showPointModal && (

@@ -1,0 +1,64 @@
+import React,{useEffect,useRef} from 'react';
+import * as THREE from 'three';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import {TransformControls} from 'three/examples/jsm/controls/TransformControls.js';
+import {api} from '../../api.js';
+import {loadMapAsset,disposeModel} from './loadMapAsset.js';
+
+export default function TabletopScene({roomId,objects,selected,editable,mode,onSelect,onTransform,onStatus,actions}){
+  const host=useRef(null),runtime=useRef(null),latest=useRef({});
+  latest.current={objects,selected,editable,mode,onSelect,onTransform,onStatus};
+  useEffect(()=>{
+    const el=host.current;let renderer;
+    try{renderer=new THREE.WebGLRenderer({antialias:true});}catch{onStatus('Não foi possível iniciar o 3D neste navegador.');return;}
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor('#151413');el.appendChild(renderer.domElement);
+    const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1,.05,20000);
+    camera.position.set(26,24,30);
+    const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,0,0);orbit.maxDistance=5000;orbit.minDistance=.15;orbit.update();
+    const transform=new TransformControls(camera,renderer.domElement);scene.add(transform.getHelper());
+    scene.add(new THREE.HemisphereLight(0xfff5e3,0x484a53,2.4));const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(12,25,8);scene.add(sun);
+    const grid=new THREE.GridHelper(100,100,0x746142,0x292722);grid.position.y=-.03;scene.add(grid);
+    const models=new Map(),loading=new Map();let disposed=false,dragging=false,frame;
+    const render=()=>renderer.render(scene,camera);
+    const apply=(mesh,item)=>{mesh.position.fromArray(item.position);mesh.rotation.fromArray([...item.rotation,'XYZ']);mesh.scale.fromArray(item.scale);};
+    const updateSelection=()=>{
+      const props=latest.current,mesh=models.get(props.selected);
+      if(mesh&&props.editable){if(transform.object!==mesh)transform.attach(mesh);transform.setMode(props.mode);}else transform.detach();render();
+    };
+    const sync=()=>{
+      const props=latest.current,ids=new Set(props.objects.map(o=>o.id));
+      for(const [id,mesh]of models)if(!ids.has(id)){if(transform.object===mesh)transform.detach();scene.remove(mesh);disposeModel(mesh);models.delete(id);}
+      for(const [id,token]of loading)if(!ids.has(id)){token.cancelled=true;loading.delete(id);}
+      for(const item of props.objects){
+        const existing=models.get(item.id);
+        if(existing){if(!(dragging&&transform.object===existing))apply(existing,item);continue;}
+        if(loading.has(item.id))continue;
+        const token={cancelled:false};loading.set(item.id,token);props.onStatus(`Carregando ${item.name}…`);
+        api(`/rooms/${roomId}/map-assets/${item.assetId}`,{signal:AbortSignal.timeout(120000)}).then(loadMapAsset).then(mesh=>{
+          if(disposed||token.cancelled){disposeModel(mesh);return;}
+          const current=latest.current.objects.find(o=>o.id===item.id);if(!current){disposeModel(mesh);return;}
+          mesh.userData.mapId=item.id;apply(mesh,current);models.set(item.id,mesh);scene.add(mesh);loading.delete(item.id);latest.current.onStatus('');updateSelection();render();
+        }).catch(error=>{if(!disposed&&!token.cancelled){latest.current.onStatus(`${item.name}: ${error.message}`);/* Retry on remount, not on every streamed transform. */}});
+      }
+      updateSelection();render();
+    };
+    const publish=()=>{const mesh=transform.object;if(!mesh||!latest.current.editable)return;latest.current.onTransform(mesh.userData.mapId,{position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z],scale:mesh.scale.toArray().map(v=>Math.max(.001,Math.abs(v)))});};
+    transform.addEventListener('dragging-changed',e=>{dragging=e.value;orbit.enabled=!e.value;if(!e.value)publish();});
+    transform.addEventListener('objectChange',()=>{publish();render();});transform.addEventListener('change',render);orbit.addEventListener('change',render);
+    const ray=new THREE.Raycaster();let start;
+    const down=e=>{start={x:e.clientX,y:e.clientY,gizmo:!!transform.axis};};
+    const up=e=>{if(!start||start.gizmo||Math.hypot(e.clientX-start.x,e.clientY-start.y)>4||e.button!==0)return;const rect=el.getBoundingClientRect();ray.setFromCamera(new THREE.Vector2(2*(e.clientX-rect.left)/rect.width-1,1-2*(e.clientY-rect.top)/rect.height),camera);const hit=ray.intersectObjects([...models.values()],true)[0];let node=hit?.object;while(node&&!node.userData.mapId)node=node.parent;latest.current.onSelect(node?.userData.mapId||null);};
+    renderer.domElement.addEventListener('pointerdown',down);renderer.domElement.addEventListener('pointerup',up);
+    const fit=()=>{
+      const chosen=models.get(latest.current.selected),box=new THREE.Box3();for(const mesh of chosen?[chosen]:models.values())box.expandByObject(mesh);
+      const center=box.isEmpty()?new THREE.Vector3():box.getCenter(new THREE.Vector3());const size=box.isEmpty()?30:box.getSize(new THREE.Vector3()).length();
+      orbit.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(1,.9,1).normalize().multiplyScalar(Math.max(2,size)*1.4/Math.min(1,camera.aspect)));orbit.update();render();
+    };
+    actions.current=action=>{if(action==='fit')fit();if(action==='top'){camera.position.copy(orbit.target).add(new THREE.Vector3(0,Math.max(10,camera.position.distanceTo(orbit.target)),.001));orbit.update();}if(action==='in'||action==='out'){camera.position.sub(orbit.target).multiplyScalar(action==='in'?.8:1.25).add(orbit.target);orbit.update();}render();};
+    const resize=()=>{if(!el.clientWidth||!el.clientHeight)return;renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();render();};
+    const observer=new ResizeObserver(resize);observer.observe(el);resize();runtime.current={sync};sync();
+    return()=>{disposed=true;runtime.current=null;actions.current=null;cancelAnimationFrame(frame);observer.disconnect();transform.detach();transform.dispose();orbit.dispose();models.forEach(disposeModel);grid.geometry.dispose();grid.material.dispose();renderer.dispose();renderer.domElement.remove();};
+  },[roomId]);
+  useEffect(()=>runtime.current?.sync(),[objects,selected,editable,mode]);
+  return <div ref={host} className="tabletop-viewport" role="img" aria-label="Mesa 3D: arraste para girar, botão direito para deslocar e roda para aproximar"/>;
+}

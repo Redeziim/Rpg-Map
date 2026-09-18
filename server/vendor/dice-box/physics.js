@@ -4,7 +4,8 @@
 import AmmoJS from './ammo.js';
 import {readFileSync} from 'node:fs';
 export const Ammo=await new AmmoJS({wasmBinary:readFileSync(new URL('./ammo.wasm.wasm',import.meta.url))});
-export function createPhysics(config){
+export function createPhysics(config,AmmoRuntime=Ammo){
+  const Ammo=AmmoRuntime;
   const allocated=[];
   const own=value=>{allocated.push(value);return value;};
   const vector=(x,y,z)=>own(new Ammo.btVector3(x,y,z));
@@ -32,5 +33,5 @@ export function createPhysics(config){
     if(mass>0){body.setActivationState(4);body.setCcdMotionThreshold(.25);body.setCcdSweptSphereRadius(.15);}
     world.addRigidBody(body);bodies.push(body);return body;
   }
-  return {world,convex,box,rigidBody,vector,own,destroy(){for(const body of bodies)world.removeRigidBody(body);for(const value of allocated.reverse())Ammo.destroy(value);}};
+  return {Ammo,world,convex,box,rigidBody,vector,own,destroy(){for(const body of bodies)world.removeRigidBody(body);for(const value of allocated.reverse())Ammo.destroy(value);}};
 }

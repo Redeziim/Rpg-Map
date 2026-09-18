@@ -105,3 +105,27 @@ Depois de uma rolagem válida, os participantes recebem um destaque central com 
 O banco local não é enviado ao GitHub: a hospedagem começa sem contas ou mesas. Consulte os custos e limites atuais do provedor antes de contratar.
 
 Nas outras abas do site, lançamentos aparecem em uma bandeja ampliada no canto, que desaparece 3 segundos depois de os dados pararem. Para lançamentos de outros participantes, essa prévia substitui o destaque central enquanto você está fora de Status do Grupo.
+
+## Mesa 3D compartilhada
+
+Em **Mapa → Mesa 3D**, Mestre e ADM podem importar terreno e estruturas. Jogadores exploram com sua própria câmera e veem as alterações nos objetos ao vivo, sem poder editá-los.
+
+- Formatos: GLB/GLTF, OBJ com MTL, FBX e PNG/JPG/WebP como planos horizontais.
+- Selecione o arquivo principal junto com BIN, materiais e texturas. Os nomes devem ser únicos. Texturas externas precisam acompanhar a importação; não são buscadas na internet.
+- GLB com texturas incorporadas é o caminho mais simples. Exporte arquivos Blender como GLB. Extensões de compressão como Draco/KTX2 e reprodução de animações não estão habilitadas nesta versão.
+- Limites: 50 MB por importação, até 100 arquivos por pacote, 100 objetos e 300 MB de arquivos por mesa.
+- Importe como terreno (normalizado inicialmente para 30 unidades) ou estrutura (5 unidades), depois ajuste a escala. Não há colisões físicas entre estruturas: o mestre posiciona livremente.
+- Selecione um objeto na lista ou na cena. Use **Mover**, **Girar**, **Escala** e arraste os eixos, ou edite os valores numéricos. As mudanças intermediárias são transmitidas durante o arrasto; a última alteração recebida prevalece quando dois editores alteram o mesmo objeto.
+- Arraste para orbitar, use botão direito para deslocar e roda/pinça para zoom. **Enquadrar**, **Focar objeto** e **Vista superior** ajudam na navegação.
+- Objetos, arquivos e transformações ficam no mesmo SQLite persistente da mesa; inclua-os nos backups. Arquivos 3D não são enviados novamente em cada evento de movimento.
+- O mapa 2D e seus pontos continuam disponíveis em **Mapa 2D e pontos**.
+
+## Estruturas para rolar dados
+
+Em **Status do Grupo**, a rolagem é sempre compartilhada. O botão com ícone de castelo **Estrutura de rolagem** permite escolher a bandeja hexagonal, a torre enviada ou adicionar uma estrutura em 3MF, STL, OBJ ou GLB. A rolagem individual da ficha continua disponível.
+
+Para usar a torre: selecione **Torre com escada**, escolha os dados, clique em **Pegar dados na mão** e depois em **Soltar dados pelo topo**. Os dados ficam ocultos até a soltura, saem um por vez e usam colisões com a malha da torre. O servidor transmite a mesma trajetória para todos. Um dado preso nos degraus, inclinado ou ainda em movimento não produz total; tente novamente ou ajuste a física.
+
+Importações aceitam até 30 MB, 60 mil triângulos e 180 mil vértices, com no máximo 10 estruturas por mesa. Todos os participantes podem adicionar estruturas de dados à própria mesa; isso não concede edição no mapa. A abertura é estimada pela região superior do modelo. Prefira uma estrutura montada, sem peças de impressão espalhadas. 3MF/STL são tratados como Z para cima; GLB/OBJ como Y para cima. A malha é renderizada em dourado, sem importar materiais de impressão.
+
+A bandeja mantém o runtime Dice Box existente. Estruturas de malha usam o runtime Ammo/Bullet completo do pacote `ammojs-typed`, que inclui colisão estática por triângulos. Ambas leem o resultado na orientação física final. Créditos do modelo fornecido ficam em `public/assets/structures/ATTRIBUTION.md`.

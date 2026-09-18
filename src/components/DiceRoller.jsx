@@ -5,8 +5,9 @@ import { Dices, RotateCw, ArrowUp, ArrowDown, Hash, ListChecks, ShoppingBag, X, 
 
 const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
 
-const DiceRoller = ({onTrayRoll}) => {
-  const [useTray,setUseTray]=useState(false),[trayBusy,setTrayBusy]=useState(false),[trayError,setTrayError]=useState('');
+const DiceRoller = ({onTrayRoll,sharedOnly=false}) => {
+  const [trayEnabled,setUseTray]=useState(false),[trayBusy,setTrayBusy]=useState(false),[trayError,setTrayError]=useState('');
+  const useTray=sharedOnly||trayEnabled;
   const [terms, setTerms] = useState([{ id: 'init', sign: 1, qty: 1, sides: 20 }]);
   const [nextSign, setNextSign] = useState(1);
   const [breakdown, setBreakdown] = useState(null);
@@ -138,7 +139,7 @@ const DiceRoller = ({onTrayRoll}) => {
         ))}
       </div>
 
-      {onTrayRoll&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja · visível para a mesa</label>}
+      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja · visível para a mesa</label>}
       {!useTray&&<div className="dice-display-area">
         {terms.length === 0 ? (
           <div className="dice-face-3d dice-face-3d-empty">
