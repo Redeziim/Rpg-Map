@@ -25,7 +25,7 @@ const string = (value, max, label, min=0) => {
   return value;
 };
 const image = value => value===null || (typeof value==='string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value));
-const initialState = () => ({points:[],mapImage:null,sheetFields:[],sheetFont:'cinzel',masterNotes:'',playerSheets:{},statusBarsData:{}});
+const initialState = () => ({points:[],mapImage:null,sheetFields:[],sheetFont:'cinzel',masterNotes:'',turnOrder:[],activePlayer:null,playerSheets:{},statusBarsData:{}});
 async function body(req,maxBytes=10*1024*1024) {
   if(!req.headers['content-type']?.startsWith('application/json')) fail(415,'Envie JSON.');
   let size=0,chunks=[];
@@ -71,11 +71,16 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   function snapshot(roomId,userId){
     const m=membership(roomId,userId),room=query('SELECT * FROM rooms WHERE id=?',roomId);
     const state=JSON.parse(room.state),members=all('SELECT u.id,u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE room_id=? ORDER BY u.username',roomId);
+    const eligible=members.filter(u=>u.role!=='master').map(u=>u.username);
+    state.turnOrder=[...(state.turnOrder||[]).filter(n=>eligible.includes(n)),...eligible.filter(n=>!(state.turnOrder||[]).includes(n))];
+    if(!eligible.includes(state.activePlayer))state.activePlayer=null;
     const usernames=new Set(members.map(u=>u.username));
     const groupBars=Object.fromEntries(members.map(u=>[u.username,{...(state.statusBarsData[u.username]||{avatar:null,bars:[]}),bars:[...(state.statusBarsData[u.username]?.bars||[]),...state.sheetFields.filter(f=>f.type==='status').map((f,i)=>({id:f.id,label:f.label,color:['#a84d51','#c8a65e','#ddd0b2'][i%3],...(state.playerSheets[u.username]?.values?.[f.id]||{current:0,max:0})}))]}]));
     state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(m.role!=='player'||members.find(u=>u.id===userId)?.username===name)));
     state.statusBarsData=Object.fromEntries(Object.entries(state.statusBarsData).filter(([name])=>usernames.has(name)));
-    if(m.role==='player')delete state.masterNotes;
+    state.masterNotebooks ||= state.masterNotes?[{id:'legacy',title:'Notas do mestre',body:state.masterNotes}]:[];
+    for(const sheet of Object.values(state.playerSheets))sheet.notebooks ||= sheet.observations?[{id:'legacy',title:'Observações do jogador',body:sheet.observations}]:[];
+    if(m.role==='player'){delete state.masterNotes;delete state.masterNotebooks;}
     return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:trayRolls.get(roomId)||null,serverTime:Date.now()};
   }
   function send(client){
@@ -203,24 +208,60 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
       const client={roomId,userId:user.id,tokenHash:user.token_hash,res};clients.add(client);send(client);res.on('close',()=>clients.delete(client));return;
     }
-    if(path[3]==='dice-structures'){
-      if(method==='GET'&&path[4]){const item=query('SELECT mesh FROM dice_structures WHERE id=? AND room_id=?',path[4],roomId);if(!item)fail(404,'Estrutura não encontrada.');return json(res,200,JSON.parse(item.mesh));}
-      if(method==='POST'&&path.length===4){
-        limit(`structure:${user.id}`,10);const data=validateStructure(requestBody);
-        if(query('SELECT count(*) AS n FROM dice_structures WHERE room_id=?',roomId).n>=10)fail(400,'Limite de 10 estruturas por mesa.');
-        const id=randomUUID();run('INSERT INTO dice_structures VALUES(?,?,?,?)',id,roomId,data.name,JSON.stringify(data));broadcast(roomId);return json(res,201,{id,...snapshot(roomId,user.id),structureId:id});
-      }
-    }
     if(path[3]==='tray-rolls'&&method==='POST'){
       const previous=trayRolls.get(roomId);
       if(previous&&Date.now()<previous.startedAt+previous.duration)fail(409,'Aguarde os dados da mesa pararem.');
       limit(`tray:${user.id}`,30);
-      const structureId=requestBody.structureId||'tray';let structure=null;
-      if(structureId==='tower')structure=tower;
-      else if(structureId!=='tray'){const asset=query('SELECT mesh FROM dice_structures WHERE id=? AND room_id=?',structureId,roomId);if(!asset)fail(404,'Estrutura não encontrada nesta mesa.');structure=JSON.parse(asset.mesh);}
-      const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics,structure);
-      roll.structureId=structureId;
+      if(requestBody.structureId && requestBody.structureId!=='tray')fail(400,'As rolagens usam apenas a bandeja.');
+      const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics);
+      roll.structureId='tray';
       trayRolls.set(roomId,roll);broadcast(roomId);return json(res,201,snapshot(roomId,user.id));
+    }
+    if(path[3]==='turns'&&method==='POST'){
+      privileged(m);
+      const {action,player}=requestBody;
+      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+      const current=snapshot(roomId,user.id).state;
+      const order=current.turnOrder;
+      let active=current.activePlayer;
+      if(['select','up','down'].includes(action)&&!order.includes(player))fail(400,'Jogador não encontrado na ordem de turnos.');
+      if(action==='select')active=player;
+      else if(action==='end')active=null;
+      else if(action==='next'){
+        if(!order.length)fail(400,'Adicione jogadores antes de iniciar os turnos.');
+        active=order[(order.indexOf(active)+1)%order.length];
+      }else if(action==='up'||action==='down'){
+        const index=order.indexOf(player),target=index+(action==='up'?-1:1);
+        if(target<0||target>=order.length)fail(400,'O jogador já está no limite da ordem.');
+        [order[index],order[target]]=[order[target],order[index]];
+      }else fail(400,'Ação de turno inválida.');
+      saveState(roomId,{...state,turnOrder:order,activePlayer:active});
+      broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+    }
+    if(path[3]==='notes'&&path[4]&&path[5]&&method==='PATCH'){
+      const scope=path[4],id=string(path[5],100,'Identificador',1);
+      if(!/^[a-zA-Z0-9-]+$/.test(id))fail(400,'Identificador de nota inválido.');
+      if(scope==='@master')privileged(m);
+      else{
+        const target=query('SELECT u.id FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=? AND u.username=?',roomId,scope);
+        if(!target)fail(404,'Jogador não encontrado nesta mesa.');
+        if(m.role!=='admin'&&(m.role!=='player'||target.id!==user.id))fail(403,'Você pode editar apenas suas próprias notas.');
+      }
+      const title=string(requestBody.title,100,'Nome da nota',1).trim();
+      if(!title)fail(400,'Dê um nome à nota.');
+      const noteBody=string(requestBody.body,50000,'Texto da nota');
+      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+      const container=scope==='@master'?state:state.playerSheets[scope];
+      const key=scope==='@master'?'masterNotebooks':'notebooks';
+      const legacy=scope==='@master'?state.masterNotes:container.observations;
+      const notes=container[key]|| (legacy?[{id:'legacy',title:scope==='@master'?'Notas do mestre':'Observações do jogador',body:legacy}]:[]);
+      const index=notes.findIndex(n=>n.id===id);
+      if(index<0&&notes.length>=30)fail(400,'Limite de 30 notas por bloco.');
+      const note={id,title,body:noteBody};
+      if(index<0)notes.push(note);else notes[index]=note;
+      container[key]=notes;
+      if(id==='legacy')container[scope==='@master'?'masterNotes':'observations']=noteBody;
+      saveState(roomId,state);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
     }
     if(path[3]==='state'&&method==='PATCH'){
       privileged(m);const patch=requestBody;const allowed=['points','mapImage','sheetFields','sheetFont','masterNotes'];
@@ -284,6 +325,13 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         admin(m);const target=membership(roomId,path[4]);if(target.role==='admin')fail(400,'O criador da mesa permanece ADM.');
         if(method==='DELETE')run('DELETE FROM members WHERE room_id=? AND user_id=?',roomId,path[4]);
         else{const data=requestBody;if(!['player','master'].includes(data.role))fail(400,'Papel inválido.');run('UPDATE members SET role=? WHERE room_id=? AND user_id=?',data.role,roomId,path[4]);}
+        if(method==='DELETE'||requestBody.role==='master'){
+          const username=query('SELECT username FROM users WHERE id=?',path[4]).username;
+          const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+          state.turnOrder=(state.turnOrder||[]).filter(name=>name!==username);
+          if(state.activePlayer===username)state.activePlayer=null;
+          saveState(roomId,state);
+        }
         // Invitations granted by a removed or demoted member are no longer valid.
         if(method==='DELETE'||query('SELECT role FROM members WHERE room_id=? AND user_id=?',roomId,path[4])?.role==='player')run('DELETE FROM invites WHERE room_id=? AND created_by=?',roomId,path[4]);
         run('UPDATE rooms SET revision=revision+1 WHERE id=?',roomId);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));

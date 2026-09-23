@@ -1,4 +1,5 @@
-import DiceStructurePicker from './DiceStructurePicker.jsx';
+import Notebook from './Notebook.jsx';
+import TurnTracker from './TurnTracker.jsx';
 import TabletopMap from './tabletop/TabletopMap.jsx';
 import DiceFocus from './DiceFocus.jsx';
 import DiceTray from './DiceTray.jsx';
@@ -16,7 +17,7 @@ import { SHEET_FONTS, FIELD_TYPES, evaluateFormula } from './sheetHelpers.jsx';
 const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) => {
   const [heldDice,setHeldDice]=useState(null);
   const [diceStructure,setDiceStructure]=useState('tray');
-  const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId,structureId:diceStructure});return true;};
+  const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId,structureId:'tray'});return true;};
   const throwHeldDice=async (gesture,physics)=>{if(!heldDice)return false;const result=await mutate('/tray-rolls',{...heldDice,gesture,physics},'POST');if(result)setHeldDice(null);return result;};
   const [selectedPlayer,setSelectedPlayer]=useState('');
   const [adminMode,setAdminMode]=useState('master');
@@ -223,6 +224,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
         <div className="nav-footer"><span>✦</span><small>Entre mundos,<br />a sua mesa.</small></div>
       </header>
 
+      <div className="room-content"><div className="session-strip"><TurnTracker room={room} username={user.username} editable={viewMode==='master'} saving={saving} mutate={mutate}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" notes={room.state.masterNotebooks||[]} onSave={(id,note)=>mutate('/notes/@master/'+id,note,'PATCH')}/>}</div>
       <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate}/>:activeTab === 'mapa' ? (
           <>
@@ -324,6 +326,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
             {/* Área principal da Ficha de Personagem */}
             <main className="sheet-area">
               <CharacterSheet
+                notebookKey={`${room.id}:${user.id}`}
+                onSaveNote={(name,id,note)=>mutate(`/notes/${encodeURIComponent(name)}/${id}`,note,'PATCH')}
                 canEditSelected={room.role==='admin'}
                 selectedPlayer={selectedPlayer}
                 onSelectPlayer={setSelectedPlayer}
@@ -355,22 +359,21 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
             </aside>
           </>
         ) : (
-          <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>A mesa</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} jogadores</span></div>
-            <DiceStructurePicker roomId={room.id} structures={room.diceStructures} value={diceStructure} onChange={id=>{setDiceStructure(id);setHeldDice(null);}} roll={room.trayRoll} serverTime={room.serverTime}/>
-            <DiceTray roll={room.trayRoll} serverTime={room.serverTime} roomId={room.id} structureId={diceStructure} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/>
-            <div className="group-dice-controls"><DiceRoller onTrayRoll={onTrayRoll} sharedOnly/></div>
-            <GroupStatus
+          <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>Status do grupo</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} {playerNames.length===1?'jogador':'jogadores'}</span></div>
+            <div className="group-workspace"><section className="party-roster" aria-label="Personagens da mesa"><GroupStatus
               viewMode={viewMode}
+              activePlayer={room.state.activePlayer}
               allPlayersBars={groupEntries}
               onOpenSheet={name => {setSelectedPlayer(name);setActiveTab('ficha');}}
               onUpdatePlayerBars={updatePlayerBars}
             />
-            {viewMode === 'master' && <section className="observations-panel master-notes"><div className="section-heading"><h3>Notas do mestre</h3><span>Visíveis no modo mestre</span></div><label className="sr-only" htmlFor="master-notes">Notas do mestre</label><textarea id="master-notes" rows={6} value={masterNotes} onChange={e => saveShared({masterNotes:e.target.value})} placeholder="Prepare encontros, pistas e lembretes para a próxima sessão…" /></section>}
+            </section><aside className="group-roll-station" aria-label="Bandeja e dados"><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/><div className="group-dice-controls"><DiceRoller onTrayRoll={onTrayRoll} sharedOnly/></div></aside></div>
           </main>
         )}
       </div>
 
-      {activeTab!=='grupo'&&<DiceTray roll={room.trayRoll} serverTime={room.serverTime} roomId={room.id} structureId={diceStructure} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/>}
+      </div>
+      {activeTab!=='grupo'&&<DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/>}
       <DiceFocus roll={room.trayRoll} serverTime={room.serverTime} enabled={activeTab==='grupo'||room.trayRoll?.username===user.username}/>
       {/* Modal de adicionar ponto */}
       {showPointModal && (
@@ -671,14 +674,12 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           border: 2px solid rgba(199, 171, 118, 0.35);
           border-radius: 12px;
           padding: 1.1rem;
-          transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-          transform-style: preserve-3d;
+          transition: none;
         }
 
         .group-status-card:hover {
-          transform: perspective(600px) rotateX(2deg) rotateY(-3deg) translateY(-3px);
-          border-color: rgba(127, 212, 193, 0.5);
-          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(127, 212, 193, 0.15);
+          border-color: #d6b36b;
+          background: #252117;
         }
 
         .group-status-card-header {

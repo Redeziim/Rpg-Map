@@ -1,0 +1,210 @@
+/* Compact game table: restrained brass rules, readable ledgers, dedicated tools. */
+.mist-theme.rpg-container {
+  --workspace-gap:16px;
+  --workspace-pad:20px;
+  --workspace-gold:#d6b36b;
+  --workspace-edge:#56472d;
+  --workspace-hover:#252117;
+  --workspace-font:'Source Sans 3',sans-serif;
+  grid-template-columns:184px minmax(0,1fr);
+  font-family:var(--workspace-font);
+  font-size:14px;
+  line-height:1.45;
+  background:#141412;
+}
+.mist-theme .parchment-bg::before,.mist-theme .parchment-bg::after{animation:none;opacity:.25}
+.mist-theme .header-content{padding:22px 14px;gap:20px}
+.mist-theme .brand-kicker{font-size:6px;letter-spacing:.7px}
+.mist-theme .logo{gap:8px}
+.mist-theme .logo h1{font-size:20px}
+.mist-theme .brand-mark{width:32px;height:38px;border-radius:8px 8px 2px 2px}
+.mist-theme .header-controls{gap:6px}
+.mist-theme .mode-btn,.mist-theme .mode-btn.active{font-family:var(--workspace-font);padding:8px;min-height:40px;box-shadow:none;text-shadow:none}
+.mist-theme .account-nav-actions{margin-top:8px;gap:6px}
+.mist-theme .room-title-nav{margin-bottom:4px}
+.mist-theme .sync-status{margin:4px 0}
+.mist-theme .tab-nav{padding:0 8px;gap:4px}
+.mist-theme .tab-btn{font-family:var(--workspace-font);font-size:13px;min-height:44px;padding:10px;gap:8px}
+.mist-theme .tab-btn.active{background:#2b251b;border-color:var(--workspace-edge);color:var(--workspace-gold)}
+.mist-theme .nav-footer{padding:20px;font-size:12px}
+.mist-theme .nav-footer small{font-size:14px}
+.mist-theme .room-content{min-width:0;width:100%;max-width:1440px;margin-inline:auto}
+.mist-theme .main-content{padding:var(--workspace-pad);gap:var(--workspace-gap);max-width:none}
+.mist-theme h2{font-size:24px;line-height:1.3}
+.mist-theme .sheet-heading{margin:0 0 18px;gap:12px}
+.mist-theme .eyebrow{font-size:9px;letter-spacing:1.5px;margin-bottom:5px;color:var(--workspace-gold)}
+.mist-theme .sheet-seal{border-radius:3px;font-size:11px;padding:5px 8px}
+.mist-theme input,.mist-theme select,.mist-theme textarea,.mist-theme .sheet-tool-btn,.mist-theme .field-type-btn,.mist-theme .field-add-btn,.mist-theme .roll-btn{font-family:var(--workspace-font);font-size:13px}
+.mist-theme button{transition:none}
+.mist-theme .sheet-tool-btn{padding:8px 10px;min-height:40px;background:#24211b;color:#dfc691}
+.mist-theme .sheet-tool-btn:hover{background:#332c20}
+.mist-theme .empty-state{padding:28px 18px}
+.mist-theme .empty-state h2,.mist-theme .empty-state h3{font-size:20px;margin:12px 0 8px}
+.mist-theme .empty-state p{font:14px/1.5 var(--workspace-font);max-width:380px}
+.mist-theme .empty-state>svg{width:34px;height:34px}
+
+/* One session strip, with a small notebook that opens over the workspace. */
+.mist-theme .session-strip{display:flex;align-items:flex-start;gap:12px;margin:20px 20px 0;position:relative;z-index:6}
+.mist-theme .session-strip .turn-tracker{width:auto;flex:1;min-width:0;margin:0;padding:10px 14px;background:#1c1b16;border-color:var(--workspace-edge);border-left-width:2px}
+.mist-theme .turn-heading{gap:8px}
+.mist-theme .turn-heading p{margin:0;font-size:14px}
+.mist-theme .turn-heading .eyebrow{font-size:8px;margin:0 0 2px}
+.mist-theme .turn-actions button{font:12px var(--workspace-font);min-height:36px;min-width:36px;padding:6px 10px}
+.mist-theme .turn-tracker summary{font-size:12px;min-height:32px;padding:8px 0 0}
+.mist-theme .turn-order li{padding:8px 0}
+.mist-theme .turn-order{margin-top:8px;max-height:280px;overflow:auto}
+.mist-theme .notebook{border:1px solid var(--workspace-edge);background:#211e17;border-radius:3px;min-width:0;margin-top:18px}
+.mist-theme .notebook summary{display:flex;align-items:center;gap:10px;list-style:none;cursor:pointer;padding:12px;color:var(--workspace-gold);min-height:48px}
+.mist-theme .notebook summary::-webkit-details-marker{display:none}
+.mist-theme .notebook summary>span{flex:1;font-size:14px;font-weight:600}
+.mist-theme .notebook summary small{display:block;font-size:11px;color:#bdb098;font-weight:400;margin-top:3px}
+.mist-theme .notebook[open] .notebook-chevron{transform:rotate(180deg)}
+.mist-theme .notebook-page{padding:0 12px 12px}
+.mist-theme .notebook-page textarea{display:block;min-height:192px;max-height:55dvh;border:1px solid #685338;border-left:3px solid #927243;border-radius:0;padding:8px 12px;color:#ede0bf;background:repeating-linear-gradient(transparent 0 27px,#c8a65e20 27px 28px),#252118;font:15px/28px var(--workspace-font)}
+.mist-theme .notebook-page>small{display:block;color:#bdb098;font-size:11px;margin-top:8px}
+.mist-theme .master-notebook{width:220px;flex-shrink:0;margin:0;position:relative}
+.mist-theme .master-notebook[open] .notebook-page{position:absolute;right:-1px;top:100%;width:360px;max-width:calc(100vw - 32px);background:#211e17;border:1px solid var(--workspace-edge);border-top:0;box-shadow:0 12px 24px #0006;padding-top:8px}
+
+/* Membership is a roster, with a narrow invitation desk beside it. */
+.mist-theme .room-management{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,380px);column-gap:24px;align-items:start}
+.mist-theme .room-management>.sheet-heading,.mist-theme .room-management>.account-hint,.mist-theme .room-management>.account-error{grid-column:1/-1}
+.mist-theme .room-management>.account-hint{max-width:680px;margin-bottom:20px;font-size:13px}
+.mist-theme .room-invite-panel{grid-column:2;grid-row:3 / span 3;margin:0;padding:16px;border-radius:3px}
+.mist-theme .members-list{grid-column:1;grid-row:3;min-width:0}
+.mist-theme .room-management:has(>.account-error) .room-invite-panel,.mist-theme .room-management:has(>.account-error) .members-list{grid-row:4}
+.mist-theme .room-invite-panel h3,.mist-theme .members-list h3{font-size:16px;margin-bottom:12px}
+.mist-theme .room-invite-panel form{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px}
+.mist-theme .room-invite-panel form>button{grid-column:1/-1}
+.mist-theme .room-invite-panel input,.mist-theme .room-invite-panel select{padding:9px;min-height:40px}
+.mist-theme .invite-action{margin-top:16px;padding-top:14px;gap:12px;align-items:stretch;flex-direction:column}
+.mist-theme .member-row{padding:10px 0;gap:10px}
+.mist-theme .member-initial{width:32px;height:32px}
+.mist-theme .role-badge{border-radius:3px;padding:4px 8px;font-family:var(--workspace-font)}
+
+/* Party first. The tray belongs to a compact station on the right. */
+.mist-theme .group-workspace{display:grid;grid-template-columns:minmax(0,1fr) 336px;align-items:start;gap:20px}
+.mist-theme .party-roster{min-width:0}
+.mist-theme .group-status-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px;align-items:start}
+.mist-theme .group-status-card{padding:16px;border-radius:3px;transition:none;animation:none;transform:none;background:#1b1a16;border:1px solid var(--workspace-edge);box-shadow:none}
+.mist-theme .group-status-card:hover,.mist-theme .group-status-card:focus-within{transform:none;animation:none;transition:none;box-shadow:none;border-color:var(--workspace-gold);background:var(--workspace-hover)}
+.mist-theme .group-status-card-header{gap:12px;margin-bottom:10px}
+.mist-theme .group-status-card-header h4{font:600 16px var(--workspace-font);color:var(--workspace-gold);overflow-wrap:anywhere}
+.mist-theme .group-status-card:hover h4{color:#e5c37d}
+.mist-theme .group-status-avatar{width:42px;height:42px;border-radius:3px;border-color:#78603a}
+.mist-theme .group-status-bars{margin-top:14px}
+.mist-theme .group-status-card .status-bar-row{margin-bottom:10px}
+.mist-theme .group-status-card.is-current-turn{border-color:var(--workspace-gold);box-shadow:inset 3px 0 var(--workspace-gold)}
+.mist-theme .group-roll-station{min-width:0;border-left:1px solid var(--workspace-edge);padding-left:16px}
+.mist-theme .group-roll-station .dice-tray{margin:0;border-radius:4px;box-shadow:none;border-color:var(--workspace-edge)}
+.mist-theme .dice-tray header{padding:10px;gap:6px}
+.mist-theme .dice-tray header strong{font-size:13px}
+.mist-theme .dice-tray small{font-size:11px}
+.mist-theme .group-roll-station .tray-scene{height:230px;background:#151410}
+.mist-theme .tray-camera-controls{gap:4px;padding:0 8px 6px}
+.mist-theme .tray-camera-controls button{min-width:32px;min-height:32px;padding:4px 7px;font-size:12px}
+.mist-theme .tray-camera-hint{font-size:11px;padding:0 10px 8px}
+.mist-theme .tray-result{font-size:12px;padding:10px;line-height:1.5}
+.mist-theme .group-dice-controls{margin:16px 0 0;padding:0;max-width:none}
+.mist-theme .dice-roller h3{font-size:14px;padding-bottom:10px;margin-bottom:12px}
+.mist-theme .dice-type-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.mist-theme .dice-type-btn{min-height:36px;padding:7px 0;font-size:13px}
+.mist-theme .dice-formula-bar{padding:6px;gap:5px}
+.mist-theme .dice-term-chip{padding:3px;font-size:12px}
+.mist-theme .roll-btn{padding:10px;min-height:44px}
+.mist-theme .tray-floating,.mist-theme .tray-floating.tray-preview,.mist-theme .tray-floating:has(.has-hand){width:min(350px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border-radius:4px;animation:none}
+.mist-theme .tray-floating .tray-scene{height:210px}
+
+/* The sheet reads like a compact dossier; editing tools open on demand. */
+.mist-theme .view-ficha{display:grid;grid-template-columns:minmax(0,1fr) 236px;align-items:start}
+.mist-theme .sheet-sidebar{width:auto;margin-top:0;padding:14px;border-radius:3px;top:16px;box-shadow:none}
+.mist-theme .dossier-layout{grid-template-columns:150px minmax(0,1fr);min-height:340px;border-radius:3px;box-shadow:none;background:#191916}
+.mist-theme .dossier-profile{padding:16px 12px;background:#1f1d18}
+.mist-theme .dossier-content{padding:18px}
+.mist-theme .dossier-title{padding-bottom:12px;margin-bottom:16px}
+.mist-theme .dossier-title h3{font-size:21px}
+.mist-theme .status-avatar-wrap{max-width:124px;aspect-ratio:4/5}
+.mist-theme .status-avatar-img,.mist-theme .status-avatar-placeholder{border-radius:4px}
+.mist-theme .status-player-header{gap:12px}
+.mist-theme .status-player-header strong{font-size:16px}
+.mist-theme .status-bars-panel h3{margin-bottom:12px}
+.mist-theme .profile-footnote{display:none}
+.mist-theme .sheet-empty{min-height:210px}
+.mist-theme .sheet-master-toolbar,.mist-theme .player-select{margin-bottom:14px;gap:10px}
+.mist-theme .field-builder-panel{padding:14px;margin-bottom:16px;border-radius:3px}
+.mist-theme .category-layout{gap:18px}
+.mist-theme .section-heading{margin-bottom:10px;padding-bottom:8px}
+.mist-theme .attribute-category .sheet-field{min-height:84px;padding:10px}
+.mist-theme .sheet-field input:not([type=checkbox]){min-height:36px}
+
+/* Cartography gets the space; instruments stay compact. */
+.mist-theme .view-mapa{min-height:0;gap:12px}
+.mist-theme .map-mode-tabs{padding:0;gap:6px}
+.mist-theme .map-mode-tabs button{font-size:12px;padding:8px 12px;min-height:40px}
+.mist-theme .tabletop-map{grid-template-columns:218px minmax(0,1fr);min-height:0}
+.mist-theme .tabletop-tools{padding:14px;max-height:70dvh}
+.mist-theme .tabletop-tools h2{font-size:18px;margin-bottom:8px}
+.mist-theme .tabletop-tools p,.mist-theme .tabletop-tools small{font-size:12px;line-height:1.5}
+.mist-theme .tabletop-tools h3{margin:16px 0 8px;font-size:14px}
+.mist-theme .tabletop-import{margin-top:14px;gap:10px}
+.mist-theme .tabletop-camera{padding:8px;gap:6px}
+.mist-theme .tabletop-camera button{padding:6px 8px;font-size:12px;min-height:36px}
+.mist-theme .tabletop-viewport{height:58dvh;min-height:340px;max-height:700px}
+.mist-theme .tabletop-help{padding:8px 12px;font-size:11px}
+.mist-theme .legacy-map-layout{gap:12px}
+.mist-theme .view-mapa .sidebar{width:210px;padding:14px;flex-shrink:0}
+.mist-theme .canvas-area{min-height:380px;border-radius:3px}
+
+@media(max-width:1150px){
+  .mist-theme.rpg-container{grid-template-columns:166px minmax(0,1fr)}
+  .mist-theme .group-workspace{grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+  .mist-theme .view-ficha{grid-template-columns:minmax(0,1fr)}
+  .mist-theme .sheet-sidebar{position:static;width:100%;max-width:420px}
+  .mist-theme .room-management{grid-template-columns:minmax(0,1fr) 310px;gap:16px}
+  .mist-theme .master-notebook{width:180px}
+}
+@media(max-width:900px){
+  .mist-theme .room-management{display:block}
+  .mist-theme .room-invite-panel{margin-bottom:20px}
+  .mist-theme .group-workspace{grid-template-columns:minmax(0,1fr) 280px}
+  .mist-theme .group-roll-station{padding-left:12px}
+  .mist-theme .tabletop-map{grid-template-columns:190px minmax(0,1fr)}
+  .mist-theme .session-strip{flex-wrap:wrap}
+  .mist-theme .master-notebook{width:100%}
+  .mist-theme .master-notebook[open] .notebook-page{position:static;width:100%;max-width:none;border:0;box-shadow:none}
+}
+@media(max-width:760px){
+  .mist-theme.rpg-container{display:block;--workspace-pad:14px}
+  .mist-theme .header{height:auto;position:relative}
+  .mist-theme .header-content{padding:12px 14px;gap:10px;flex-direction:row}
+  .mist-theme .tab-nav{flex-direction:row;padding:0 8px 8px;gap:2px}
+  .mist-theme .tab-btn{font-size:11px;padding:8px 4px;gap:5px;min-height:44px}
+  .mist-theme .header-controls{max-width:180px}
+  .mist-theme .session-strip{margin:14px 14px 0;gap:8px}
+  .mist-theme .session-strip .turn-tracker{padding:10px;flex-basis:100%}
+  .mist-theme .turn-actions button{min-height:44px;min-width:44px}
+  .mist-theme .turn-tracker summary{min-height:44px;padding-top:12px}
+  .mist-theme .master-notebook summary{padding:8px 10px}
+  .mist-theme .master-notebook summary small{display:none}
+  .mist-theme .group-workspace{display:flex;flex-direction:column;gap:20px}
+  .mist-theme .party-roster{width:100%}
+  .mist-theme .group-roll-station{width:100%;max-width:440px;padding:0;border-left:0}
+  .mist-theme .group-status-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))}
+  .mist-theme .sheet-tool-btn,.mist-theme .dice-type-btn,.mist-theme .tray-camera-controls button{min-height:44px;min-width:44px}
+  .mist-theme .dossier-layout{grid-template-columns:1fr}
+  .mist-theme .dossier-profile{border-right:0;padding:12px}
+  .mist-theme .status-avatar-wrap{width:64px;height:80px}
+  .mist-theme .dossier-content{padding:14px}
+  .mist-theme .category-layout{grid-template-columns:1fr}
+  .mist-theme .sheet-sidebar{margin-top:0;max-width:none}
+  .mist-theme .tabletop-map{grid-template-columns:1fr}
+  .mist-theme .tabletop-stage{grid-row:1}
+  .mist-theme .tabletop-tools{max-height:340px;border-right:0}
+  .mist-theme .tabletop-viewport{height:45dvh;min-height:280px}
+  .mist-theme .tabletop-camera button{min-height:44px}
+  .mist-theme .legacy-map-layout{flex-direction:column}
+  .mist-theme .view-mapa .sidebar{width:100%;margin-bottom:0}
+  .mist-theme .room-invite-panel form{grid-template-columns:minmax(0,1fr) 110px}
+  .mist-theme input,.mist-theme select,.mist-theme textarea{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){.mist-theme button,.mist-theme .group-status-card{transition:none;animation:none}}
+@media(forced-colors:active){.mist-theme .group-status-card:hover,.mist-theme .group-status-card:focus-within{outline:2px solid Highlight}}

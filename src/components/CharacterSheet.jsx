@@ -1,10 +1,11 @@
+import Notebook from './Notebook.jsx';
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
 import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 
-const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false }) => {
+const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('text');
   const [newFieldLabel, setNewFieldLabel] = useState('');
@@ -294,7 +295,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         <button className="sheet-tool-btn" onClick={() => setBuilderOpen(o => !o)} aria-expanded={builderOpen}><Settings2 size={16} />{builderOpen ? 'Fechar modelo' : 'Editar modelo da ficha'}</button>
         <label className="font-choice">Tipografia<select value={sheetFont} onChange={e => onFontChange(e.target.value)}>{SHEET_FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}</select></label>
       </div>}
-      {isMaster && (builderOpen || !sheetFields.length) && <section className="field-builder-panel">
+      {isMaster && builderOpen && <section className="field-builder-panel">
         <div className="section-heading"><h3>Modelo da campanha</h3><span>{sheetFields.length} campos</span></div>
         <p className="status-bars-hint">Defina os campos e suas categorias. Cada jogador preenche os próprios valores.</p>
         {!sheetFields.length && <button className="sheet-tool-btn starter-button" onClick={createStarter}><Plus size={16} /> Começar com uma ficha base</button>}
@@ -325,7 +326,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
               <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
             </section>)}</div>
-            <section className="observations-panel"><div className="section-heading"><h3><Edit3 size={16} />Observações</h3><span>Do jogador</span></div><label className="sr-only" htmlFor="player-observations">Observações do jogador</label><textarea id="player-observations" readOnly={readOnly} rows={5} value={activeEntry.observations || ''} placeholder={isMaster ? 'Nenhuma observação registrada.' : 'Lembretes, detalhes e anotações da sessão…'} onChange={e => onUpdatePlayerSheet(activePlayer,{observations:e.target.value})} /></section>
+            <Notebook key={activePlayer} storageKey={notebookKey+':'+activePlayer} title="Observações do jogador" hint="Notas salvas · abrir janelas" notes={activeEntry.notebooks||[]} readOnly={readOnly} onSave={(id,note)=>onSaveNote(activePlayer,id,note)}/>
           </>}
         </div>
       </div>

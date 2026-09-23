@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, Eye, Edit3, Plus, X, ImageIcon, Minus } from 'lucide-react';
 
-const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet }) => {
+const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet, activePlayer }) => {
   const isMaster = viewMode === 'master';
   const playerNames = Object.keys(allPlayersBars || {});
 
@@ -64,7 +64,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet
         const entry = allPlayersBars[name] || { avatar: null, bars: [] };
         const cardHasDamage = (entry.bars || []).some(bar => effects[`${name}::${bar.id}`]?.kind === 'damage');
         return (
-          <div key={name} className={`group-status-card ${cardHasDamage ? 'card-hit-shake' : ''}`}>
+          <div key={name} className={`group-status-card ${cardHasDamage ? 'card-hit-shake' : ''} ${activePlayer===name?'is-current-turn':''}`}>
             <div className="group-status-card-header">
               {entry.avatar ? (
                 <img src={entry.avatar} alt={name} className="group-status-avatar" />
@@ -73,7 +73,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet
                   <ImageIcon size={22} />
                 </div>
               )}
-              <h4>{name}</h4>
+              <h4>{name}{activePlayer===name&&<span className="turn-badge">Em turno</span>}</h4>
             </div>
 
             {isMaster && <button className="sheet-tool-btn" onClick={() => onOpenSheet(name)}><Eye size={15} />Consultar ficha</button>}

@@ -1,0 +1,19 @@
+.room-content{min-width:0}.room-content>.turn-tracker{width:calc(100% - 48px);margin:24px 24px 0}@media(max-width:600px){.room-content>.turn-tracker{width:calc(100% - 24px);margin:12px 12px 0}}
+.turn-tracker{--turn-gold:#edd18f;--turn-line:#78613f;grid-column:1/-1;min-width:0;width:100%;padding:16px 20px;margin-bottom:20px;border:1px solid var(--turn-line);border-left:4px solid var(--turn-gold);background:#201c18;color:#eee5d5}
+.turn-heading,.turn-order li{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.turn-heading p{margin:6px 0;color:var(--turn-gold)}
+.turn-actions{display:flex;gap:6px;flex-wrap:wrap}
+.turn-tracker button{min-height:44px;min-width:44px;padding:8px 12px;border:1px solid var(--turn-line);background:#302820;color:#f5e5bf;font:inherit;cursor:pointer}
+.turn-tracker button:hover:not(:disabled){background:#463922}
+.turn-tracker button:disabled{opacity:.5;cursor:default}
+.turn-tracker :focus-visible{outline:2px solid var(--turn-gold);outline-offset:3px}
+.turn-tracker summary{padding:12px 0;min-height:44px;cursor:pointer}
+.turn-order{list-style:none;padding:0;margin:0}
+.turn-order li{padding:10px 0;border-top:1px solid #514333}
+.turn-number{font-variant-numeric:tabular-nums;color:#c6b79c}
+.turn-name{flex:1;overflow-wrap:anywhere;min-width:80px}
+.is-current-turn .turn-name,.group-status-card.is-current-turn h4{color:#edd18f}
+.group-status-card.is-current-turn{border-color:#edd18f;box-shadow:inset 4px 0 #edd18f}
+.turn-badge{display:inline-block;margin-left:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#edd18f}
+@media(max-width:600px){.turn-tracker{padding:12px}.turn-order .turn-actions{width:100%;justify-content:flex-end}}
+@media(forced-colors:active){.is-current-turn{outline:2px solid Highlight}.turn-tracker button{border-color:ButtonText}}
