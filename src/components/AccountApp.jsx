@@ -3,10 +3,11 @@ import { ScrollText, LogOut, Plus, ArrowRight, Users, KeyRound, ShieldCheck, Cop
 import { api, ROLE_LABELS } from '../api.js';
 import { useRoom } from '../useRoom.js';
 import RPGMapExplorer from './RPGMapExplorer.jsx';
+import AmbientFog from './AmbientFog.jsx';
 import '../account.css';
 
 function Brand(){return <div className="account-brand"><ScrollText size={32}/><span>Grimório</span></div>;}
-function Backdrop(){return <div className="parchment-bg" aria-hidden="true"/>;}
+function Backdrop(){return <AmbientFog/>;}
 function Login({onLogin,invite}){
   const [register,setRegister]=useState(false),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function submit(e){e.preventDefault();setError('');if(register&&password!==confirm){setError('As senhas não coincidem.');return;}setBusy(true);try{onLogin(await api(`/auth/${register?'register':'login'}`,{method:'POST',data:{username,password}}));}catch(e){setError(e.message);}finally{setBusy(false);}}

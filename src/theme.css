@@ -2,7 +2,6 @@
 :root{color-scheme:dark;--ink:#eee7d9;--muted:#b8b0a4;--gold:#c8a65e;--accent:#c97770;--red:#8f3037;--line:rgba(200,166,94,.22);--panel:#171717}
 body{background:#131313;color:var(--ink)}
 .mist-theme.rpg-container{height:auto;min-height:100dvh;overflow:clip;display:grid;grid-template-columns:220px minmax(0,1fr);background:radial-gradient(ellipse at 85% 10%,#3535352e,transparent 60%),#141414;color:var(--ink);font-family:'Segoe UI',sans-serif;font-size:14px;line-height:1.6}
-.mist-theme .parchment-bg{position:fixed;inset:0;opacity:.6;background:radial-gradient(ellipse at 75% 22%,#b2b2b215,transparent 36%),radial-gradient(ellipse at 25% 75%,#b3b3b31c,transparent 46%),repeating-linear-gradient(165deg,transparent 0 80px,#bdbdbd04 120px,transparent 210px);filter:blur(18px);z-index:0}
 .mist-theme .header{position:sticky;top:0;height:100dvh;background:#161616e8;border:0;border-right:1px solid var(--line);box-shadow:none;display:flex;flex-direction:column;z-index:5}
 .mist-theme .header-content{padding:32px 22px;display:flex;flex-direction:column;align-items:stretch;gap:36px;width:100%}
 .mist-theme .logo{align-items:center;gap:11px}.mist-theme .brand-mark{border:1px solid var(--gold);width:42px;height:48px;display:grid;place-items:center;border-radius:15px 15px 4px 4px;flex-shrink:0}.mist-theme .logo svg{color:var(--gold);filter:none}
@@ -25,7 +24,6 @@ body{background:#131313;color:var(--ink)}
 
 /* Matte finish: solid surfaces, gold hierarchy, restrained red accents. */
 .mist-theme.rpg-container{background:#101010}
-.mist-theme .parchment-bg{opacity:.28;background:radial-gradient(ellipse at 80% 12%,#b0b0b012,transparent 45%),radial-gradient(ellipse at 15% 85%,#77777710,transparent 50%);filter:blur(24px)}
 .mist-theme .header{background:#111;border-right-color:var(--line)}
 .mist-theme .brand-mark{border-color:var(--gold);border-bottom:3px solid var(--red);background:#181818}
 .mist-theme .logo h1,.mist-theme .dossier-title h3{color:var(--gold)}
@@ -74,39 +72,38 @@ body{background:#131313;color:var(--ink)}
 .mist-theme .profile-footnote p,.mist-theme .nav-footer small{color:#b8b0a4}
 .mist-theme .skin-preview{border-color:var(--gold)}
 
-/* Two soft layers drift independently, without a visible restart. */
+/* Smoke footage stays behind the interface; the warm still covers loading and reduced motion. */
 .mist-theme .parchment-bg{
-  inset:-18%;
+  position:fixed;
+  inset:0;
+  z-index:0;
   opacity:1;
-  background:none;
-  filter:none;
   overflow:hidden;
   pointer-events:none;
+  background:#0b0a09;
+  filter:none;
+  isolation:isolate;
 }
-.mist-theme .parchment-bg::before,
+.mist-theme .ambient-fog-still,
+.mist-theme .ambient-fog-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  mix-blend-mode:screen;
+}
+.mist-theme .ambient-fog-still{
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  opacity:.03;
+}
+.mist-theme .ambient-fog-video{opacity:.32}
+.mist-theme .parchment-bg.still-only .ambient-fog-still{opacity:.3}
 .mist-theme .parchment-bg::after{
   content:"";
   position:absolute;
   inset:0;
-  background:
-    radial-gradient(ellipse at 25% 38%,rgba(200,200,200,.09),transparent 48%),
-    radial-gradient(ellipse at 78% 68%,rgba(165,165,165,.07),transparent 44%);
-  filter:blur(35px);
-  animation:grimorio-fog-drift 38s ease-in-out infinite alternate;
-}
-.mist-theme .parchment-bg::after{
-  background:
-    radial-gradient(ellipse at 65% 20%,rgba(185,185,185,.07),transparent 45%),
-    radial-gradient(ellipse at 30% 80%,rgba(150,150,150,.06),transparent 50%);
-  animation-duration:53s;
-  animation-delay:-19s;
-  animation-direction:alternate-reverse;
-}
-@keyframes grimorio-fog-drift{
-  from{transform:translate3d(-6%,-3%,0) scale(1);opacity:.55}
-  to{transform:translate3d(7%,4%,0) scale(1.08);opacity:1}
-}
-@media(prefers-reduced-motion:reduce){
-  .mist-theme .parchment-bg::before,
-  .mist-theme .parchment-bg::after{animation:none;opacity:.65}
+  background:radial-gradient(ellipse at 50% 35%,transparent 8%,#0b0a0980 86%);
 }

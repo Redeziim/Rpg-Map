@@ -178,7 +178,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
   const groupEntries=room.groupBars;
   return (
     <div className="rpg-container mist-theme">
-      <a className="skip-link" href="#main-content">Pular para o conteúdo</a><div className="parchment-bg" aria-hidden="true"></div>
+      <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       
       {/* Header */}
       <header className="header">
@@ -459,19 +459,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           color: #e9dfcd;
           position: relative;
           overflow: hidden;
-        }
-
-        .parchment-bg {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-image: 
-            repeating-linear-gradient(90deg, rgba(151, 126, 96, 0.05) 0px, transparent 1px, transparent 2px, rgba(151, 126, 96, 0.05) 3px),
-            repeating-linear-gradient(0deg, rgba(151, 126, 96, 0.05) 0px, transparent 1px, transparent 2px, rgba(151, 126, 96, 0.05) 3px);
-          opacity: 0.3;
-          pointer-events: none;
         }
 
         .header {
@@ -2617,4 +2604,3 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
 };
 
 export default RPGMapExplorer;
-
