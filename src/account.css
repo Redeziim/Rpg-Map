@@ -5,3 +5,9 @@
 
 .account-screen .parchment-bg{z-index:0}
 .account-screen>*:not(.parchment-bg){position:relative;z-index:1}
+
+/* Keep the small supporting copy legible against the matte panels. */
+.account-screen label{font-size:14px;line-height:1.4}
+.account-screen .account-caption,.account-screen .account-hint,.account-screen .lobby-forms p{font-size:14px}
+.account-screen .room-row small,.account-screen .role-badge{font-size:13px}
+.account-screen input[aria-invalid="true"]{border-color:#d57475;box-shadow:0 0 0 1px #d57475}

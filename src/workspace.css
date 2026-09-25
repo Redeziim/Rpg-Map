@@ -26,6 +26,7 @@
 .mist-theme .tab-nav{padding:0 8px;gap:4px}
 .mist-theme .tab-btn{font-family:var(--workspace-font);font-size:13px;min-height:44px;padding:10px;gap:8px}
 .mist-theme .tab-btn.active{background:#2b251b;border-color:var(--workspace-edge);color:var(--workspace-gold)}
+.mist-theme .tab-label-short{display:none}
 .mist-theme .nav-footer{padding:20px;font-size:12px}
 .mist-theme .nav-footer small{font-size:14px}
 .mist-theme .room-content{min-width:0;width:100%;max-width:1440px;margin-inline:auto}
@@ -177,7 +178,10 @@
   .mist-theme .header{height:auto;position:relative}
   .mist-theme .header-content{padding:12px 14px;gap:10px;flex-direction:row}
   .mist-theme .tab-nav{flex-direction:row;padding:0 8px 8px;gap:2px}
-  .mist-theme .tab-btn{font-size:11px;padding:8px 4px;gap:5px;min-height:44px}
+  .mist-theme .tab-btn{font-size:12px;padding:8px 4px;gap:5px;min-height:44px}
+  .mist-theme .tab-btn svg{flex-shrink:0}
+  .mist-theme .tab-label-full{display:none}
+  .mist-theme .tab-label-short{display:inline}
   .mist-theme .header-controls{max-width:180px}
   .mist-theme .session-strip{margin:14px 14px 0;gap:8px}
   .mist-theme .session-strip .turn-tracker{padding:10px;flex-basis:100%}
@@ -206,5 +210,18 @@
   .mist-theme .room-invite-panel form{grid-template-columns:minmax(0,1fr) 110px}
   .mist-theme input,.mist-theme select,.mist-theme textarea{font-size:16px}
 }
+
+@media(max-width:1100px){
+  .mist-theme .tabletop-map{grid-template-columns:minmax(0,1fr)}
+  .mist-theme .tabletop-stage{grid-row:1}
+  .mist-theme .tabletop-tools{grid-row:2;max-height:none;border-right:0;border-top:1px solid var(--workspace-edge)}
+  .mist-theme .tabletop-camera{justify-content:flex-start}
+}
+.mist-theme .upload-btn{position:relative;min-height:44px;font-size:13px}
+.mist-theme .upload-btn:focus-within{outline:2px solid #e5c480;outline-offset:3px}
+.mist-theme .upload-btn input{display:block;position:absolute;width:1px;height:1px;min-height:1px;padding:0;opacity:0;clip-path:inset(50%)}
+.mist-theme .map-keyboard-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0}
+.mist-theme .map-keyboard-actions button{min-height:44px;padding:7px;border:1px solid var(--workspace-edge);background:#25221c;color:#e7d6b1;cursor:pointer}
+.mist-theme .map-keyboard-actions button:last-child:nth-child(4){grid-column:1/-1}
 @media(prefers-reduced-motion:reduce){.mist-theme button,.mist-theme .group-status-card{transition:none;animation:none}}
 @media(forced-colors:active){.mist-theme .group-status-card:hover,.mist-theme .group-status-card:focus-within{outline:2px solid Highlight}}

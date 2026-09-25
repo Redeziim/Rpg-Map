@@ -1,9 +1,18 @@
 import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
+import { X } from 'lucide-react';
 
 const Scene3D = ({ pointData, onClose }) => {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -183,7 +192,8 @@ const Scene3D = ({ pointData, onClose }) => {
       environment.rotation.y += 0.003;
       renderer.render(scene, camera);
     };
-    animate();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) renderer.render(scene, camera);
+    else animate();
 
     // Cleanup
     return () => {
@@ -196,14 +206,14 @@ const Scene3D = ({ pointData, onClose }) => {
   }, [pointData.type]);
 
   return (
-    <div className="scene-overlay">
+    <div className="scene-overlay" role="dialog" aria-modal="true" aria-label={pointData.name}>
       <div className="scene-container">
         <div className="scene-header">
           <div>
             <h2>{pointData.name}</h2>
             <p>{pointData.description}</p>
           </div>
-          <button onClick={onClose} className="close-btn">
+          <button ref={closeRef} onClick={onClose} className="close-btn" aria-label="Fechar local">
             <X size={24} />
           </button>
         </div>

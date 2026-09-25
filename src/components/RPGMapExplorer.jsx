@@ -61,11 +61,12 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
   ];
 
   const handleCanvasClick = (e) => {
-    if (viewMode !== 'master' || dragging) return;
+    if (dragging) return;
 
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left - position.x) / scale;
-    const y = (e.clientY - rect.top - position.y) / scale;
+    const canvas=canvasRef.current;
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*canvas.width/rect.width;
+    const y=(e.clientY-rect.top)*canvas.height/rect.height;
 
     // Verificar se clicou em um ponto existente
     const clickedPoint = points.find(p => {
@@ -75,7 +76,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
 
     if (clickedPoint) {
       setShow3DScene(clickedPoint);
-    } else {
+    } else if (viewMode === 'master') {
       setNewPoint({ ...newPoint, x, y });
       setShowPointModal(true);
     }
@@ -185,7 +186,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
       <header className="header">
         <div className="header-content">
           <div className="logo">
-            <div className="brand-mark"><ScrollText size={25} /></div><div><span className="brand-kicker">UM REFÚGIO PARA SUAS HISTÓRIAS</span><h1>Grimório</h1></div>
+            <div className="brand-mark"><ScrollText size={25} /></div><div><span className="brand-kicker">SUA MESA DE RPG</span><h1>Grimório</h1></div>
           </div>
           <div className="header-controls">
             <div className="room-title-nav">{room.name}</div>
@@ -198,9 +199,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
             </div>
           </div>
         </div>
-        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} onClick={()=>setActiveTab('mesa')}><Users size={18}/>Mesa</button>
+        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-pressed={activeTab==='mesa'} onClick={()=>setActiveTab('mesa')}><Users size={18}/>Mesa</button>
           <button
             className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
+            aria-pressed={activeTab === 'mapa'}
             onClick={() => setActiveTab('mapa')}
           >
             <Map size={18} />
@@ -208,20 +210,24 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           </button>
           <button
             className={`tab-btn ${activeTab === 'ficha' ? 'active' : ''}`}
+            aria-label={viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}
+            aria-pressed={activeTab === 'ficha'}
             onClick={() => setActiveTab('ficha')}
           >
             <ScrollText size={18} />
-            {viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}
+            <span className="tab-label-full">{viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}</span><span className="tab-label-short" aria-hidden="true">Ficha</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'grupo' ? 'active' : ''}`}
+            aria-label="Status do Grupo"
+            aria-pressed={activeTab === 'grupo'}
             onClick={() => setActiveTab('grupo')}
           >
             <Heart size={18} />
-            Status do Grupo
+            <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short" aria-hidden="true">Grupo</span>
           </button>
         </nav>
-        <div className="nav-footer"><span>✦</span><small>Entre mundos,<br />a sua mesa.</small></div>
+        <div className="nav-footer"><span>✦</span><small>Mapa, fichas<br />e dados.</small></div>
       </header>
 
       <div className="room-content"><div className="session-strip"><TurnTracker room={room} username={user.username} editable={viewMode==='master'} saving={saving} mutate={mutate}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" notes={room.state.masterNotebooks||[]} onSave={(id,note)=>mutate('/notes/@master/'+id,note,'PATCH')}/>}</div>
@@ -240,7 +246,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 {viewMode === 'master' && (
                   <label className="upload-btn">
                     <input type="file" accept="image/*" onChange={handleImageUpload} />
-                    Upload de Mapa
+                    Selecionar imagem
                   </label>
                 )}
               </div>
@@ -266,6 +272,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                         {viewMode === 'master' && (
                           <button 
                             className="delete-btn"
+                            aria-label={`Excluir ponto ${point.name}`}
                             onClick={() => deletePoint(point.id)}
                           >
                             <X size={16} />
@@ -280,10 +287,16 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
               <div className="sidebar-section">
                 <h3>Controles</h3>
                 <div className="controls-info">
-                  <p><strong>Scroll:</strong> Zoom</p>
-                  <p><strong>Arrastar:</strong> Mover mapa</p>
-                  <p><strong>Clique:</strong> {viewMode === 'master' ? 'Adicionar ponto' : 'Ver ponto'}</p>
+                  <p><strong>Roda do mouse:</strong> aproximar ou afastar</p>
+                  <p><strong>Arrastar:</strong> mover o mapa</p>
+                  <p><strong>Clique:</strong> {viewMode === 'master' ? 'adicionar ponto' : 'ver ponto'}</p>
                 </div>
+                {mapImage&&<div className="map-keyboard-actions" role="group" aria-label="Controles do mapa 2D">
+                  <button onClick={()=>setScale(prev=>Math.min(prev*1.2,3))}>Aproximar</button>
+                  <button onClick={()=>setScale(prev=>Math.max(prev/1.2,.5))}>Afastar</button>
+                  <button onClick={()=>{setScale(1);setPosition({x:0,y:0});}}>Centralizar</button>
+                  {viewMode==='master'&&<button onClick={()=>{const canvas=canvasRef.current;setNewPoint({...newPoint,x:(canvas?.width||0)/2,y:(canvas?.height||0)/2});setShowPointModal(true);}}>Adicionar ponto no centro</button>}
+                </div>}
                 <div className="zoom-indicator">
                   Zoom: {Math.round(scale * 100)}%
                 </div>
@@ -377,18 +390,20 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
       <DiceFocus roll={room.trayRoll} serverTime={room.serverTime} enabled={activeTab==='grupo'||room.trayRoll?.username===user.username}/>
       {/* Modal de adicionar ponto */}
       {showPointModal && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="new-point-title" onKeyDown={e=>{if(e.key==='Escape')setShowPointModal(false);}}>
           <div className="modal">
             <div className="modal-header">
-              <h2>Novo Ponto de Interesse</h2>
-              <button onClick={() => setShowPointModal(false)}>
+              <h2 id="new-point-title">Novo Ponto de Interesse</h2>
+              <button aria-label="Fechar novo ponto" onClick={() => setShowPointModal(false)}>
                 <X size={24} />
               </button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>Nome</label>
+                <label htmlFor="new-point-name">Nome</label>
                 <input
+                  id="new-point-name"
+                  autoFocus
                   type="text"
                   value={newPoint.name}
                   onChange={(e) => setNewPoint({ ...newPoint, name: e.target.value })}
@@ -396,8 +411,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 />
               </div>
               <div className="form-group">
-                <label>Descrição</label>
+                <label htmlFor="new-point-description">Descrição</label>
                 <textarea
+                  id="new-point-description"
                   value={newPoint.description}
                   onChange={(e) => setNewPoint({ ...newPoint, description: e.target.value })}
                   placeholder="Descreva este local..."
@@ -405,14 +421,15 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 />
               </div>
               <div className="form-group">
-                <label>Tipo</label>
-                <div className="type-grid">
+                <span id="new-point-type">Tipo</span>
+                <div className="type-grid" role="group" aria-labelledby="new-point-type">
                   {pointTypes.map(type => {
                     const Icon = type.icon;
                     return (
                       <button
                         key={type.value}
                         className={`type-btn ${newPoint.type === type.value ? 'active' : ''}`}
+                        aria-pressed={newPoint.type === type.value}
                         onClick={() => setNewPoint({ ...newPoint, type: type.value })}
                         style={{ '--type-color': type.color }}
                       >
@@ -428,7 +445,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
               <button className="btn-secondary" onClick={() => setShowPointModal(false)}>
                 Cancelar
               </button>
-              <button className="btn-primary" onClick={addPoint}>
+              <button className="btn-primary" onClick={addPoint} disabled={!newPoint.name.trim()}>
                 <Plus size={18} />
                 Adicionar Ponto
               </button>

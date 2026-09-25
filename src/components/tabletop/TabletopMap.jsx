@@ -52,7 +52,7 @@ export default function TabletopMap({room,mutate,editable}){
       <h2>Mesa 3D</h2><p>{editable?'Monte o terreno e posicione suas estruturas.':'Explore a cena. Mestre e ADM cuidam dos objetos.'}</p>
       {editable&&<div className="tabletop-import">
         <label>Importar como<select value={kind} disabled={busy} onChange={e=>setKind(e.target.value)}><option value="terrain">Mapa / terreno</option><option value="structure">Estrutura / objeto</option></select></label>
-        <label className="tabletop-file">Selecionar arquivos<input type="file" multiple disabled={busy} accept=".glb,.gltf,.obj,.mtl,.fbx,.bin,.png,.jpg,.jpeg,.webp" onChange={choose}/></label>
+        <label className="tabletop-file">{files.length?`${files.length} arquivo${files.length>1?'s':''} selecionado${files.length>1?'s':''} · trocar`:'Selecionar arquivos'}<input type="file" multiple disabled={busy} accept=".glb,.gltf,.obj,.mtl,.fbx,.bin,.png,.jpg,.jpeg,.webp" onChange={choose}/></label>
         <small>GLB, GLTF, OBJ, FBX ou PNG/JPG/WebP. Selecione junto os materiais, texturas e arquivos BIN. Até 50 MB.</small>
         {!!files.length&&<><label>Arquivo principal<select value={main} disabled={busy} onChange={e=>setMain(e.target.value)}>{files.filter(f=>supported.test(f.name)).map(f=><option key={f.name} value={f.webkitRelativePath||f.name}>{f.name}</option>)}</select></label><button onClick={upload} disabled={busy||!main}>{busy?'Importando…':`Adicionar à mesa (${files.length} arquivos)`}</button></>}
       </div>}
