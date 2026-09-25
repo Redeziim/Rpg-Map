@@ -25,7 +25,15 @@ const string = (value, max, label, min=0) => {
   return value;
 };
 const image = value => value===null || (typeof value==='string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value));
-const initialState = () => ({points:[],mapImage:null,sheetFields:[],sheetFont:'cinzel',masterNotes:'',turnOrder:[],activePlayer:null,playerSheets:{},statusBarsData:{}});
+const initialState = () => ({points:[],mapImage:null,sheetFields:[],sheetFont:'cinzel',masterNotes:'',turnOrder:[],turnExcluded:[],turnNpcs:[],activePlayer:null,playerSheets:{},statusBarsData:{}});
+function normalizeTurns(state,members){
+  const players=members.filter(member=>member.role!=='master').map(member=>member.username);
+  const excluded=(state.turnExcluded||[]).filter(name=>players.includes(name));
+  const npcs=state.turnNpcs||[];
+  const available=[...players.filter(name=>!excluded.includes(name)),...npcs.map(npc=>npc.id)];
+  const order=[...new Set([...(state.turnOrder||[]).filter(id=>available.includes(id)),...available])];
+  return {...state,turnExcluded:excluded,turnNpcs:npcs,turnOrder:order,activePlayer:available.includes(state.activePlayer)?state.activePlayer:null};
+}
 async function body(req,maxBytes=10*1024*1024) {
   if(!req.headers['content-type']?.startsWith('application/json')) fail(415,'Envie JSON.');
   let size=0,chunks=[];
@@ -70,10 +78,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const admin=m=>{if(m.role!=='admin')fail(403,'Somente o ADM pode fazer isso.');};
   function snapshot(roomId,userId){
     const m=membership(roomId,userId),room=query('SELECT * FROM rooms WHERE id=?',roomId);
-    const state=JSON.parse(room.state),members=all('SELECT u.id,u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE room_id=? ORDER BY u.username',roomId);
-    const eligible=members.filter(u=>u.role!=='master').map(u=>u.username);
-    state.turnOrder=[...(state.turnOrder||[]).filter(n=>eligible.includes(n)),...eligible.filter(n=>!(state.turnOrder||[]).includes(n))];
-    if(!eligible.includes(state.activePlayer))state.activePlayer=null;
+    const members=all('SELECT u.id,u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE room_id=? ORDER BY u.username',roomId);
+    const state=normalizeTurns(JSON.parse(room.state),members);
     const usernames=new Set(members.map(u=>u.username));
     const groupBars=Object.fromEntries(members.map(u=>[u.username,{...(state.statusBarsData[u.username]||{avatar:null,bars:[]}),bars:[...(state.statusBarsData[u.username]?.bars||[]),...state.sheetFields.filter(f=>f.type==='status').map((f,i)=>({id:f.id,label:f.label,color:['#a84d51','#c8a65e','#ddd0b2'][i%3],...(state.playerSheets[u.username]?.values?.[f.id]||{current:0,max:0})}))]}]));
     state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(m.role!=='player'||members.find(u=>u.id===userId)?.username===name)));
@@ -100,7 +106,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     transaction(()=>{
       run('INSERT INTO members VALUES(?,?,?)',roomId,userId,role);
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      state.playerSheets[username] ||= {values:{},extraFields:[],observations:''};state.statusBarsData[username] ||= {avatar:null,bars:[]};saveState(roomId,state);
+      state.playerSheets[username] ||= {values:{},extraFields:[],observations:''};state.statusBarsData[username] ||= {avatar:null,bars:[]};state.turnExcluded=(state.turnExcluded||[]).filter(name=>name!==username);saveState(roomId,state);
     });
   }
   const timer=setInterval(()=>{
@@ -221,21 +227,37 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       privileged(m);
       const {action,player}=requestBody;
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      const current=snapshot(roomId,user.id).state;
-      const order=current.turnOrder;
+      const view=snapshot(roomId,user.id),current=view.state;
+      let order=[...current.turnOrder],npcs=[...current.turnNpcs],excluded=[...current.turnExcluded];
       let active=current.activePlayer;
-      if(['select','up','down'].includes(action)&&!order.includes(player))fail(400,'Jogador não encontrado na ordem de turnos.');
+      if(['select','up','down','remove'].includes(action)&&!order.includes(player))fail(400,'Participante não encontrado na ordem de turnos.');
       if(action==='select')active=player;
       else if(action==='end')active=null;
       else if(action==='next'){
-        if(!order.length)fail(400,'Adicione jogadores antes de iniciar os turnos.');
+        if(!order.length)fail(400,'Adicione participantes antes de iniciar os turnos.');
         active=order[(order.indexOf(active)+1)%order.length];
+      }else if(action==='add'){
+        if(npcs.length>=40)fail(400,'A ordem já tem 40 inimigos ou NPCs.');
+        const name=string(requestBody.name,50,'Nome',2).trim();
+        if(name.length<2)fail(400,'Dê um nome ao personagem.');
+        if(!['enemy','npc'].includes(requestBody.kind))fail(400,'Tipo de personagem inválido.');
+        const npc={id:`npc:${randomUUID()}`,name,kind:requestBody.kind};
+        npcs.push(npc);order.push(npc.id);
+      }else if(action==='remove'){
+        const removedIndex=order.indexOf(player);
+        if(player.startsWith('npc:'))npcs=npcs.filter(npc=>npc.id!==player);
+        else excluded.push(player);
+        order=order.filter(id=>id!==player);
+        if(active===player)active=order.length?order[removedIndex%order.length]:null;
+      }else if(action==='include'){
+        if(!excluded.includes(player)||!view.members.some(member=>member.username===player&&member.role!=='master'))fail(400,'Jogador não está fora do combate.');
+        excluded=excluded.filter(name=>name!==player);order.push(player);
       }else if(action==='up'||action==='down'){
         const index=order.indexOf(player),target=index+(action==='up'?-1:1);
         if(target<0||target>=order.length)fail(400,'O jogador já está no limite da ordem.');
         [order[index],order[target]]=[order[target],order[index]];
       }else fail(400,'Ação de turno inválida.');
-      saveState(roomId,{...state,turnOrder:order,activePlayer:active});
+      saveState(roomId,{...state,turnOrder:order,turnNpcs:npcs,turnExcluded:excluded,activePlayer:active});
       broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
     }
     if(path[3]==='notes'&&path[4]&&path[5]&&method==='PATCH'){
@@ -329,6 +351,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
           const username=query('SELECT username FROM users WHERE id=?',path[4]).username;
           const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
           state.turnOrder=(state.turnOrder||[]).filter(name=>name!==username);
+          state.turnExcluded=(state.turnExcluded||[]).filter(name=>name!==username);
           if(state.activePlayer===username)state.activePlayer=null;
           saveState(roomId,state);
         }

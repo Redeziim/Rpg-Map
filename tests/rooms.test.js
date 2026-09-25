@@ -48,6 +48,31 @@ test('accounts, room isolation, role enforcement, invites, live updates and pers
     assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'next'})).body.state.activePlayer,'bob');
     assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'select',player:'owner'})).status,200);
     assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'next'})).body.state.activePlayer,'bob');
+    assert.equal((await request('alice',`/rooms/${room}/turns`,'POST',{action:'add',name:'Guarda',kind:'enemy'})).status,403);
+    const addedEnemy=await request('master',`/rooms/${room}/turns`,'POST',{action:'add',name:'Guarda da ponte',kind:'enemy'});
+    assert.equal(addedEnemy.status,200);
+    const enemy=addedEnemy.body.state.turnNpcs[0];
+    assert.equal(enemy.name,'Guarda da ponte');assert.equal(enemy.kind,'enemy');
+    assert.equal(addedEnemy.body.state.turnOrder.at(-1),enemy.id);
+    assert.deepEqual((await request('alice',`/rooms/${room}`)).body.state.turnNpcs,[enemy]);
+    assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'select',player:enemy.id})).body.state.activePlayer,enemy.id);
+    assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'remove',player:enemy.id})).body.state.activePlayer,'bob');
+    assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'select',player:'alice'})).body.state.activePlayer,'alice');
+    const excluded=await request('master',`/rooms/${room}/turns`,'POST',{action:'remove',player:'alice'});
+    assert.equal(excluded.body.state.activePlayer,'owner');
+    assert.ok(!excluded.body.state.turnOrder.includes('alice'));
+    assert.ok(excluded.body.state.turnExcluded.includes('alice'));
+    assert.ok(excluded.body.members.some(member=>member.username==='alice'));
+    assert.ok(!(await request('owner',`/rooms/${room}`)).body.state.turnOrder.includes('alice'));
+    const included=await request('owner',`/rooms/${room}/turns`,'POST',{action:'include',player:'alice'});
+    assert.ok(included.body.state.turnOrder.includes('alice'));
+    assert.ok(!included.body.state.turnExcluded.includes('alice'));
+    assert.equal((await request('owner',`/rooms/${room}/turns`,'POST',{action:'add',name:'Vigia',kind:'npc'})).status,200);
+    const ally=(await request('bob',`/rooms/${room}`)).body.state.turnNpcs[0];
+    assert.equal(ally.kind,'npc');
+    assert.equal((await request('owner',`/rooms/${room}/turns`,'POST',{action:'remove',player:ally.id})).status,200);
+    assert.equal((await request('bob',`/rooms/${room}`)).body.state.turnNpcs.length,0);
+    await request('master',`/rooms/${room}/turns`,'POST',{action:'select',player:'bob'});
     const model={sheetFields:[{id:'force',label:'Força',type:'number',tab:'Atributos'},{id:'life',label:'Vida',type:'status',tab:'Recursos'}],masterNotes:'Segredo do mestre'};
     assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',model)).status,200);
     assert.equal((await request('master',`/rooms/${room}/state`,'PATCH',{sheetFields:[{id:'bad',label:'Inválido',type:'text',tab:{}}]})).status,400);
@@ -77,6 +102,9 @@ test('accounts, room isolation, role enforcement, invites, live updates and pers
     const invitation=(await request('master',`/rooms/${room}/invites`,'POST',{role:'player'})).body;
     assert.ok(invitation.code);
     const joined=await request('outsider','/join','POST',{code:invitation.code,role:'admin'});assert.equal(joined.status,200);assert.equal(joined.body.role,'player');
+    assert.ok(joined.body.state.turnOrder.includes('outsider'));
+    const persistentNpc=(await request('master',`/rooms/${room}/turns`,'POST',{action:'add',name:'Arauto',kind:'npc'})).body.state.turnNpcs[0];
+    assert.equal((await request('master',`/rooms/${room}/turns`,'POST',{action:'remove',player:'outsider'})).status,200);
     assert.equal((await request('master',`/rooms/${room}/invites/${invitation.id}`,'DELETE')).status,200);
     assert.equal((await request('bob','/join','POST',{code:invitation.code})).status,404);
     const controller=new AbortController();
@@ -84,6 +112,10 @@ test('accounts, room isolation, role enforcement, invites, live updates and pers
     let buffer='';const decoder=new TextDecoder();
     async function event(){while(!buffer.includes('\n\n')){const chunk=await reader.read();if(chunk.done)throw Error('SSE closed');buffer+=decoder.decode(chunk.value,{stream:true});}const end=buffer.indexOf('\n\n');const result=buffer.slice(0,end);buffer=buffer.slice(end+2);return result;}
     const first=await event();assert.match(first,/event: room/);assert.ok(!first.includes('Segredo do mestre'));assert.ok(!first.includes('Nota de Bob'));
+    const liveNpc=(await request('master',`/rooms/${room}/turns`,'POST',{action:'add',name:'Vigia ao vivo',kind:'enemy'})).body.state.turnNpcs.at(-1);
+    assert.match(await event(),/Vigia ao vivo/);
+    await request('master',`/rooms/${room}/turns`,'POST',{action:'remove',player:liveNpc.id});
+    assert.ok(!(await event()).includes('Vigia ao vivo'));
     await request('master',`/rooms/${room}/state`,'PATCH',{sheetFont:'fell'});
     const change=await event();assert.match(change,/"sheetFont":"fell"/);
     await request('master',`/rooms/${room}/turns`,'POST',{action:'select',player:'alice'});
@@ -104,6 +136,9 @@ test('accounts, room isolation, role enforcement, invites, live updates and pers
     const restored=await request('owner',`/rooms/${room}`);assert.equal(restored.status,200);assert.equal(restored.body.state.playerSheets.bob.observations,'Nota de Bob');assert.equal(restored.body.state.sheetFont,'fell');
     assert.equal(restored.body.state.activePlayer,'bob');
     assert.equal(restored.body.state.turnOrder[0],'bob');
+    assert.deepEqual(restored.body.state.turnNpcs,[persistentNpc]);
+    assert.ok(restored.body.state.turnExcluded.includes('outsider'));
+    assert.ok(!restored.body.state.turnOrder.includes('outsider'));
     await request('owner','/auth/logout','POST');assert.equal((await request('owner','/rooms')).status,401);
   }finally{app.close();rmSync(directory,{recursive:true,force:true});}
 });

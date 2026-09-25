@@ -24,6 +24,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
   const viewMode=room.role==='admin'?adminMode:room.role==='master'?'master':'player';
   const [activeTab,setActiveTab]=useState('mesa');
   const [mapMode,setMapMode]=useState('3d');
+  const [mapFocus,setMapFocus]=useState(false);
+  const [map2dToolsOpen,setMap2dToolsOpen]=useState(false);
+  const [mapCanvasSize,setMapCanvasSize]=useState({width:0,height:0});
+  const [mapViewportSize,setMapViewportSize]=useState({width:0,height:0});
   const {masterNotes='',mapImage,points,sheetFields,sheetFont,playerSheets,statusBarsData}=room.state;
   const playerName=user.username;
   const [selectedPoint,setSelectedPoint]=useState(null);
@@ -34,7 +38,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
   const [position,setPosition]=useState({x:0,y:0});
   const [dragging,setDragging]=useState(false);
   const [dragStart,setDragStart]=useState({x:0,y:0});
-  const canvasRef=useRef(null),mapRef=useRef(null);
+  const canvasRef=useRef(null),canvasWrapperRef=useRef(null),mapRef=useRef(null);
+  const mapFit=mapCanvasSize.width&&mapCanvasSize.height&&mapViewportSize.width&&mapViewportSize.height
+    ?Math.min((mapViewportSize.width-20)/mapCanvasSize.width,(mapViewportSize.height-20)/mapCanvasSize.height):1;
   const saveShared=patch=>mutate('/state',patch,'PATCH',current=>({...current,state:{...current.state,...patch}}));
   const saveSheetFields=sheetFields=>saveShared({sheetFields});
   const saveSheetFont=sheetFont=>saveShared({sheetFont});
@@ -136,10 +142,13 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const img = new Image();
+    let cancelled=false;
     
     img.onload = () => {
+      if(cancelled)return;
       canvas.width = img.width;
       canvas.height = img.height;
+      setMapCanvasSize({width:img.width,height:img.height});
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
@@ -174,12 +183,22 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
     };
     
     img.src = mapImage;
-  }, [mapImage, points, scale, position, mapMode, activeTab]);
+    return()=>{cancelled=true;img.onload=null;};
+  }, [mapImage, points, mapMode, activeTab]);
+
+  useEffect(()=>{
+    if(mapMode!=='2d'||activeTab!=='mapa'||!mapImage||!canvasWrapperRef.current)return;
+    const wrapper=canvasWrapperRef.current;
+    const measure=()=>{const rect=wrapper.getBoundingClientRect();setMapViewportSize(previous=>previous.width===rect.width&&previous.height===rect.height?previous:{width:rect.width,height:rect.height});};
+    const observer=new ResizeObserver(measure);
+    observer.observe(wrapper);measure();
+    return()=>observer.disconnect();
+  },[mapMode,activeTab,mapImage]);
 
   const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
   const groupEntries=room.groupBars;
   return (
-    <div className="rpg-container mist-theme">
+    <div className={`rpg-container mist-theme ${activeTab==='mapa'&&mapFocus?'map-focus':''}`}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       
       {/* Header */}
@@ -234,10 +253,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
       <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate}/>:activeTab === 'mapa' ? (
           <>
-            <div className="map-mode-tabs" role="group" aria-label="Visualização do mapa"><button aria-pressed={mapMode==='3d'} onClick={()=>setMapMode('3d')}>Mesa 3D</button><button aria-pressed={mapMode==='2d'} onClick={()=>setMapMode('2d')}>Mapa 2D e pontos</button></div>
+            <div className="map-mode-tabs" role="group" aria-label="Visualização do mapa"><button aria-pressed={mapMode==='3d'} onClick={()=>setMapMode('3d')}>Mesa 3D</button><button aria-pressed={mapMode==='2d'} onClick={()=>setMapMode('2d')}>Mapa 2D e pontos</button>{mapMode==='2d'&&<button aria-expanded={map2dToolsOpen} aria-controls="map-2d-tools" onClick={()=>setMap2dToolsOpen(open=>!open)}>{map2dToolsOpen?'Fechar ferramentas':'Ferramentas 2D'}</button>}<button className="map-focus-button" aria-pressed={mapFocus} onClick={()=>setMapFocus(focus=>!focus)}>{mapFocus?'Sair do foco':'Ampliar mapa'}</button></div>
             {mapMode==='3d'?<TabletopMap room={room} mutate={mutate} editable={room.role==='admin'||room.role==='master'}/>:<div className="legacy-map-layout">
             {/* Sidebar */}
-            <aside className="sidebar">
+            <aside id="map-2d-tools" className="sidebar" hidden={!map2dToolsOpen}>
               <div className="sidebar-section">
                 <h3>
                   <Upload size={18} />
@@ -314,6 +333,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
               ) : (
                 <div 
                   className="canvas-wrapper"
+                  ref={canvasWrapperRef}
                   onWheel={handleWheel}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -325,6 +345,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                     className="map-canvas"
                     onClick={handleCanvasClick}
                     style={{
+                      width:mapCanvasSize.width*mapFit||undefined,
+                      height:mapCanvasSize.height*mapFit||undefined,
                       transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                       cursor: dragging ? 'grabbing' : 'grab'
                     }}

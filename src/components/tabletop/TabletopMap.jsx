@@ -8,7 +8,7 @@ const model=/\.(glb|gltf|obj|fbx)$/i;
 const read=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve({name:file.webkitRelativePath||file.name,data:reader.result});reader.onerror=()=>reject(Error('Não foi possível ler '+file.name));reader.readAsDataURL(file);});
 
 export default function TabletopMap({room,mutate,editable}){
-  const objects=room.state.mapObjects||[],[selected,setSelected]=useState(null),[mode,setMode]=useState('translate'),[files,setFiles]=useState([]),[main,setMain]=useState(''),[kind,setKind]=useState('terrain'),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState('');
+  const objects=room.state.mapObjects||[],[selected,setSelected]=useState(null),[mode,setMode]=useState('translate'),[files,setFiles]=useState([]),[main,setMain]=useState(''),[kind,setKind]=useState('terrain'),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState(''),[toolsOpen,setToolsOpen]=useState(false);
   const actions=useRef(null),pending=useRef(new Map()),timer=useRef(null),alive=useRef(true),inflight=useRef(false),permission=useRef(editable);
   permission.current=editable;
   const item=objects.find(o=>o.id===selected);
@@ -48,7 +48,7 @@ export default function TabletopMap({room,mutate,editable}){
     const result=await mutate(`/map-objects/${item.id}`,{},'DELETE');if(result)setSelected(null);
   }
   return <section className="tabletop-map" aria-label="Mapa tridimensional">
-    <aside className="tabletop-tools">
+    <aside id="tabletop-tools-panel" className="tabletop-tools" aria-label="Ferramentas do mapa" hidden={!toolsOpen}>
       <h2>Mesa 3D</h2><p>{editable?'Monte o terreno e posicione suas estruturas.':'Explore a cena. Mestre e ADM cuidam dos objetos.'}</p>
       {editable&&<div className="tabletop-import">
         <label>Importar como<select value={kind} disabled={busy} onChange={e=>setKind(e.target.value)}><option value="terrain">Mapa / terreno</option><option value="structure">Estrutura / objeto</option></select></label>
@@ -67,7 +67,7 @@ export default function TabletopMap({room,mutate,editable}){
       </div>}
     </aside>
     <div className="tabletop-stage">
-      <div className="tabletop-camera" role="group" aria-label="Câmera do mapa">{[['fit','Enquadrar'],['top','Vista superior'],['in','Aproximar'],['out','Afastar']].map(([action,label])=><button key={action} onClick={()=>actions.current?.(action)}>{label}</button>)}</div>
+      <div className="tabletop-camera" role="group" aria-label="Câmera do mapa"><button type="button" className="tabletop-tools-toggle" aria-expanded={toolsOpen} aria-controls="tabletop-tools-panel" onClick={()=>setToolsOpen(open=>!open)}>{toolsOpen?'Fechar ferramentas':'Ferramentas'}</button>{[['fit','Enquadrar'],['top','Vista superior'],['in','Aproximar'],['out','Afastar']].map(([action,label])=><button key={action} onClick={()=>actions.current?.(action)}>{label}</button>)}</div>
       <TabletopScene roomId={room.id} objects={objects} selected={selected} editable={editable} mode={mode} onSelect={setSelected} onTransform={stream} onStatus={setStatus} actions={actions}/>
       <p className="tabletop-help">Arraste para girar · botão direito para deslocar · roda ou pinça para zoom. Sua câmera é individual.</p>
       {(status||error)&&<div className={`tabletop-notice ${error?'has-error':''}`} role={error?'alert':'status'}>{error||status}</div>}
