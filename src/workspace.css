@@ -27,8 +27,10 @@
 .mist-theme .tab-btn{font-family:var(--workspace-font);font-size:13px;min-height:44px;padding:10px;gap:8px}
 .mist-theme .tab-btn.active{background:#2b251b;border-color:var(--workspace-edge);color:var(--workspace-gold)}
 .mist-theme .tab-label-short{display:none}
-.mist-theme .nav-footer{padding:20px;font-size:12px}
-.mist-theme .nav-footer small{font-size:14px}
+.mist-theme .nav-footer{padding:12px 8px 18px;display:block}
+.mist-theme .nav-about-button{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:10px;border:1px solid transparent;border-radius:3px;background:transparent;color:#bcb4a5;cursor:pointer;text-align:left;font:600 13px var(--workspace-font)}
+.mist-theme .nav-about-button:hover,.mist-theme .nav-about-button.active{border-color:var(--workspace-edge);background:#2b251b;color:var(--workspace-gold)}
+.mist-theme .nav-about-button:focus-visible{outline:2px solid #e0bd77;outline-offset:2px}
 .mist-theme .room-content{min-width:0;width:100%;max-width:1440px;margin-inline:auto}
 .mist-theme .main-content{padding:var(--workspace-pad);gap:var(--workspace-gap);max-width:none}
 .mist-theme h2{font-size:24px;line-height:1.3}
@@ -178,7 +180,10 @@
   .mist-theme .header{height:auto;position:relative}
   .mist-theme .header-content{padding:12px 14px;gap:10px;flex-direction:row}
   .mist-theme .tab-nav{flex-direction:row;padding:0 8px 8px;gap:2px}
+  .mist-theme .tab-nav{flex-wrap:wrap}
   .mist-theme .tab-btn{font-size:12px;padding:8px 4px;gap:5px;min-height:44px}
+  .mist-theme .nav-footer{display:flex;justify-content:flex-end;padding:0 12px 10px}
+  .mist-theme .nav-about-button{width:auto;padding:8px 12px}
   .mist-theme .tab-btn svg{flex-shrink:0}
   .mist-theme .tab-label-full{display:none}
   .mist-theme .tab-label-short{display:inline}

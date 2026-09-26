@@ -1,10 +1,11 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{Suspense,lazy,useEffect,useRef,useState} from 'react';
 import { ScrollText, LogOut, Plus, ArrowRight, Users, KeyRound, ShieldCheck, Copy, X } from 'lucide-react';
 import { api, ROLE_LABELS } from '../api.js';
 import { useRoom } from '../useRoom.js';
-import RPGMapExplorer from './RPGMapExplorer.jsx';
 import AmbientFog from './AmbientFog.jsx';
 import '../account.css';
+
+const RPGMapExplorer=lazy(()=>import('./RPGMapExplorer.jsx'));
 
 function Brand(){return <div className="account-brand"><ScrollText size={32}/><span>Grimório</span></div>;}
 function Backdrop(){return <AmbientFog/>;}
@@ -25,7 +26,7 @@ function ActiveRoom({initialRoom,user,onExit,onLogout}){
   const {room,error,connection,saving,mutate}=useRoom(initialRoom,message=>onExit(message));
   const leave=()=>{if(!saving||confirm('Há alterações sendo enviadas. Deseja sair mesmo assim?'))onExit();};
   const logout=()=>{if(!saving||confirm('Há alterações sendo enviadas. Deseja sair mesmo assim?'))onLogout();};
-  return <><RPGMapExplorer room={room} user={user} mutate={mutate} onExit={leave} onLogout={logout} connection={connection} saving={saving}/>{error&&<div role="alert" className="room-error-toast">{error}</div>}</>;
+  return <><Suspense fallback={<main className="mist-theme account-loading"><Brand/><p role="status">Preparando sua mesa…</p></main>}><RPGMapExplorer room={room} user={user} mutate={mutate} onExit={leave} onLogout={logout} connection={connection} saving={saving} error={error}/></Suspense>{error&&<div role="alert" className="room-error-toast">{error}</div>}</>;
 }
 export default function AccountApp(){
   const [user,setUser]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[room,setRoom]=useState(null),[notice,setNotice]=useState('');

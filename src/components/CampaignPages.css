@@ -1,0 +1,45 @@
+.mist-theme .campaign-page{width:100%;min-width:0;max-width:1120px;margin:0 auto;color:#e7dfce}
+.mist-theme .campaign-page-heading{padding:4px 0 22px;border-bottom:1px solid #66573a}
+.mist-theme .campaign-kicker{display:block;color:#c9a965;font:700 10px/1.4 'Source Sans 3',sans-serif;letter-spacing:.15em;text-transform:uppercase}
+.mist-theme .campaign-page-heading h2{margin:5px 0 6px;font:600 clamp(28px,3vw,40px)/1.15 'Cinzel',Georgia,serif;color:#f1ddad}
+.mist-theme .campaign-page h2,.mist-theme .campaign-page h3{text-wrap:balance}
+.mist-theme .campaign-page-heading p{max-width:620px;margin:0;color:#c3baaa;font-size:15px}
+.mist-theme .scenes-empty{display:grid;grid-template-columns:160px minmax(0,1fr);align-items:center;gap:28px;margin:34px 0;padding:30px;border:1px solid #594d35;border-left:3px solid #c9a965;background:#1b1b18}
+.mist-theme .scenes-reel{width:152px;height:152px;display:grid;place-items:center;align-content:center;gap:9px;border:1px solid #756441;background:#24231c;color:#dabd7e}
+.mist-theme .scenes-reel span{font:600 29px 'Cinzel',Georgia,serif}
+.mist-theme .scenes-empty h3{margin:7px 0 8px;font:600 23px/1.3 'Cinzel',Georgia,serif;color:#ecd7a4}
+.mist-theme .scenes-empty p{max-width:540px;margin:0;color:#c5bbab;font-size:15px;line-height:1.55}
+.mist-theme .about-columns{display:grid;grid-template-columns:minmax(0,.9fr) minmax(320px,1.1fr);gap:24px;padding-top:26px}
+.mist-theme .about-reading{display:grid;align-content:start;gap:22px}
+.mist-theme .about-section,.mist-theme .feedback-section{min-width:0;background:#1c1d19;border:1px solid #544a35;padding:20px 22px}
+.mist-theme .about-section h3,.mist-theme .feedback-heading h3{display:flex;align-items:center;gap:9px;margin:0;color:#e8d1a0;font:600 18px/1.35 'Cinzel',Georgia,serif}
+.mist-theme .about-section h3 svg,.mist-theme .feedback-heading svg{color:#d3ad68;flex-shrink:0}
+.mist-theme .about-section ul{padding-left:19px;margin:15px 0 0;color:#d4ccbc;line-height:1.6}
+.mist-theme .about-section li+li{margin-top:10px}
+.mist-theme .feedback-section{border-top:3px solid #af8d53}
+.mist-theme .feedback-heading{display:flex;align-items:center;gap:12px}
+.mist-theme .feedback-section>p{margin:13px 0 20px;color:#c8c0b1;line-height:1.55}
+.mist-theme .feedback-section form{display:grid;gap:8px}
+.mist-theme .feedback-section label{color:#ddc995;font-size:13px;font-weight:700}
+.mist-theme .feedback-section select,.mist-theme .feedback-section textarea{box-sizing:border-box;width:100%;border:1px solid #766849;border-radius:2px;background:#151713;color:#f0e8d7;padding:11px 12px;font:15px/1.5 'Source Sans 3',sans-serif;color-scheme:dark}
+.mist-theme .feedback-section textarea{min-height:136px;resize:vertical;overflow-wrap:anywhere}
+.mist-theme .feedback-section select{min-height:44px;margin-bottom:8px}
+.mist-theme .feedback-section select:focus-visible,.mist-theme .feedback-section textarea:focus-visible,.mist-theme .feedback-actions button:focus-visible{outline:2px solid #e5bf78;outline-offset:2px}
+.mist-theme .feedback-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px}
+.mist-theme .feedback-actions span{color:#a9a394;font-size:12px}
+.mist-theme .feedback-actions span,.mist-theme .feedback-log time{font-variant-numeric:tabular-nums}
+.mist-theme .feedback-actions button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid #b99153;border-radius:2px;background:#4a3b27;color:#f8e4b5;cursor:pointer;font:700 13px 'Source Sans 3',sans-serif}
+.mist-theme .feedback-actions button:hover:not(:disabled){background:#5d492e}
+.mist-theme .feedback-actions button:disabled{opacity:.55;cursor:default}
+.mist-theme .feedback-notice{color:#b5dcad!important}.mist-theme .feedback-error{color:#ffb9af!important}
+.mist-theme .feedback-log{margin-top:26px;padding-top:17px;border-top:1px solid #4d493b}
+.mist-theme .feedback-log h4{margin:0 0 12px;color:#ddc995;font:700 14px 'Source Sans 3',sans-serif}
+.mist-theme .feedback-log>p{color:#ada99f;font-size:13px}
+.mist-theme .feedback-log ol{display:grid;gap:9px;list-style:none;margin:0;padding:0;max-height:310px;overflow:auto}
+.mist-theme .feedback-log li{padding:10px 12px;border-left:2px solid #8c7449;background:#24241e;overflow-wrap:anywhere}
+.mist-theme .feedback-log li>div{display:flex;justify-content:space-between;gap:12px;color:#dbc58e;font-size:12px}
+.mist-theme .feedback-log time,.mist-theme .feedback-log small{color:#aaa596}
+.mist-theme .feedback-log li p{margin:6px 0 0;white-space:pre-wrap;color:#dfd7c6;font-size:13px;line-height:1.45}
+@media(max-width:850px){.mist-theme .about-columns{grid-template-columns:1fr}.mist-theme .scenes-empty{grid-template-columns:1fr}.mist-theme .scenes-reel{width:100%;height:95px;display:flex;justify-content:center}.mist-theme .about-section,.mist-theme .feedback-section{padding:18px}}
+@media(max-width:500px){.mist-theme .scenes-empty{padding:18px;margin:20px 0}.mist-theme .campaign-page-heading{padding-bottom:16px}.mist-theme .about-columns{gap:14px;padding-top:16px}.mist-theme .feedback-actions{align-items:stretch;flex-direction:column}.mist-theme .feedback-actions button{width:100%}}
+@media(forced-colors:active){.mist-theme .scenes-empty,.mist-theme .about-section,.mist-theme .feedback-section,.mist-theme .feedback-log li{border:1px solid CanvasText}.mist-theme .feedback-actions button{border:1px solid ButtonText}}

@@ -25,6 +25,28 @@ const string = (value, max, label, min=0) => {
   return value;
 };
 const image = value => value===null || (typeof value==='string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(value));
+const emptyBoard=()=>({nodes:[],edges:[],strokes:[]});
+function noteBoard(value){
+  if(!object(value)||!Array.isArray(value.nodes)||!Array.isArray(value.edges)||!Array.isArray(value.strokes))fail(400,'Quadro da nota inválido.');
+  if(value.nodes.length>80||value.edges.length>120||value.strokes.length>150||JSON.stringify(value).length>6*1024*1024)fail(413,'Quadro muito grande. Reduza imagens e traços.');
+  const ids=new Set(),edgeIds=new Set(),strokeIds=new Set();
+  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9-]{1,100}$/.test(id);
+  for(const node of value.nodes){
+    if(!object(node)||!validId(node.id)||ids.has(node.id)||!['text','image'].includes(node.kind)||!Number.isFinite(node.x)||!Number.isFinite(node.y)||node.x<0||node.x>740||node.y<0||node.y>470)fail(400,'Elemento do quadro inválido.');
+    ids.add(node.id);
+    if(typeof node.text!=='string'||node.text.length>500)fail(400,'Texto do quadro inválido.');
+    if(node.kind==='image'&&(!image(node.src)||!node.src||node.src.length>3*1024*1024))fail(400,'Imagem do quadro inválida ou muito grande.');
+  }
+  for(const edge of value.edges){
+    if(!object(edge)||!validId(edge.id)||edgeIds.has(edge.id)||!ids.has(edge.from)||!ids.has(edge.to)||edge.from===edge.to)fail(400,'Conexão do quadro inválida.');
+    edgeIds.add(edge.id);
+  }
+  for(const stroke of value.strokes){
+    if(!object(stroke)||!validId(stroke.id)||strokeIds.has(stroke.id)||typeof stroke.path!=='string'||stroke.path.length>15000||!/^[ML0-9.,\s-]+$/.test(stroke.path))fail(400,'Traço do quadro inválido.');
+    strokeIds.add(stroke.id);
+  }
+  return value;
+}
 const initialState = () => ({points:[],mapImage:null,sheetFields:[],sheetFont:'cinzel',masterNotes:'',turnOrder:[],turnExcluded:[],turnNpcs:[],activePlayer:null,playerSheets:{},statusBarsData:{}});
 function normalizeTurns(state,members){
   const players=members.filter(member=>member.role!=='master').map(member=>member.username);
@@ -42,7 +64,7 @@ async function body(req,maxBytes=10*1024*1024) {
   if(!object(value))fail(400,'Dados inválidos.');safeKeys(value);return value;
 }
 
-export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPath=resolve('dist'),production=false,publicOrigin='',rateLimit=true}={}) {
+export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPath=resolve('dist'),production=false,publicOrigin='',rateLimit=true,heartbeatMs=20000}={}) {
   if(dbPath!==':memory:')mkdirSync(dirname(dbPath),{recursive:true,mode:0o700});
   const db=new DatabaseSync(dbPath);db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,salt TEXT NOT NULL);
@@ -52,6 +74,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     CREATE TABLE IF NOT EXISTS dice_structures(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),name TEXT NOT NULL,mesh TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS map_assets(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),bundle TEXT NOT NULL,bytes INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS invites(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),token_hash TEXT NOT NULL UNIQUE,role TEXT NOT NULL CHECK(role IN ('master','player')),expires INTEGER NOT NULL,created_by TEXT NOT NULL REFERENCES users(id));
+    CREATE TABLE IF NOT EXISTS feedback(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id),user_id TEXT NOT NULL REFERENCES users(id),category TEXT NOT NULL,message TEXT NOT NULL,created_at INTEGER NOT NULL);
   `);
   const query=(sql,...params)=>db.prepare(sql).get(...params);
   const all=(sql,...params)=>db.prepare(sql).all(...params);
@@ -79,20 +102,35 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   function snapshot(roomId,userId){
     const m=membership(roomId,userId),room=query('SELECT * FROM rooms WHERE id=?',roomId);
     const members=all('SELECT u.id,u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE room_id=? ORDER BY u.username',roomId);
+    const viewer=members.find(member=>member.id===userId)?.username;
     const state=normalizeTurns(JSON.parse(room.state),members);
     const usernames=new Set(members.map(u=>u.username));
     const groupBars=Object.fromEntries(members.map(u=>[u.username,{...(state.statusBarsData[u.username]||{avatar:null,bars:[]}),bars:[...(state.statusBarsData[u.username]?.bars||[]),...state.sheetFields.filter(f=>f.type==='status').map((f,i)=>({id:f.id,label:f.label,color:['#a84d51','#c8a65e','#ddd0b2'][i%3],...(state.playerSheets[u.username]?.values?.[f.id]||{current:0,max:0})}))]}]));
-    state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(m.role!=='player'||members.find(u=>u.id===userId)?.username===name)));
-    state.statusBarsData=Object.fromEntries(Object.entries(state.statusBarsData).filter(([name])=>usernames.has(name)));
     state.masterNotebooks ||= state.masterNotes?[{id:'legacy',title:'Notas do mestre',body:state.masterNotes}]:[];
     for(const sheet of Object.values(state.playerSheets))sheet.notebooks ||= sheet.observations?[{id:'legacy',title:'Observações do jogador',body:sheet.observations}]:[];
+    const normalizedNote=note=>({...note,board:note.board||emptyBoard(),sharedWith:note.sharedWith||[],version:note.version||1});
+    state.masterNotebooks=state.masterNotebooks.map(normalizedNote);
+    for(const sheet of Object.values(state.playerSheets))sheet.notebooks=sheet.notebooks.map(normalizedNote);
+    state.sharedNotebooks=[
+      ...state.masterNotebooks.filter(note=>note.sharedWith.includes(viewer)&&!['master','admin'].includes(m.role)).map(note=>({...note,scope:'@master',owner:'Mestre'})),
+      ...Object.entries(state.playerSheets).flatMap(([scope,sheet])=>scope===viewer||!usernames.has(scope)?[]:sheet.notebooks.filter(note=>note.sharedWith.includes(viewer)).map(note=>({...note,scope,owner:scope})))
+    ];
+    state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(m.role!=='player'||members.find(u=>u.id===userId)?.username===name)));
+    state.statusBarsData=Object.fromEntries(Object.entries(state.statusBarsData).filter(([name])=>usernames.has(name)));
     if(m.role==='player'){delete state.masterNotes;delete state.masterNotebooks;}
-    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:trayRolls.get(roomId)||null,serverTime:Date.now()};
+    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,pointsVersion:digest(JSON.stringify(state.points||[])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:trayRolls.get(roomId)||null,serverTime:Date.now()};
   }
-  function send(client){
+  function send(client,heartbeat=false){
     try{
       if(!query('SELECT 1 FROM sessions WHERE token_hash=? AND expires>?',client.tokenHash,Date.now()))throw Error('session');
-      client.res.write(`event: room\ndata: ${JSON.stringify(snapshot(client.roomId,client.userId))}\n\n`);
+      if(heartbeat){membership(client.roomId,client.userId);client.res.write(': heartbeat\n\n');}
+      else {
+        const room=snapshot(client.roomId,client.userId);
+        const imageHash=digest(room.state.mapImage||'');
+        if(client.mapImageHash===imageHash){delete room.state.mapImage;room.mapImageUnchanged=true;}
+        else client.mapImageHash=imageHash;
+        client.res.write(`event: room\ndata: ${JSON.stringify(room)}\n\n`);
+      }
     }catch{client.res.write('event: revoked\ndata: {}\n\n');client.res.end();clients.delete(client);}
   }
   const broadcast=roomId=>{for(const c of clients)if(c.roomId===roomId)send(c);};
@@ -112,8 +150,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const timer=setInterval(()=>{
     run('DELETE FROM sessions WHERE expires<?',Date.now());
     for(const [key,v] of limits)if(v.until<Date.now())limits.delete(key);
-    for(const client of clients)send(client);
-  },20000);timer.unref();
+    for(const client of clients)send(client,true);
+  },heartbeatMs);timer.unref();
   function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
   async function route(req,res){
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');
@@ -182,6 +220,24 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     if(path[1]!=='rooms'||!path[2])fail(404,'Rota não encontrada.');
     const roomId=path[2],m=membership(roomId,user.id);
     if(path.length===3&&method==='GET')return json(res,200,snapshot(roomId,user.id));
+    if(path[3]==='feedback'&&path.length===4){
+      if(method==='GET'){
+        const visible=['master','admin'].includes(m.role)
+          ?all('SELECT f.id,u.username,f.category,f.message,f.created_at AS createdAt FROM feedback f JOIN users u ON u.id=f.user_id WHERE f.room_id=? ORDER BY f.created_at DESC LIMIT 30',roomId)
+          :all('SELECT f.id,u.username,f.category,f.message,f.created_at AS createdAt FROM feedback f JOIN users u ON u.id=f.user_id WHERE f.room_id=? AND f.user_id=? ORDER BY f.created_at DESC LIMIT 30',roomId,user.id);
+        return json(res,200,visible);
+      }
+      if(method==='POST'){
+        limit(`feedback:${user.id}`,10);
+        const category=string(requestBody.category,20,'Tipo de feedback',1);
+        if(!['suggestion','issue','other'].includes(category))fail(400,'Tipo de feedback inválido.');
+        const message=string(requestBody.message,2000,'Feedback',10).trim();
+        if(message.length<10)fail(400,'Escreva pelo menos 10 caracteres no feedback.');
+        const entry={id:randomUUID(),username:user.username,category,message,createdAt:Date.now()};
+        run('INSERT INTO feedback VALUES(?,?,?,?,?,?)',entry.id,roomId,user.id,category,message,entry.createdAt);
+        return json(res,201,entry);
+      }
+    }
     if(path[3]==='map-assets'){
       if(method==='GET'&&path[4]){
         const asset=query('SELECT bundle FROM map_assets WHERE id=? AND room_id=?',path[4],roomId);
@@ -263,30 +319,45 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     if(path[3]==='notes'&&path[4]&&path[5]&&method==='PATCH'){
       const scope=path[4],id=string(path[5],100,'Identificador',1);
       if(!/^[a-zA-Z0-9-]+$/.test(id))fail(400,'Identificador de nota inválido.');
-      if(scope==='@master')privileged(m);
-      else{
-        const target=query('SELECT u.id FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=? AND u.username=?',roomId,scope);
-        if(!target)fail(404,'Jogador não encontrado nesta mesa.');
-        if(m.role!=='admin'&&(m.role!=='player'||target.id!==user.id))fail(403,'Você pode editar apenas suas próprias notas.');
-      }
-      const title=string(requestBody.title,100,'Nome da nota',1).trim();
-      if(!title)fail(400,'Dê um nome à nota.');
-      const noteBody=string(requestBody.body,50000,'Texto da nota');
+      const target=scope==='@master'?null:query('SELECT u.id FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=? AND u.username=?',roomId,scope);
+      if(scope!=='@master'&&!target)fail(404,'Jogador não encontrado nesta mesa.');
+      const canManage=scope==='@master'?['master','admin'].includes(m.role):m.role==='admin'||target.id===user.id;
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
       const container=scope==='@master'?state:state.playerSheets[scope];
       const key=scope==='@master'?'masterNotebooks':'notebooks';
       const legacy=scope==='@master'?state.masterNotes:container.observations;
       const notes=container[key]|| (legacy?[{id:'legacy',title:scope==='@master'?'Notas do mestre':'Observações do jogador',body:legacy}]:[]);
       const index=notes.findIndex(n=>n.id===id);
+      const previous=notes[index];
+      if(!canManage&&(!previous||!previous.sharedWith?.includes(user.username)))fail(403,'Esta nota não foi compartilhada com você.');
+      const version=previous?.version||1;
+      if(path[6]==='share'){
+        if(path.length!==7||Object.keys(requestBody).some(field=>!['sharedWith','version'].includes(field)))fail(400,'Compartilhamento inválido.');
+        if(!canManage)fail(403,'Somente o dono pode compartilhar esta nota.');
+        if(!previous)fail(404,'Salve a nota antes de compartilhar.');
+        if(requestBody.version!==version)fail(409,'A nota mudou em outra tela. Reabra o compartilhamento.');
+        const sharedWith=requestBody.sharedWith;
+        const members=all('SELECT u.username FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=?',roomId).map(row=>row.username);
+        if(!Array.isArray(sharedWith)||sharedWith.length>30||new Set(sharedWith).size!==sharedWith.length||sharedWith.some(name=>typeof name!=='string'||name===scope||!members.includes(name)))fail(400,'Selecione participantes desta mesa.');
+        previous.sharedWith=sharedWith;previous.version=version+1;
+        container[key]=notes;saveState(roomId,state);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      }
+      if(path.length!==6||Object.keys(requestBody).some(field=>!['title','body','board','version'].includes(field)))fail(400,'Alteração de nota inválida.');
       if(index<0&&notes.length>=30)fail(400,'Limite de 30 notas por bloco.');
-      const note={id,title,body:noteBody};
+      if(previous&&requestBody.version!==version)fail(409,'A nota mudou em outra tela. Seu rascunho foi mantido; revise a versão atual antes de salvar.');
+      if(!previous&&requestBody.version!==undefined)fail(409,'A nota foi criada em outra tela. Atualize a lista antes de salvar.');
+      const title=string(requestBody.title,100,'Nome da nota',1).trim();
+      if(!title)fail(400,'Dê um nome à nota.');
+      const noteBody=string(requestBody.body,50000,'Texto da nota');
+      const board=requestBody.board===undefined?(previous?.board||emptyBoard()):noteBoard(requestBody.board);
+      const note={id,title,body:noteBody,board,sharedWith:previous?.sharedWith||[],version:previous?version+1:1};
       if(index<0)notes.push(note);else notes[index]=note;
       container[key]=notes;
       if(id==='legacy')container[scope==='@master'?'masterNotes':'observations']=noteBody;
       saveState(roomId,state);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
     }
     if(path[3]==='state'&&method==='PATCH'){
-      privileged(m);const patch=requestBody;const allowed=['points','mapImage','sheetFields','sheetFont','masterNotes'];
+      privileged(m);const {pointsVersion,...patch}=requestBody;const allowed=['points','mapImage','sheetFields','sheetFont','masterNotes'];
       if(Object.keys(patch).some(k=>!allowed.includes(k)))fail(400,'Campo de mesa inválido.');
       if('points'in patch && (!Array.isArray(patch.points)||patch.points.length>1000||patch.points.some(p=>!object(p)||typeof p.name!=='string'||!Number.isFinite(p.x)||!Number.isFinite(p.y))))fail(400,'Pontos inválidos.');
       if('mapImage'in patch&&!image(patch.mapImage))fail(400,'Use imagem PNG, JPEG, GIF ou WebP.');
@@ -302,7 +373,11 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       }
       if('sheetFont'in patch&&!['cinzel','medieval','uncial','fell','metamorphous','grenze'].includes(patch.sheetFont))fail(400,'Fonte inválida.');
       if('masterNotes'in patch)string(patch.masterNotes,50000,'Notas');
-      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);saveState(roomId,{...state,...patch});broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+      if('points'in patch){
+        if(typeof pointsVersion!=='string'||pointsVersion!==digest(JSON.stringify(state.points||[])))fail(409,'Os pontos mudaram em outra tela. O mapa foi atualizado; revise e tente novamente.');
+      }else if(pointsVersion!==undefined)fail(400,'Versão dos pontos sem alteração de pontos.');
+      saveState(roomId,{...state,...patch});broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
     }
     if(['sheets','profiles'].includes(path[3])&&path[4]&&method==='PATCH'){
       const target=query('SELECT u.* FROM users u JOIN members m ON m.user_id=u.id WHERE m.room_id=? AND u.username=?',roomId,path[4]);

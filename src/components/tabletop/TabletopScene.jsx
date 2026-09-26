@@ -10,8 +10,8 @@ export default function TabletopScene({roomId,objects,selected,editable,mode,onS
   latest.current={objects,selected,editable,mode,onSelect,onTransform,onStatus};
   useEffect(()=>{
     const el=host.current;let renderer;
-    try{renderer=new THREE.WebGLRenderer({antialias:true});}catch{onStatus('Não foi possível iniciar o 3D neste navegador.');return;}
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor('#151413');el.appendChild(renderer.domElement);
+    try{renderer=new THREE.WebGLRenderer({antialias:devicePixelRatio<=1.5});}catch{onStatus('Não foi possível iniciar o 3D neste navegador.');return;}
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setClearColor('#151413');el.appendChild(renderer.domElement);
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1,.05,20000);
     camera.position.set(26,24,30);
     const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,0,0);orbit.maxDistance=5000;orbit.minDistance=.15;orbit.update();
@@ -54,11 +54,37 @@ export default function TabletopScene({roomId,objects,selected,editable,mode,onS
       const center=box.isEmpty()?new THREE.Vector3():box.getCenter(new THREE.Vector3());const size=box.isEmpty()?30:box.getSize(new THREE.Vector3()).length();
       orbit.target.copy(center);camera.position.copy(center).add(new THREE.Vector3(1,.9,1).normalize().multiplyScalar(Math.max(2,size)*1.4/Math.min(1,camera.aspect)));orbit.update();render();
     };
-    actions.current=action=>{if(action==='fit')fit();if(action==='top'){camera.position.copy(orbit.target).add(new THREE.Vector3(0,Math.max(10,camera.position.distanceTo(orbit.target)),.001));orbit.update();}if(action==='in'||action==='out'){camera.position.sub(orbit.target).multiplyScalar(action==='in'?.8:1.25).add(orbit.target);orbit.update();}render();};
+    actions.current=action=>{
+      if(action==='fit'){fit();return;}
+      if(action==='top')camera.position.copy(orbit.target).add(new THREE.Vector3(0,Math.max(10,camera.position.distanceTo(orbit.target)),.001));
+      if(action==='in'||action==='out')camera.position.sub(orbit.target).multiplyScalar(action==='in'?.8:1.25).add(orbit.target);
+      if(action.startsWith('orbit-')){
+        const offset=camera.position.clone().sub(orbit.target),spherical=new THREE.Spherical().setFromVector3(offset);
+        if(action==='orbit-left')spherical.theta-=.16;
+        if(action==='orbit-right')spherical.theta+=.16;
+        if(action==='orbit-up')spherical.phi=Math.max(.05,spherical.phi-.16);
+        if(action==='orbit-down')spherical.phi=Math.min(Math.PI-.05,spherical.phi+.16);
+        camera.position.copy(orbit.target).add(new THREE.Vector3().setFromSpherical(spherical));
+      }
+      if(action.startsWith('pan-')){
+        const distance=camera.position.distanceTo(orbit.target)*.08;
+        const right=new THREE.Vector3();camera.getWorldDirection(right);right.cross(new THREE.Vector3(0,1,0)).normalize();
+        const movement=action==='pan-left'?right.multiplyScalar(-distance):action==='pan-right'?right.multiplyScalar(distance):new THREE.Vector3(0,action==='pan-up'?distance:-distance,0);
+        camera.position.add(movement);orbit.target.add(movement);
+      }
+      orbit.update();render();
+    };
     const resize=()=>{if(!el.clientWidth||!el.clientHeight)return;renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();render();};
     const observer=new ResizeObserver(resize);observer.observe(el);resize();runtime.current={sync};sync();
     return()=>{disposed=true;runtime.current=null;actions.current=null;cancelAnimationFrame(frame);observer.disconnect();transform.detach();transform.dispose();orbit.dispose();models.forEach(disposeModel);grid.geometry.dispose();grid.material.dispose();renderer.dispose();renderer.domElement.remove();};
   },[roomId]);
   useEffect(()=>runtime.current?.sync(),[objects,selected,editable,mode]);
-  return <div ref={host} className="tabletop-viewport" role="img" aria-label="Mesa 3D: arraste para girar, botão direito para deslocar e roda para aproximar"/>;
+  const onKeyDown=event=>{
+    const directions={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};
+    const action=directions[event.key]?(event.shiftKey?'pan-':'orbit-')+directions[event.key]
+      :event.key==='+'||event.key==='='?'in':event.key==='-'?'out':event.key==='Home'?'fit':null;
+    if(!action)return;
+    event.preventDefault();actions.current?.(action);
+  };
+  return <div ref={host} className="tabletop-viewport" role="region" tabIndex={0} aria-label="Mesa 3D navegável por teclado" aria-describedby="tabletop-keyboard-help" onKeyDown={onKeyDown}/>;
 }

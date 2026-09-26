@@ -1,20 +1,23 @@
 import Notebook from './Notebook.jsx';
 import TurnTracker from './TurnTracker.jsx';
-import TabletopMap from './tabletop/TabletopMap.jsx';
-import DiceFocus from './DiceFocus.jsx';
-import DiceTray from './DiceTray.jsx';
-import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
+import {AboutPanel,ScenesPanel} from './CampaignPages.jsx';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks, Clapperboard, Info } from 'lucide-react';
 import RoomManagement from './RoomManagement.jsx';
 import { ROLE_LABELS } from '../api.js';
-import Scene3D from './Scene3D.jsx';
-import DiceRoller from './DiceRoller.jsx';
-import GroupStatus from './GroupStatus.jsx';
 import StatusBars from './StatusBars.jsx';
-import CharacterSheet from './CharacterSheet.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula } from './sheetHelpers.jsx';
+import { trapDialogFocus } from './trapDialogFocus.js';
 
-const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) => {
+const TabletopMap=lazy(()=>import('./tabletop/TabletopMap.jsx'));
+const Scene3D=lazy(()=>import('./Scene3D.jsx'));
+const DiceTray=lazy(()=>import('./DiceTray.jsx'));
+const DiceFocus=lazy(()=>import('./DiceFocus.jsx'));
+const DiceRoller=lazy(()=>import('./DiceRoller.jsx'));
+const CharacterSheet=lazy(()=>import('./CharacterSheet.jsx'));
+const GroupStatus=lazy(()=>import('./GroupStatus.jsx'));
+
+const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,error}) => {
   const [heldDice,setHeldDice]=useState(null);
   const [diceStructure,setDiceStructure]=useState('tray');
   const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId,structureId:'tray'});return true;};
@@ -22,7 +25,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
   const [selectedPlayer,setSelectedPlayer]=useState('');
   const [adminMode,setAdminMode]=useState('master');
   const viewMode=room.role==='admin'?adminMode:room.role==='master'?'master':'player';
+  const canManageScenes=room.role==='admin'||room.role==='master';
   const [activeTab,setActiveTab]=useState('mesa');
+  useEffect(()=>{if(activeTab==='cenas'&&!canManageScenes)setActiveTab('mesa');},[activeTab,canManageScenes]);
   const [mapMode,setMapMode]=useState('3d');
   const [mapFocus,setMapFocus]=useState(false);
   const [map2dToolsOpen,setMap2dToolsOpen]=useState(false);
@@ -32,13 +37,21 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
   const playerName=user.username;
   const [selectedPoint,setSelectedPoint]=useState(null);
   const [showPointModal,setShowPointModal]=useState(false);
+  const [pointSaveError,setPointSaveError]=useState(false);
   const [newPoint,setNewPoint]=useState({x:0,y:0,name:'',description:'',type:'cidade'});
   const [show3DScene,setShow3DScene]=useState(null);
   const [scale,setScale]=useState(1);
   const [position,setPosition]=useState({x:0,y:0});
   const [dragging,setDragging]=useState(false);
   const [dragStart,setDragStart]=useState({x:0,y:0});
-  const canvasRef=useRef(null),canvasWrapperRef=useRef(null),mapRef=useRef(null);
+  const canvasRef=useRef(null),canvasWrapperRef=useRef(null),mapRef=useRef(null),pointDialogRef=useRef(null),pointNameRef=useRef(null);
+  useEffect(()=>{
+    if(!showPointModal){setPointSaveError(false);return;}
+    const dialog=pointDialogRef.current,opener=document.activeElement;
+    dialog.showModal();
+    pointNameRef.current?.focus();
+    return()=>{if(dialog.open)dialog.close();requestAnimationFrame(()=>{if(opener?.isConnected)opener.focus();});};
+  },[showPointModal]);
   const mapFit=mapCanvasSize.width&&mapCanvasSize.height&&mapViewportSize.width&&mapViewportSize.height
     ?Math.min((mapViewportSize.width-20)/mapCanvasSize.width,(mapViewportSize.height-20)/mapCanvasSize.height):1;
   const saveShared=patch=>mutate('/state',patch,'PATCH',current=>({...current,state:{...current.state,...patch}}));
@@ -70,6 +83,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
     if (dragging) return;
 
     const canvas=canvasRef.current;
+    canvas.focus();
     const rect=canvas.getBoundingClientRect();
     const x=(e.clientX-rect.left)*canvas.width/rect.width;
     const y=(e.clientY-rect.top)*canvas.height/rect.height;
@@ -101,7 +115,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
       createdAt: new Date().toISOString()
     };
     
-    await savePoints([...points, point]);
+    const saved=await savePoints([...points, point]);
+    if(!saved){setPointSaveError(true);return;}
+    setPointSaveError(false);
     setShowPointModal(false);
     setNewPoint({ x: 0, y: 0, name: '', description: '', type: 'cidade' });
   };
@@ -114,6 +130,19 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setScale(prev => Math.min(Math.max(prev * delta, 0.5), 3));
+  };
+
+  const handleCanvasKeyDown=e=>{
+    const step=e.shiftKey?16:48;
+    if(e.key==='ArrowLeft')setPosition(p=>({...p,x:p.x+step}));
+    else if(e.key==='ArrowRight')setPosition(p=>({...p,x:p.x-step}));
+    else if(e.key==='ArrowUp')setPosition(p=>({...p,y:p.y+step}));
+    else if(e.key==='ArrowDown')setPosition(p=>({...p,y:p.y-step}));
+    else if(e.key==='+'||e.key==='=')setScale(s=>Math.min(s*1.2,3));
+    else if(e.key==='-')setScale(s=>Math.max(s/1.2,.5));
+    else if(e.key==='Home'){setScale(1);setPosition({x:0,y:0});}
+    else return;
+    e.preventDefault();
   };
 
   const handleMouseDown = (e) => {
@@ -245,16 +274,17 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
             <Heart size={18} />
             <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short" aria-hidden="true">Grupo</span>
           </button>
+          {canManageScenes&&<button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-pressed={activeTab==='cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>}
         </nav>
-        <div className="nav-footer"><span>✦</span><small>Mapa, fichas<br />e dados.</small></div>
+        <div className="nav-footer"><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-pressed={activeTab==='sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button></div>
       </header>
 
-      <div className="room-content"><div className="session-strip"><TurnTracker room={room} username={user.username} editable={viewMode==='master'} saving={saving} mutate={mutate}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" notes={room.state.masterNotebooks||[]} onSave={(id,note)=>mutate('/notes/@master/'+id,note,'PATCH')}/>}</div>
+      <div className="room-content"><div className="session-strip"><TurnTracker room={room} username={user.username} editable={viewMode==='master'} saving={saving} mutate={mutate}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
       <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate}/>:activeTab === 'mapa' ? (
           <>
             <div className="map-mode-tabs" role="group" aria-label="Visualização do mapa"><button aria-pressed={mapMode==='3d'} onClick={()=>setMapMode('3d')}>Mesa 3D</button><button aria-pressed={mapMode==='2d'} onClick={()=>setMapMode('2d')}>Mapa 2D e pontos</button>{mapMode==='2d'&&<button aria-expanded={map2dToolsOpen} aria-controls="map-2d-tools" onClick={()=>setMap2dToolsOpen(open=>!open)}>{map2dToolsOpen?'Fechar ferramentas':'Ferramentas 2D'}</button>}<button className="map-focus-button" aria-pressed={mapFocus} onClick={()=>setMapFocus(focus=>!focus)}>{mapFocus?'Sair do foco':'Ampliar mapa'}</button></div>
-            {mapMode==='3d'?<TabletopMap room={room} mutate={mutate} editable={room.role==='admin'||room.role==='master'}/>:<div className="legacy-map-layout">
+            {mapMode==='3d'?<Suspense fallback={<p role="status">Preparando a mesa 3D…</p>}><TabletopMap room={room} mutate={mutate} editable={room.role==='admin'||room.role==='master'}/></Suspense>:<div className="legacy-map-layout">
             {/* Sidebar */}
             <aside id="map-2d-tools" className="sidebar" hidden={!map2dToolsOpen}>
               <div className="sidebar-section">
@@ -309,6 +339,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                   <p><strong>Roda do mouse:</strong> aproximar ou afastar</p>
                   <p><strong>Arrastar:</strong> mover o mapa</p>
                   <p><strong>Clique:</strong> {viewMode === 'master' ? 'adicionar ponto' : 'ver ponto'}</p>
+                  <p id="map-keyboard-help"><strong>Teclado:</strong> foco no mapa, setas para mover, +/− para zoom e Home para centralizar. Abra pontos pela lista acima.</p>
                 </div>
                 {mapImage&&<div className="map-keyboard-actions" role="group" aria-label="Controles do mapa 2D">
                   <button onClick={()=>setScale(prev=>Math.min(prev*1.2,3))}>Aproximar</button>
@@ -343,7 +374,11 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                   <canvas
                     ref={canvasRef}
                     className="map-canvas"
+                    tabIndex={0}
+                    role="img"
+                    aria-label="Mapa 2D. Setas movem, mais e menos ajustam zoom, Home centraliza. Abra pontos na lista das ferramentas."
                     onClick={handleCanvasClick}
+                    onKeyDown={handleCanvasKeyDown}
                     style={{
                       width:mapCanvasSize.width*mapFit||undefined,
                       height:mapCanvasSize.height*mapFit||undefined,
@@ -360,9 +395,13 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           <>
             {/* Área principal da Ficha de Personagem */}
             <main className="sheet-area">
+              <Suspense fallback={<p role="status">Preparando a ficha…</p>}>
               <CharacterSheet
                 notebookKey={`${room.id}:${user.id}`}
                 onSaveNote={(name,id,note)=>mutate(`/notes/${encodeURIComponent(name)}/${id}`,note,'PATCH')}
+                onShareNote={(name,id,data)=>mutate(`/notes/${encodeURIComponent(name)}/${id}/share`,data,'PATCH')}
+                notebookMembers={room.members}
+                notebookUsername={user.username}
                 canEditSelected={room.role==='admin'}
                 selectedPlayer={selectedPlayer}
                 onSelectPlayer={setSelectedPlayer}
@@ -386,33 +425,34 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 playerSheets={playerSheets}
                 onUpdatePlayerSheet={updatePlayerSheet}
               />
+              </Suspense>
             </main>
 
             {/* Painel lateral com o Dado */}
             <aside className="sheet-sidebar">
-              <DiceRoller onTrayRoll={onTrayRoll}/>
+              <Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll}/></Suspense>
             </aside>
           </>
-        ) : (
+        ) : activeTab==='cenas' ? (canManageScenes?<ScenesPanel/>:null) : activeTab==='sobre' ? <AboutPanel roomId={room.id} username={user.username} role={room.role}/> : (
           <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>Status do grupo</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} {playerNames.length===1?'jogador':'jogadores'}</span></div>
-            <div className="group-workspace"><section className="party-roster" aria-label="Personagens da mesa"><GroupStatus
+            <div className="group-workspace"><section className="party-roster" aria-label="Personagens da mesa"><Suspense fallback={<p role="status">Preparando o grupo…</p>}><GroupStatus
               viewMode={viewMode}
               activePlayer={room.state.activePlayer}
               allPlayersBars={groupEntries}
               onOpenSheet={name => {setSelectedPlayer(name);setActiveTab('ficha');}}
               onUpdatePlayerBars={updatePlayerBars}
-            />
-            </section><aside className="group-roll-station" aria-label="Bandeja e dados"><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/><div className="group-dice-controls"><DiceRoller onTrayRoll={onTrayRoll} sharedOnly/></div></aside></div>
+            /></Suspense>
+            </section><aside className="group-roll-station" aria-label="Bandeja e dados"><Suspense fallback={<p role="status">Preparando a bandeja…</p>}><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/></Suspense><div className="group-dice-controls"><Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll} sharedOnly/></Suspense></div></aside></div>
           </main>
         )}
       </div>
 
       </div>
-      {activeTab!=='grupo'&&<DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/>}
-      <DiceFocus roll={room.trayRoll} serverTime={room.serverTime} enabled={activeTab==='grupo'||room.trayRoll?.username===user.username}/>
+      {activeTab!=='grupo'&&<Suspense fallback={<p role="status">Preparando a bandeja…</p>}><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/></Suspense>}
+      <Suspense fallback={null}><DiceFocus roll={room.trayRoll} serverTime={room.serverTime} enabled={activeTab==='grupo'||room.trayRoll?.username===user.username}/></Suspense>
       {/* Modal de adicionar ponto */}
       {showPointModal && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="new-point-title" onKeyDown={e=>{if(e.key==='Escape')setShowPointModal(false);}}>
+        <dialog ref={pointDialogRef} className="modal-overlay" aria-labelledby="new-point-title" onKeyDown={trapDialogFocus} onCancel={e=>{e.preventDefault();setShowPointModal(false);}}>
           <div className="modal">
             <div className="modal-header">
               <h2 id="new-point-title">Novo Ponto de Interesse</h2>
@@ -425,7 +465,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 <label htmlFor="new-point-name">Nome</label>
                 <input
                   id="new-point-name"
-                  autoFocus
+                  ref={pointNameRef}
+                  name="pointName"
+                  autoComplete="off"
                   type="text"
                   value={newPoint.name}
                   onChange={(e) => setNewPoint({ ...newPoint, name: e.target.value })}
@@ -436,6 +478,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 <label htmlFor="new-point-description">Descrição</label>
                 <textarea
                   id="new-point-description"
+                  name="pointDescription"
                   value={newPoint.description}
                   onChange={(e) => setNewPoint({ ...newPoint, description: e.target.value })}
                   placeholder="Descreva este local..."
@@ -463,6 +506,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
                 </div>
               </div>
             </div>
+            {pointSaveError&&<p className="modal-error" role="alert">{error||'Não foi possível salvar o ponto. Revise o mapa e tente novamente.'}</p>}
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setShowPointModal(false)}>
                 Cancelar
@@ -473,15 +517,15 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
               </button>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
 
       {/* Visualização 3D */}
       {show3DScene && (
-        <Scene3D 
-          pointData={show3DScene} 
-          onClose={() => setShow3DScene(null)} 
-        />
+        <Suspense fallback={<p role="status">Abrindo local…</p>}><Scene3D
+          pointData={show3DScene}
+          onClose={() => setShow3DScene(null)}
+        /></Suspense>
       )}
 
       <style>{`
@@ -2347,6 +2391,11 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           border-radius: 4px;
         }
 
+        .map-canvas:focus-visible {
+          outline: 3px solid #e2c786;
+          outline-offset: 5px;
+        }
+
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -2359,6 +2408,29 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           justify-content: center;
           z-index: 1000;
           animation: fadeIn 0.3s ease;
+        }
+
+        dialog.modal-overlay,
+        dialog.scene-overlay {
+          width: 100vw;
+          height: 100dvh;
+          max-width: none;
+          max-height: none;
+          margin: 0;
+          padding: 0;
+          border: 0;
+          color: inherit;
+          overscroll-behavior: contain;
+        }
+
+        dialog.modal-overlay::backdrop,
+        dialog.scene-overlay::backdrop {
+          background: rgba(0, 0, 0, 0.85);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .modal-overlay, .modal, .scene-overlay { animation: none; }
+          .map-canvas { transition: none; }
         }
 
         @keyframes fadeIn {
@@ -2494,6 +2566,13 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving}) =>
           gap: 1rem;
           padding: 1.5rem;
           border-top: 2px solid #51493e;
+        }
+
+        .modal-error {
+          margin: 0 1.5rem;
+          color: #ffd0c6;
+          font-size: 0.95rem;
+          line-height: 1.4;
         }
 
         .btn-secondary,

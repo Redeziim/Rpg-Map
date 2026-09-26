@@ -36,7 +36,7 @@ test('named notes preserve legacy content, enforce privacy, broadcast and surviv
     abort=new AbortController();const response=await fetch(base+root+'/events',{headers:{Cookie:cookies.owner},signal:abort.signal});
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
     async function event(){while(!buffer.includes('\n\n')){const chunk=await reader.read();buffer+=decoder.decode(chunk.value,{stream:true});}const end=buffer.indexOf('\n\n'),value=buffer.slice(0,end);buffer=buffer.slice(end+2);return value;}
-    await event();await call('master',root+'/notes/@master/one','PATCH',{title:'Encontro revisado',body:'Novo texto'});
+    await event();await call('master',root+'/notes/@master/one','PATCH',{title:'Encontro revisado',body:'Novo texto',version:1});
     assert.match(await event(),/Encontro revisado/);abort.abort();
     const other=(await call('owner','/rooms','POST',{name:'Outra mesa'})).data;
     assert.deepEqual(other.state.masterNotebooks,[]);

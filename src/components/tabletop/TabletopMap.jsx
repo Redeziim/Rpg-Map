@@ -69,7 +69,7 @@ export default function TabletopMap({room,mutate,editable}){
     <div className="tabletop-stage">
       <div className="tabletop-camera" role="group" aria-label="Câmera do mapa"><button type="button" className="tabletop-tools-toggle" aria-expanded={toolsOpen} aria-controls="tabletop-tools-panel" onClick={()=>setToolsOpen(open=>!open)}>{toolsOpen?'Fechar ferramentas':'Ferramentas'}</button>{[['fit','Enquadrar'],['top','Vista superior'],['in','Aproximar'],['out','Afastar']].map(([action,label])=><button key={action} onClick={()=>actions.current?.(action)}>{label}</button>)}</div>
       <TabletopScene roomId={room.id} objects={objects} selected={selected} editable={editable} mode={mode} onSelect={setSelected} onTransform={stream} onStatus={setStatus} actions={actions}/>
-      <p className="tabletop-help">Arraste para girar · botão direito para deslocar · roda ou pinça para zoom. Sua câmera é individual.</p>
+      <p id="tabletop-keyboard-help" className="tabletop-help">Arraste para girar · botão direito para deslocar · roda ou pinça para zoom. Com foco no mapa: setas giram, Shift + setas deslocam, +/− ajustam zoom e Home enquadra. Selecione objetos em Ferramentas.</p>
       {(status||error)&&<div className={`tabletop-notice ${error?'has-error':''}`} role={error?'alert':'status'}>{error||status}</div>}
     </div>
   </section>;

@@ -5,7 +5,7 @@ import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 
-const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote }) => {
+const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote, onShareNote, notebookMembers=[], notebookUsername='' }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('text');
   const [newFieldLabel, setNewFieldLabel] = useState('');
@@ -326,7 +326,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
               <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
             </section>)}</div>
-            <Notebook key={activePlayer} storageKey={notebookKey+':'+activePlayer} title="Observações do jogador" hint="Notas salvas · abrir janelas" notes={activeEntry.notebooks||[]} readOnly={readOnly} onSave={(id,note)=>onSaveNote(activePlayer,id,note)}/>
+            <Notebook key={activePlayer} storageKey={notebookKey+':'+activePlayer} title="Observações do jogador" hint="Notas salvas · abrir janelas" scope={activePlayer} username={notebookUsername} members={notebookMembers} canShare={!readOnly} notes={activeEntry.notebooks||[]} readOnly={readOnly} onSave={(_,id,note)=>onSaveNote(activePlayer,id,note)} onShare={(_,id,data)=>onShareNote(activePlayer,id,data)}/>
           </>}
         </div>
       </div>

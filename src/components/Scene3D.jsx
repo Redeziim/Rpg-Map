@@ -1,18 +1,21 @@
 import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { X } from 'lucide-react';
+import { trapDialogFocus } from './trapDialogFocus.js';
 
 const Scene3D = ({ pointData, onClose }) => {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const closeRef = useRef(null);
+  const dialogRef = useRef(null);
 
   useEffect(() => {
+    const dialog = dialogRef.current;
+    const opener = document.activeElement;
+    dialog.showModal();
     closeRef.current?.focus();
-    const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
-  }, [onClose]);
+    return () => { if (dialog.open) dialog.close(); requestAnimationFrame(()=>{if(opener?.isConnected)opener.focus();}); };
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -20,7 +23,8 @@ const Scene3D = ({ pointData, onClose }) => {
     // Setup Three.js
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: devicePixelRatio<=1.5, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
     
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     containerRef.current.appendChild(renderer.domElement);
@@ -206,7 +210,7 @@ const Scene3D = ({ pointData, onClose }) => {
   }, [pointData.type]);
 
   return (
-    <div className="scene-overlay" role="dialog" aria-modal="true" aria-label={pointData.name}>
+    <dialog ref={dialogRef} className="scene-overlay" aria-label={pointData.name} onKeyDown={trapDialogFocus} onCancel={event=>{event.preventDefault();onClose();}}>
       <div className="scene-container">
         <div className="scene-header">
           <div>
@@ -222,7 +226,7 @@ const Scene3D = ({ pointData, onClose }) => {
           <span className="scene-type">{pointData.type}</span>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };
 

@@ -26,9 +26,9 @@ function TrayScene({roll,offset,held,hold,mapPoint,onLoadError,navigate,cameraAc
   useEffect(()=>{if(controlsRef.current){controlsRef.current.enableRotate=navigate;controlsRef.current.enablePan=navigate;controlsRef.current.enableZoom=navigate;}},[navigate]);
   useEffect(()=>{
     const element=host.current;let renderer;
-    try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}catch{return;}
+    try{renderer=new THREE.WebGLRenderer({antialias:devicePixelRatio<=1.5,alpha:true});}catch{return;}
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));element.appendChild(renderer.domElement);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));element.appendChild(renderer.domElement);
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,100);
     camera.position.fromArray(cameraState.current?.position||([0,16,12]));
     const controls=new OrbitControls(camera,renderer.domElement);controlsRef.current=controls;

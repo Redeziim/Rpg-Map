@@ -7,6 +7,20 @@ Aplicação web para condução e acompanhamento de campanhas de RPG. Reúne map
 - Node.js 24 ou superior
 - npm
 
+## Rodar localmente
+
+Na raiz do repositório, instale as dependências e inicie o site e a API com um único comando:
+
+```bash
+npm ci
+npm run dev
+```
+
+Abra `http://localhost:5173/` no navegador. O Vite encaminha as chamadas `/api` ao servidor Node.js em `http://127.0.0.1:3001/`; não é preciso iniciar a API separadamente. No primeiro acesso, crie uma conta e depois uma mesa. Não há usuário ou senha padrão.
+
+O banco SQLite é criado em `data/grimorio.sqlite`. Essa pasta e os arquivos `.env` ficam fora do Git. Use `Ctrl+C` no terminal para parar os dois servidores. Se uma das portas já estiver ocupada, encerre a instância anterior antes de executar o comando novamente.
+
+Para instruções de convites, papéis e publicação, consulte [ONLINE.md](ONLINE.md).
 
 ## Validação
 
