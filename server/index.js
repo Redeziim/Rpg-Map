@@ -1,9 +1,14 @@
 import { resolve } from 'node:path';
 import { createApplication } from './app.js';
+import {automaticBackupConfig} from '../scripts/automaticBackup.js';
+import {startAutomaticBackups} from './automaticBackups.js';
+const backupConfig=automaticBackupConfig();
 const production=process.env.NODE_ENV==='production';
 const publicOrigin=process.env.PUBLIC_ORIGIN || '';
 if(production&&!publicOrigin.startsWith('https://'))throw Error('Defina PUBLIC_ORIGIN com o endereço HTTPS público do site.');
 const app=createApplication({dbPath:process.env.DB_PATH||resolve('data/grimorio.sqlite'),production,publicOrigin});
+if(app.migration.schemaApplied||app.migration.roomsMigrated)console.log(`Migrações aplicadas: ${app.migration.schemaApplied} de banco; ${app.migration.roomsMigrated} mesas atualizadas.`);
 const port=Number(process.env.PORT||3001),host=process.env.HOST||(production?'0.0.0.0':'127.0.0.1');
-app.server.listen(port,host,()=>console.log(`Grimório: servidor em http://${host}:${port}`));
-for(const signal of ['SIGTERM','SIGINT'])process.once(signal,()=>{app.close();process.exit(0);});
+let backups,stopping=false;
+app.server.listen(port,host,()=>{console.log(`Grimório: servidor em http://${host}:${app.server.address().port}`);backups=startAutomaticBackups(backupConfig);});
+for(const signal of ['SIGTERM','SIGINT'])process.once(signal,async()=>{if(stopping)return;stopping=true;app.close();await backups?.stop();process.exit(0);});

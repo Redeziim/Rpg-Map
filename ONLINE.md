@@ -23,11 +23,59 @@ O papel é por mesa: a mesma conta pode ser ADM de uma campanha e jogador em out
 | Editar própria ficha e observações | Sim | Não | Sim, no modo jogador |
 | Consultar fichas completas dos participantes | Só a própria | Sim | Sim |
 | Editar fichas de outros jogadores | Não | Não | Sim |
-| Alterar mapa, modelo e notas do mestre | Não | Sim | Sim |
+| Alterar imagem e criar, editar ou excluir pontos do mapa 2D | Não | Sim | No modo mestre |
+| Desenhar e apagar os próprios traços no mapa 2D | Em áreas reveladas | Sim | Em áreas reveladas no modo jogador; todas no modo mestre |
+| Apagar ou restaurar traços de outros participantes no mapa 2D | Não | Sim | No modo mestre |
+| Mostrar ou esconder grupos de traços na própria tela | Sim | Sim | Nos dois modos |
+| Criar ou alterar traços entre Todos e Só mestres | Não | Sim | No modo mestre |
+| Ativar névoa, revelar e cobrir áreas | Não | Sim | No modo mestre |
+| Definir escala, unidade e alinhamento da grade | Não | Sim | No modo mestre |
+| Criar, editar, compartilhar, arquivar e restaurar rotas; editar legenda | Não | Sim | No modo mestre |
+| Consultar rotas compartilhadas e exportar a própria vista em PNG | Caminhos totalmente revelados | Sim | Conforme o modo da interface |
+| Mostrar grade e medir distância somente na própria tela | Entre pontos revelados | Sim | Entre pontos revelados no modo jogador; todos no modo mestre |
+| Liberar ou desativar posições compartilhadas na mesa | Não | Sim | No modo mestre |
+| Compartilhar, mover e remover a própria posição | Com a função liberada, em áreas reveladas | Não | No modo jogador, com a função liberada, em áreas reveladas |
+| Consultar mapa, pontos e traços fora das áreas reveladas | Não | Sim | No modo mestre |
+| Ler cenas compartilhadas da campanha | Com ponto revelado, ou cena sem pontos | Sim | Nos dois modos, conforme a visão |
+| Criar, editar, compartilhar, arquivar e restaurar cenas | Não | Sim | No modo mestre |
+| Alterar modelo de ficha e notas do mestre | Não | Sim | Sim |
 | Adicionar/convidar jogadores | Não | Sim | Sim |
 | Atribuir papéis e remover participantes | Não | Não | Sim |
+| Consultar registro de alterações da mesa | Não | Sim | No modo mestre |
 
 Convites expiram em 7 dias e podem ser revogados. O criador permanece ADM. As notas do mestre não são enviadas para jogadores. A API valida sessão e papel em toda ação, independentemente do que estiver visível na interface.
+
+Com névoa ativa, a API e o SSE não enviam pixels originais, pontos ocultos ou coordenadas de traços parcialmente ocultos para contas de jogador. A imagem protegida é gerada localmente por Sharp e enviada em uma rota autenticada com `Cache-Control: no-store`. O ADM mantém seu papel real na API; a interface no modo jogador aplica a mesma cobertura e os mesmos filtros de um jogador. Cobrir áreas limita os próximos envios e não revoga imagens já vistas.
+
+Posições compartilhadas começam desativadas por mesa e exigem escolha individual. A API aceita somente o marcador da conta autenticada, usa versões para impedir alterações antigas e não envia coordenadas ocultas de marcadores pelo GET ou SSE. Retirar o compartilhamento continua permitido quando seu marcador estiver coberto. Desativar a função limpa as posições; trocar a imagem também as limpa. Os marcadores representam locais no mapa da campanha, sem geolocalização ou status de conexão.
+
+Cenas começam privadas e são compartilhadas explicitamente pelo mestre. Jogadores recebem pelo GET e SSE somente cenas ativas, compartilhadas e com pelo menos um ponto visível, ou cenas criadas sem pontos. Identificadores de pontos ocultos são retirados das cenas recebidas. Vínculos a pontos excluídos não tornam uma cena pública para toda a mesa: o mestre precisa revisá-los. O modo jogador do ADM aplica os mesmos filtros na interface. Indicadores de notas e cenas nos pontos contam somente conteúdo disponível para quem está usando a tela.
+
+A API salva cada cena com versão própria; versões antigas são recusadas para revisão. Arquivar e restaurar também exigem a versão atual. Os rascunhos locais não são publicados automaticamente. Cenas são armazenadas no estado SQLite da mesa e entram no backup existente. Limites: 100 cenas por mesa, título de 120 caracteres, texto de 10.000 caracteres e 30 pontos por cena. Consulte [a decisão de visibilidade](docs/adr/002-cenas-e-pontos.md).
+
+### Rotas, legenda e imagens do mapa 2D
+
+Rotas e legenda ficam no estado SQLite e entram no backup da mesa. Rotas têm versão individual e exigem a versão da imagem em toda escrita. A API valida nome de até 120 caracteres, cor RGB, estado/visibilidade, até 100 paradas em coordenadas inteiras dentro da imagem e limite de 100 rotas (incluindo arquivadas). Reconfere permissão e versões após ler as dimensões do mapa. GET e SSE removem rotas privadas, arquivadas ou parcialmente cobertas e também retiram seus identificadores do mapa de versões enviado a jogadores. A legenda é compartilhada e versionada, com os cinco tipos existentes, nomes de até 40 caracteres e cores válidas. Trocar a imagem remove rotas e mantém a legenda. Detalhes em [exploração e exportação](docs/adr/004-exploracao-e-exportacao.md).
+
+A prévia prepara a imagem no navegador antes do envio, com limite de origem de 20 MB, 16.000 px por lado e 32 milhões de pixels. A API aceita imagens fixas PNG, JPEG, WebP ou GIF de até 5 MB, 4096 px por lado e 8 milhões de pixels. Verifica Base64, assinatura, dimensões e decodificação; arquivos inválidos, incompletos, animados ou acima dos limites são recusados sem alterar o mapa. A validação usa Sharp já instalado no servidor, com uma decodificação por vez e até quatro validações pendentes por aplicação; excesso de fila retorna 503 para tentar novamente.
+
+O navegador envia `mapImageVersion` capturada ao abrir a prévia. Uma versão antiga retorna 409. A API também confere se a imagem ou a permissão mudou durante a decodificação e relê o estado para preservar alterações paralelas em outros campos. O reposicionamento proporcional envia `pointsVersion` junto da imagem e salva os dois na mesma atualização; uma versão antiga dos pontos bloqueia toda a troca. Clientes antigos ainda podem omitir `mapImageVersion`; devem enviá-la para proteger uma prévia aberta. A imagem continua no SQLite e na sincronização existente, sem serviço externo ou mudança na estratégia de persistência. Consulte [os limites e a política de compatibilidade](docs/adr/003-imagens-do-mapa.md).
+
+## Retomar a conexão
+
+Se a API ou a rede cair, a mesa tenta reconectar e consulta o acesso atual. Sessão expirada ou encerrada leva à entrada com um aviso; entrar na mesma conta retoma a mesa anterior enquanto a página continua aberta. Outra conta abre a lista de mesas. Se você foi removido de uma mesa, o aviso aparece nessa lista e sua conta continua conectada.
+
+Rascunhos de notas continuam locais e versões antigas exigem comparação antes de salvar. Uma resposta perdida pode acontecer depois de a alteração ter sido salva: confira a versão da mesa antes de repetir. A aplicação não reenvia automaticamente. Consulte [comportamento, testes e limites da recuperação](docs/RECONNECTION.md).
+
+## Reutilizar imagens
+
+Depois de receber uma imagem, o navegador a reutiliza ao atualizar texto, mover cartões ou sincronizar outros campos da mesa. Fontes novas são enviadas completas; imagens idênticas no mesmo snapshot são deduplicadas. A tela e os rascunhos continuam com imagens completas, e as permissões da mesa são aplicadas antes da transferência.
+
+Imagens da coleção e pacotes 3D são revalidados pelo servidor antes de usar o cache privado do navegador. Se o conteúdo e o acesso permanecem válidos, a resposta evita enviar os bytes novamente. Nova conexão ou cache indisponível pode exigir o envio completo. Consulte [protocolo, medições e limites](docs/MEDIA_TRANSFER.md).
+
+## Registro da mesa
+
+Em **Mesa → Registro da mesa**, ADM em modo mestre e mestres consultam data, autor e tipo de alterações salvas, com filtro por assunto e registros anteriores. A lista guarda até 1.000 entradas recentes por mesa e começa após ativar esta versão. Textos de notas, imagens, valores e códigos de convite não são copiados; notas pessoais privadas ficam fora do registro. Não substitui o histórico de notas nem desfaz ações. Consulte [acesso, cobertura e retenção](docs/ROOM_AUDIT.md).
 
 ## Publicar para acesso pela internet
 
@@ -56,10 +104,13 @@ Coloque esse contêiner atrás de um proxy HTTPS. `PUBLIC_ORIGIN` deve correspon
 
 ## Armazenamento e limites
 
-- SQLite em `data/grimorio.sqlite` por padrão. Dados não ficam mais no navegador; contas, sessões e mesas sobrevivem a reinícios do servidor.
+- SQLite em `data/grimorio.sqlite` por padrão. Contas, sessões e conteúdo salvo das mesas ficam no servidor e sobrevivem a reinícios. Rascunhos de notas usam as cópias locais autorizadas em `localStorage` e IndexedDB; imagens recebidas também podem permanecer no cache privado do navegador.
 - Use uma instância de servidor com esse banco e mantenha o volume entre deploys. Para várias réplicas, é necessária outra estratégia de banco e distribuição de eventos.
-- Faça backups regulares com a API de backup do SQLite ou com o serviço parado, incluindo os arquivos WAL quando existirem.
+- O início executa migrações numeradas antes de abrir a API. Banco atual: `user_version=2`, identificador `GRIM`, mesas com `stateVersion: 1`. A migração 002 acrescenta o registro da mesa e conserva o estado/revisão existentes; banco e backups conhecidos da versão 1 continuam reconhecidos. SQL, marcadores, histórico de migrações e conversão dos estados são transacionais; erro em qualquer mesa reverte o conjunto. Campos atuais não são reconstruídos somente no snapshot. Faça backup e teste a cópia antes do deploy; consulte [MIGRATIONS.md](docs/MIGRATIONS.md).
+- Execute `npm run backup` regularmente. O comando cria uma cópia SQLite consistente em `data/backups/` mesmo com o servidor em funcionamento e verifica integridade, referências e formato da cópia. Use `npm run backup -- /caminho/backup.sqlite` para escolher o destino. Guarde também o manifesto `backup.sqlite.json`, com versão, esquema, contagens e checksum. Mantenha cópias fora do servidor. Use `npm run restore -- --verify /caminho/backup.sqlite` para conferir e `npm run restore -- /caminho/backup.sqlite /caminho/novo.sqlite` para restaurar sem sobrescrever. Siga o [procedimento de restauração e ensaio isolado](docs/RESTORE.md).
 - Os dados locais antigos no navegador são preservados, mas não são importados automaticamente para mesas online.
+- Escritas relacionadas de modelos/objetos, notas/histórico, cadastro/sessão e mudanças de participantes usam transações. Alterações de acesso confirmam papel, turnos, posição, convites e uma revisão juntos; uma falha conserva os dados anteriores. Pacotes 3D só são removidos após a última referência da mesa. A coleção de imagens permanece independente do salvamento posterior da nota. Consulte [a revisão dos salvamentos](docs/TRANSACTIONS.md).
+- Para agendar cópias no servidor, defina `BACKUP_DIR` absoluto em disco persistente, separado do banco. Intervalo, retenção, nova tentativa e prazo ficam em variáveis do ambiente; padrões: 24 horas, 14 cópias, nova tentativa em 15 minutos. Worker separado, lock entre processos e retenção somente de cópias automáticas verificadas. Falhas geram `ALERTA:` no stderr; consulte `npm run backup:auto -- --status` e configure o monitor da hospedagem pelo código de saída. Sem `BACKUP_DIR`, o agendamento fica desativado. Consulte [configuração e limites](docs/AUTOMATIC_BACKUPS.md).
 - Senhas são derivadas com scrypt e salt; sessões usam cookies HttpOnly, SameSite e Secure em produção, com expiração de 7 dias.
 - Cadastro usa nome de usuário e senha; recuperação de senha por e-mail ainda não está implementada.
 - Limites iniciais: 30 mesas por criador, 200 campos por modelo, 10 MB por requisição e 20 MB de estado por mesa. Prefira imagens compactadas.
@@ -120,12 +171,11 @@ Em **Mapa → Mesa 3D**, Mestre e ADM podem importar terreno e estruturas. Jogad
 - Objetos, arquivos e transformações ficam no mesmo SQLite persistente da mesa; inclua-os nos backups. Arquivos 3D não são enviados novamente em cada evento de movimento.
 - O mapa 2D e seus pontos continuam disponíveis em **Mapa 2D e pontos**.
 
-## Estruturas para rolar dados
+## Estrutura de rolagem disponível
 
-Em **Status do Grupo**, a rolagem é sempre compartilhada. O botão com ícone de castelo **Estrutura de rolagem** permite escolher a bandeja hexagonal, a torre enviada ou adicionar uma estrutura em 3MF, STL, OBJ ou GLB. A rolagem individual da ficha continua disponível.
+As rolagens compartilhadas em **Status do Grupo** usam apenas a bandeja hexagonal. A torre e a importação de estruturas de rolagem não estão disponíveis na interface nem na API de lançamento. A rolagem individual da ficha continua disponível.
 
-Para usar a torre: selecione **Torre com escada**, escolha os dados, clique em **Pegar dados na mão** e depois em **Soltar dados pelo topo**. Os dados ficam ocultos até a soltura, saem um por vez e usam colisões com a malha da torre. O servidor transmite a mesma trajetória para todos. Um dado preso nos degraus, inclinado ou ainda em movimento não produz total; tente novamente ou ajuste a física.
 
-Importações aceitam até 30 MB, 60 mil triângulos e 180 mil vértices, com no máximo 10 estruturas por mesa. Todos os participantes podem adicionar estruturas de dados à própria mesa; isso não concede edição no mapa. A abertura é estimada pela região superior do modelo. Prefira uma estrutura montada, sem peças de impressão espalhadas. 3MF/STL são tratados como Z para cima; GLB/OBJ como Y para cima. A malha é renderizada em dourado, sem importar materiais de impressão.
+## Cópia portátil da mesa
 
-A bandeja mantém o runtime Dice Box existente. Estruturas de malha usam o runtime Ammo/Bullet completo do pacote `ammojs-typed`, que inclui colisão estática por triângulos. Ambas leem o resultado na orientação física final. Créditos do modelo fornecido ficam em `public/assets/structures/ATTRIBUTION.md`.
+Em **Mesa → Salvar uma cópia da mesa**, prepare e baixe um JSON com dados e arquivos permitidos, incluindo imagens e pacotes 3D incorporados. Notas privadas de outros jogadores não entram; modo jogador conserva a cobertura do mapa. A cópia fica disponível por até cinco minutos e é descartada após o download. Ainda não há importação deste formato pela interface. Formato, permissões, API e limites em [docs/ROOM_EXPORT.md](docs/ROOM_EXPORT.md).

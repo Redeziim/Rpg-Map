@@ -5,7 +5,7 @@ import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 
-const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote, onShareNote, notebookMembers=[], notebookUsername='' }) => {
+const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote, onShareNote, notebookMembers=[], notebookUsername='', mapPoints=[], onOpenPoint,openNoteRequest,roomId }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
   const [newFieldType, setNewFieldType] = useState('text');
   const [newFieldLabel, setNewFieldLabel] = useState('');
@@ -141,7 +141,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
 
       {f.type === 'status' && (() => {
         const value = draftValues[f.id] || { current: 0, max: 0 };
-        return <div className="resource-field"><div className="status-bar-track"><div className="status-bar-fill" style={{width: `${value.max > 0 ? Math.min(100,Math.max(0,value.current/value.max*100)) : 0}%`}} /></div><div className="resource-inputs"><label>Atual<input type="number" min="0" value={value.current} onChange={e => setValue(f.id,{...value,current:Math.max(0,Math.min(value.max,Number(e.target.value)))})} /></label><span>/</span><label>Máximo<input type="number" min="0" value={value.max} onChange={e => {const max=Math.max(0,Number(e.target.value));setValue(f.id,{max,current:Math.min(value.current,max)});}} /></label></div></div>;
+        return <div className="resource-field"><div className="status-bar-track"><div className="status-bar-fill" style={{width: `${value.max > 0 ? Math.min(100,Math.max(0,value.current/value.max*100)) : 0}%`}} /></div><div className="resource-inputs"><label>Atual<input type="number" aria-label={`${f.label}: valor atual`} min="0" value={value.current} onChange={e => setValue(f.id,{...value,current:Math.max(0,Math.min(value.max,Number(e.target.value)))})} /></label><span>/</span><label>Máximo<input type="number" aria-label={`${f.label}: valor máximo`} min="0" value={value.max} onChange={e => {const max=Math.max(0,Number(e.target.value));setValue(f.id,{max,current:Math.min(value.current,max)});}} /></label></div></div>;
       })()}
       {f.type === 'text' && (
         <input id={`field-${f.id}`} type="text" value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui…" />
@@ -167,8 +167,8 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         <div className="sheet-field-list">
           {(draftValues[f.id] || []).map((item, idx) => (
             <div key={idx} className="sheet-list-item">
-              <input type="text" value={item} onChange={e => updateListItem(f.id, idx, e.target.value)} placeholder={`Item ${idx + 1}`} />
-              <button onClick={() => removeListItem(f.id, idx)}><X size={14} /></button>
+              <input type="text" aria-label={`${f.label}, item ${idx + 1}`} value={item} onChange={e => updateListItem(f.id, idx, e.target.value)} placeholder={`Item ${idx + 1}`} />
+              <button type="button" aria-label={`Remover item ${idx + 1} de ${f.label}`} onClick={() => removeListItem(f.id, idx)}><X size={14} aria-hidden="true" /></button>
             </div>
           ))}
           <button className="sheet-list-add-btn" onClick={() => addListItem(f.id)}>
@@ -250,15 +250,16 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         <div className="sheet-field-checklist">
           {(draftValues[f.id] || []).map(item => (
             <div key={item.id} className="checklist-item-row">
-              <input type="checkbox" checked={!!item.checked} onChange={() => toggleChecklistItem(f.id, item.id)} />
+              <input type="checkbox" aria-label={`Concluir ${item.text || 'item'} em ${f.label}`} checked={!!item.checked} onChange={() => toggleChecklistItem(f.id, item.id)} />
               <input
                 type="text"
+                aria-label={`Item de ${f.label}`}
                 value={item.text}
                 onChange={e => updateChecklistText(f.id, item.id, e.target.value)}
                 placeholder="Descreva o item..."
                 className={item.checked ? 'checklist-text-done' : ''}
               />
-              <button onClick={() => removeChecklistItem(f.id, item.id)}><X size={14} /></button>
+              <button type="button" aria-label={`Remover ${item.text || 'item'} de ${f.label}`} onClick={() => removeChecklistItem(f.id, item.id)}><X size={14} aria-hidden="true" /></button>
             </div>
           ))}
           <button className="sheet-list-add-btn" onClick={() => addChecklistItem(f.id)}>
@@ -326,7 +327,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
               <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
             </section>)}</div>
-            <Notebook key={activePlayer} storageKey={notebookKey+':'+activePlayer} title="Observações do jogador" hint="Notas salvas · abrir janelas" scope={activePlayer} username={notebookUsername} members={notebookMembers} canShare={!readOnly} notes={activeEntry.notebooks||[]} readOnly={readOnly} onSave={(_,id,note)=>onSaveNote(activePlayer,id,note)} onShare={(_,id,data)=>onShareNote(activePlayer,id,data)}/>
+            <Notebook key={notebookKey+':'+activePlayer} storageKey={notebookKey+':'+activePlayer} title="Observações do jogador" hint="Notas salvas · abrir janelas" scope={activePlayer} username={notebookUsername} members={notebookMembers} canShare={!readOnly} notes={activeEntry.notebooks||[]} readOnly={readOnly} points={mapPoints} onOpenPoint={onOpenPoint} openRequest={openNoteRequest} roomId={roomId} onSave={(_,id,note)=>onSaveNote(activePlayer,id,note)} onShare={(_,id,data)=>onShareNote(activePlayer,id,data)}/>
           </>}
         </div>
       </div>

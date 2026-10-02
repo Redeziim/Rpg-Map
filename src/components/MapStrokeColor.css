@@ -1,0 +1,27 @@
+.map-color-picker{position:relative;--color-paper:#211e18;--color-ink:#f0e3c7;--color-edge:#927344}
+.mist-theme .view-mapa .map-draw-tools .map-color-trigger{gap:8px}
+.map-color-seal{display:block;width:28px;height:28px;flex-shrink:0;border-radius:50%;background:conic-gradient(#ed6c5b,#e9d25b,#79b46a,#63b8bc,#7f88d1,#c57ab1,#ed6c5b);padding:4px}
+.map-color-seal::after{content:"";display:block;width:100%;height:100%;border-radius:50%;background:var(--chosen-color);border:1px solid #1a1712;box-sizing:border-box}
+.map-color-panel{position:absolute;z-index:8;top:calc(100% + 8px);right:0;width:268px;max-width:calc(100vw - 40px);padding:14px;background:var(--color-paper);color:var(--color-ink);border:1px solid var(--color-edge);box-shadow:0 12px 28px #0009;max-height:min(610px,80dvh);overflow:auto;overscroll-behavior:contain;box-sizing:border-box}
+.mist-theme .view-mapa .map-draw-tools:has(.map-color-panel){z-index:6}
+.mist-theme .main-content.view-mapa:has(.map-color-panel){z-index:30}
+.map-color-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.map-color-panel h3{margin:0;font:600 14px Cinzel,Georgia,serif}
+.map-color-panel p{margin:5px 0 14px;font:15px/1.4 'Crimson Pro',Georgia,serif}
+.mist-theme .view-mapa .map-draw-tools .map-color-panel header button{width:44px;flex-shrink:0;padding:0;background:transparent;border:0}
+.mist-theme .view-mapa .map-draw-tools .map-color-wheel{display:block;position:relative;width:208px;max-width:100%;height:auto;aspect-ratio:1;margin:0 auto 14px;padding:0;border:0;border-radius:50%;background:radial-gradient(circle closest-side,#fff,transparent),conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);touch-action:none;user-select:none;cursor:crosshair}
+.map-color-wheel::before{content:"";position:absolute;inset:0;border-radius:50%;background:#000;opacity:var(--wheel-shade);pointer-events:none}
+.map-color-position{position:absolute;z-index:1;display:block;width:16px;height:16px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #17130f;transform:translate(-50%,-50%);pointer-events:none}
+.map-color-panel label{display:block;font:14px/1.5 'Crimson Pro',Georgia,serif;margin-top:10px}
+.map-color-panel .map-color-tone{display:flex;justify-content:space-between}
+.mist-theme .map-color-panel input[type=range]{display:block;width:100%;min-height:44px;padding:0;accent-color:#d9b777;cursor:pointer}
+.map-color-presets{display:flex;justify-content:space-between;gap:3px;margin:8px 0}
+.mist-theme .view-mapa .map-draw-tools .map-color-presets button{width:44px;padding:7px;background:transparent;border:1px solid transparent}
+.map-color-presets button::after{content:"";width:26px;height:26px;border-radius:50%;background:var(--swatch-color);border:1px solid #a5916b}
+.mist-theme .view-mapa .map-draw-tools .map-color-presets button[aria-pressed=true]{border-color:#edcd92;background:#3c3221}
+.map-color-code{display:flex;align-items:center;gap:8px;margin-top:5px}
+.map-color-code span{width:32px;height:32px;border:1px solid #a5916b;flex-shrink:0}
+.mist-theme .map-color-code input{width:100%;min-width:0;min-height:44px;font:16px Georgia,serif}
+.mist-theme .view-mapa .map-draw-tools .map-color-done{width:100%;margin-top:14px}
+@media(max-width:900px){.map-color-picker{position:static}.map-color-panel{position:fixed;right:auto;left:50%;top:50%;transform:translate(-50%,-50%);max-height:calc(100dvh - 32px)}}
+@media(forced-colors:active){.map-color-wheel,.map-color-seal,.map-color-presets button::after,.map-color-code span{forced-color-adjust:none}.map-color-position{border-color:#fff;box-shadow:0 0 0 2px #000}}

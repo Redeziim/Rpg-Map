@@ -18,29 +18,39 @@ export default function TabletopScene({roomId,objects,selected,editable,mode,onS
     const transform=new TransformControls(camera,renderer.domElement);scene.add(transform.getHelper());
     scene.add(new THREE.HemisphereLight(0xfff5e3,0x484a53,2.4));const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(12,25,8);scene.add(sun);
     const grid=new THREE.GridHelper(100,100,0x746142,0x292722);grid.position.y=-.03;scene.add(grid);
-    const models=new Map(),loading=new Map();let disposed=false,dragging=false,frame;
+    const models=new Map(),loading=new Map(),queued=new Map(),failed=new Set();let disposed=false,dragging=false,activeLoads=0;
     const render=()=>renderer.render(scene,camera);
     const apply=(mesh,item)=>{mesh.position.fromArray(item.position);mesh.rotation.fromArray([...item.rotation,'XYZ']);mesh.scale.fromArray(item.scale);};
     const updateSelection=()=>{
       const props=latest.current,mesh=models.get(props.selected);
       if(mesh&&props.editable){if(transform.object!==mesh)transform.attach(mesh);transform.setMode(props.mode);}else transform.detach();render();
     };
+    const pump=()=>{
+      while(!disposed&&activeLoads<2&&queued.size){
+        const [id,item]=queued.entries().next().value;queued.delete(id);
+        if(!latest.current.objects.some(object=>object.id===id))continue;
+        const token={cancelled:false};loading.set(id,token);activeLoads++;
+        latest.current.onStatus(`Carregando ${item.name}…`);
+        api(`/rooms/${roomId}/map-assets/${item.assetId}`,{signal:AbortSignal.timeout(120000)}).then(loadMapAsset).then(mesh=>{
+          if(disposed||token.cancelled){disposeModel(mesh);return;}
+          const current=latest.current.objects.find(object=>object.id===id);if(!current){disposeModel(mesh);return;}
+          mesh.userData.mapId=id;apply(mesh,current);models.set(id,mesh);scene.add(mesh);latest.current.onStatus('');updateSelection();render();
+        }).catch(error=>{if(!disposed&&!token.cancelled){failed.add(id);latest.current.onStatus(`${item.name}: ${error.message}`);}})
+          .finally(()=>{if(loading.get(id)===token)loading.delete(id);activeLoads--;pump();});
+      }
+    };
     const sync=()=>{
       const props=latest.current,ids=new Set(props.objects.map(o=>o.id));
       for(const [id,mesh]of models)if(!ids.has(id)){if(transform.object===mesh)transform.detach();scene.remove(mesh);disposeModel(mesh);models.delete(id);}
       for(const [id,token]of loading)if(!ids.has(id)){token.cancelled=true;loading.delete(id);}
+      for(const id of queued.keys())if(!ids.has(id))queued.delete(id);
+      for(const id of failed)if(!ids.has(id))failed.delete(id);
       for(const item of props.objects){
         const existing=models.get(item.id);
         if(existing){if(!(dragging&&transform.object===existing))apply(existing,item);continue;}
-        if(loading.has(item.id))continue;
-        const token={cancelled:false};loading.set(item.id,token);props.onStatus(`Carregando ${item.name}…`);
-        api(`/rooms/${roomId}/map-assets/${item.assetId}`,{signal:AbortSignal.timeout(120000)}).then(loadMapAsset).then(mesh=>{
-          if(disposed||token.cancelled){disposeModel(mesh);return;}
-          const current=latest.current.objects.find(o=>o.id===item.id);if(!current){disposeModel(mesh);return;}
-          mesh.userData.mapId=item.id;apply(mesh,current);models.set(item.id,mesh);scene.add(mesh);loading.delete(item.id);latest.current.onStatus('');updateSelection();render();
-        }).catch(error=>{if(!disposed&&!token.cancelled){latest.current.onStatus(`${item.name}: ${error.message}`);/* Retry on remount, not on every streamed transform. */}});
+        if(!loading.has(item.id)&&!queued.has(item.id)&&!failed.has(item.id))queued.set(item.id,item);
       }
-      updateSelection();render();
+      pump();updateSelection();render();
     };
     const publish=()=>{const mesh=transform.object;if(!mesh||!latest.current.editable)return;latest.current.onTransform(mesh.userData.mapId,{position:mesh.position.toArray(),rotation:[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z],scale:mesh.scale.toArray().map(v=>Math.max(.001,Math.abs(v)))});};
     transform.addEventListener('dragging-changed',e=>{dragging=e.value;orbit.enabled=!e.value;if(!e.value)publish();});
@@ -76,7 +86,7 @@ export default function TabletopScene({roomId,objects,selected,editable,mode,onS
     };
     const resize=()=>{if(!el.clientWidth||!el.clientHeight)return;renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();render();};
     const observer=new ResizeObserver(resize);observer.observe(el);resize();runtime.current={sync};sync();
-    return()=>{disposed=true;runtime.current=null;actions.current=null;cancelAnimationFrame(frame);observer.disconnect();transform.detach();transform.dispose();orbit.dispose();models.forEach(disposeModel);grid.geometry.dispose();grid.material.dispose();renderer.dispose();renderer.domElement.remove();};
+    return()=>{disposed=true;runtime.current=null;actions.current=null;queued.clear();observer.disconnect();transform.detach();transform.dispose();orbit.dispose();models.forEach(disposeModel);grid.geometry.dispose();grid.material.dispose();renderer.dispose();renderer.domElement.remove();};
   },[roomId]);
   useEffect(()=>runtime.current?.sync(),[objects,selected,editable,mode]);
   const onKeyDown=event=>{

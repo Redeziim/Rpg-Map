@@ -55,6 +55,46 @@ test('concurrent point edits reject a stale copy without losing the first edit',
     const retried=await request('master',`/rooms/${room}/state`,'PATCH',{points:[first,second],pointsVersion:saved.body.pointsVersion});
     assert.equal(retried.status,200);
     assert.deepEqual((await request('player',`/rooms/${room}`)).body.state.points,[first,second]);
+    for(const who of ['owner','player']){
+      const view=who==='owner'?'player':'master';
+      assert.equal((await request(who,`/rooms/${room}/state?mapViewMode=${view}`,'PATCH',{points:[],pointsVersion:retried.body.pointsVersion})).status,403);
+      assert.equal((await request(who,`/rooms/${room}/state?mapViewMode=${view}`,'PATCH',{mapImage:null})).status,403);
+      assert.equal((await request(who,`/rooms/${room}/points/first?mapViewMode=${view}`,'PATCH',{name:'Sem acesso',version:retried.body.pointVersions.first})).status,403);
+    }
+    assert.deepEqual((await request('owner',`/rooms/${room}`)).body.state.points,[first,second]);
+
+    const pointPath=id=>`/rooms/${room}/points/${id}`;
+    const firstVersion=retried.body.pointVersions.first;
+    const secondVersion=retried.body.pointVersions.second;
+    const otherPoint=await request('master',pointPath('second'),'PATCH',{name:'Portão leste',version:secondVersion});
+    assert.equal(otherPoint.status,200);
+    assert.equal(otherPoint.body.pointVersions.first,firstVersion);
+    const edit=await request('owner',pointPath('first'),'PATCH',{name:'Torre antiga',description:'Vigia no topo.',type:'dungeon',version:firstVersion});
+    assert.equal(edit.status,200);
+    assert.deepEqual(edit.body.state.points,[{...first,name:'Torre antiga',description:'Vigia no topo.',type:'dungeon'},{...second,name:'Portão leste'}]);
+    assert.notEqual(edit.body.pointVersions.first,firstVersion);
+
+    const stalePoint=await request('master',pointPath('first'),'PATCH',{name:'Torre apagada',version:firstVersion});
+    assert.equal(stalePoint.status,409);
+    assert.match(stalePoint.body.error,/rascunho foi mantido/);
+    assert.equal((await request('master',pointPath('first'),'PATCH',{name:'Sem versão'})).status,409);
+    assert.equal((await request('player',pointPath('first'),'PATCH',{name:'Sem permissão',version:edit.body.pointVersions.first})).status,403);
+    for(const patch of [{x:99},{id:'other'},{name:' '},{description:123},{type:'unknown'}]){
+      assert.equal((await request('owner',pointPath('first'),'PATCH',{...patch,version:edit.body.pointVersions.first})).status,400);
+    }
+    assert.deepEqual((await request('owner',`/rooms/${room}`)).body.state.points,edit.body.state.points);
+
+    const concurrent=await Promise.all([
+      request('owner',pointPath('first'),'PATCH',{name:'Torre do norte',version:edit.body.pointVersions.first}),
+      request('master',pointPath('first'),'PATCH',{name:'Torre do sul',version:edit.body.pointVersions.first})
+    ]);
+    assert.deepEqual(concurrent.map(result=>result.status).sort(),[200,409]);
+    const winner=concurrent.find(result=>result.status===200).body;
+    assert.deepEqual((await request('owner',`/rooms/${room}`)).body.state.points,winner.state.points);
+    const removed=await request('owner',`/rooms/${room}/state`,'PATCH',{points:winner.state.points.filter(point=>point.id!=='first'),pointsVersion:winner.pointsVersion});
+    assert.equal(removed.status,200);
+    assert.equal((await request('master',pointPath('first'),'PATCH',{name:'Não recriar',version:winner.pointVersions.first})).status,404);
+    assert.deepEqual((await request('owner',`/rooms/${room}`)).body.state.points,[{...second,name:'Portão leste'}]);
   }finally{
     controller?.abort();app.close();rmSync(directory,{recursive:true,force:true});
   }

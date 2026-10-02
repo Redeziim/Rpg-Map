@@ -9,7 +9,7 @@ Estas instruções se aplicam a todo o repositório `Rpg-Map`.
 - `src/components/CharacterSheet.jsx`: ficha dinâmica e construtor de campos.
 - `src/components/StatusBars.jsx` e `GroupStatus.jsx`: barras individuais e visão do grupo.
 - `src/components/DiceRoller.jsx` e `Dice3D.jsx`: expressão, histórico e renderização tridimensional dos dados.
-- `src/components/Scene3D.jsx`: cena tridimensional associada aos pontos do mapa.
+- `src/components/tabletop/TabletopMap.jsx`: mesa 3D independente dos pontos do mapa 2D.
 - O servidor Node.js em `server/` usa SQLite para contas e mesas, com permissões validadas na API e sincronização SSE.
 - `npm run dev` inicia Vite e API; Node.js 24 ou superior é necessário.
 
@@ -59,3 +59,13 @@ Prefira uma linguagem visual específica: cartografia impressa, marginalia, inst
 6. Teste as páginas alteradas em um servidor HTTP local e em larguras desktop e mobile.
 
 Para validar a aplicação, execute `npm run build` e teste `npm run dev` no navegador. Não declare sucesso apenas com inspeção estática.
+
+## Agent skills
+
+### Issue tracker
+
+Tarefas e especificações em GitHub Issues de `Redeziim/Rpg-Map`. Consulte `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Um único contexto: glossário em `GLOSSARY.md` e decisões em `docs/adr/`, criados conforme necessário. Consulte `docs/agents/domain.md`.

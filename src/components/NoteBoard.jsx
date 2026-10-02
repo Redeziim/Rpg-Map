@@ -1,11 +1,19 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {ImagePlus,Link2,Pencil,Plus,Trash2,Undo2} from 'lucide-react';
+import {flushSync} from 'react-dom';
+import {ImagePlus,Link2,MapPin,Pencil,Plus,Trash2,Undo2,ZoomIn,ZoomOut,Expand} from 'lucide-react';
+import {imageSignatureMatches} from '../shared/imageSignature.js';
+import {api} from '../api.js';
+import {emptyNoteBoard} from './noteBoardDefaults.js';
+import {NoteHighlight} from './NoteFind.jsx';
 import './NoteBoard.css';
 
-export const emptyNoteBoard=()=>({nodes:[],edges:[],strokes:[]});
-const BOARD_WIDTH=960,BOARD_HEIGHT=620;
+const MIN_WIDTH=960,MIN_HEIGHT=620,MAX_WIDTH=3840,MAX_HEIGHT=2480,MIN_ZOOM=.05;
+const CARD_TYPES={person:'Pessoa',place:'Local',scene:'Cena',clue:'Pista'};
 const bounded=(value,max)=>Math.max(0,Math.min(max,value));
 const isTextTarget=target=>Boolean(target?.closest?.('textarea,input,[contenteditable="true"]'));
+const nodeTags=node=>Array.isArray(node?.tags)?node.tags.filter(tag=>typeof tag==='string'):[];
+const validTags=tags=>Array.isArray(tags)&&tags.length<=8&&tags.every(tag=>typeof tag==='string'&&tag===tag.trim()&&tag.length>=1&&tag.length<=30)&&new Set(tags.map(tag=>tag.toLocaleLowerCase('pt-BR'))).size===tags.length;
+const copiedMetadata=payload=>({...(CARD_TYPES[payload?.category]?{category:payload.category}:{}),...(validTags(payload?.tags)?{tags:payload.tags}:{})});
 function segment(from,to){
   const ax=from.x+95,ay=from.y+54,bx=to.x+95,by=to.y+54,dx=bx-ax,dy=by-ay;
   if(Math.abs(dx)+Math.abs(dy)<2)return {x1:ax,y1:ay,x2:bx+1,y2:by+1};
@@ -13,19 +21,69 @@ function segment(from,to){
   return {x1:ax+dx*edge,y1:ay+dy*edge,x2:bx-dx*edge,y2:by-dy*edge};
 }
 
-export default function NoteBoard({value,onChange,readOnly=false}){
+export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpenPoint,roomId,searchQuery='',activeSearch,searchNavigation=0}){
   const board=value||emptyNoteBoard();
-  const [drawing,setDrawing]=useState(false),[selected,setSelected]=useState(null),[editingId,setEditingId]=useState(null);
+  const width=board.width||MIN_WIDTH,height=board.height||MIN_HEIGHT;
+  const [zoom,setZoom]=useState(1);
+  const [drawing,setDrawing]=useState(false),[selected,setSelected]=useState(null),[selectedCards,setSelectedCards]=useState(new Set()),[editingId,setEditingId]=useState(null);
   const [linkFrom,setLinkFrom]=useState(null),[error,setError]=useState(''),[announcement,setAnnouncement]=useState('');
+  const [editingEdge,setEditingEdge]=useState(null),[edgeDraft,setEdgeDraft]=useState('');
+  const [categoryFilter,setCategoryFilter]=useState('all'),[tagFilter,setTagFilter]=useState('all');
+  const [tagInput,setTagInput]=useState(''),[tagError,setTagError]=useState('');
   const [pen,setPen]=useState({x:480,y:310,path:''});
-  const boardRef=useRef(null),scrollRef=useRef(null),fileRef=useRef(null),strokePreview=useRef(null),linkPreview=useRef(null);
+  const [libraryOpen,setLibraryOpen]=useState(false),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(''),[assets,setAssets]=useState([]),[assetUploads,setAssetUploads]=useState(0);
+  const boardRef=useRef(null),scrollRef=useRef(null),fileRef=useRef(null),strokePreview=useRef(null),linkPreview=useRef(null),edgeElements=useRef(new Map()),edgeLabelElements=useRef(new Map());
   const stroke=useRef(null),drag=useRef(null),pan=useRef(null),linking=useRef(null),readOnlyRef=useRef(readOnly),aliveRef=useRef(true);
   const boardValue=useRef(board),history=useRef({past:[],future:[]}),nodeHistory=useRef(new Map());
   boardValue.current=board;readOnlyRef.current=readOnly;
   useEffect(()=>{aliveRef.current=true;return()=>{aliveRef.current=false;};},[]);
   useEffect(()=>{if(selected&&!board.nodes.some(node=>node.id===selected))setSelected(null);},[board.nodes,selected]);
-  const markerId=useRef(`note-arrow-${crypto.randomUUID()}`).current;
   const nodesById=new Map(board.nodes.map(node=>[node.id,node]));
+  const availableTags=[...new Map(board.nodes.flatMap(nodeTags).map(tag=>[tag.toLocaleLowerCase('pt-BR'),tag])).values()].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const visibleNodes=board.nodes.filter(node=>(categoryFilter==='all'||(categoryFilter==='none'?!node.category:node.category===categoryFilter))&&(tagFilter==='all'||(tagFilter==='none'?!nodeTags(node).length:nodeTags(node).some(tag=>tag.toLocaleLowerCase('pt-BR')===tagFilter.toLocaleLowerCase('pt-BR')))));
+  const matchingAssets=assets.filter(asset=>asset.name.toLocaleLowerCase('pt-BR').includes(librarySearch.trim().toLocaleLowerCase('pt-BR')));
+  const visibleIds=new Set(visibleNodes.map(node=>node.id));
+  const visibleEdges=board.edges.filter(edge=>visibleIds.has(edge.from)&&visibleIds.has(edge.to));
+  useEffect(()=>{if(selected&&!visibleIds.has(selected)){setSelected(null);setEditingId(null);}if(linkFrom&&!visibleIds.has(linkFrom))setLinkFrom(null);},[selected,linkFrom,categoryFilter,tagFilter,board.nodes]);
+  useEffect(()=>{setSelectedCards(current=>{const remaining=[...current].filter(id=>visibleIds.has(id));return remaining.length===current.size?current:new Set(remaining);});},[categoryFilter,tagFilter,board.nodes]);
+  useEffect(()=>{if(editingEdge&&!visibleEdges.some(edge=>edge.id===editingEdge))setEditingEdge(null);},[editingEdge,categoryFilter,tagFilter,board.edges,board.nodes]);
+  useEffect(()=>{if(tagFilter!=='all'&&tagFilter!=='none'&&!availableTags.some(tag=>tag.toLocaleLowerCase('pt-BR')===tagFilter))setTagFilter('all');},[tagFilter,board.nodes]);
+  useEffect(()=>{
+    if(!activeSearch)return;
+    setEditingId(null);
+    if(categoryFilter!=='all'||tagFilter!=='all')setAnnouncement('Filtros removidos para mostrar o resultado da busca.');
+    setCategoryFilter('all');setTagFilter('all');
+    const frame=requestAnimationFrame(()=>{
+      const viewport=scrollRef.current,target=boardRef.current?.querySelector('.note-find-current');
+      if(!viewport||!target)return;
+      const bounds=target.getBoundingClientRect(),area=viewport.getBoundingClientRect();
+      viewport.scrollLeft+=(bounds.left+bounds.right-area.left-area.right)/2;
+      viewport.scrollTop+=(bounds.top+bounds.bottom-area.top-area.bottom)/2;
+      const content=viewport.closest('.note-window-content'),outer=content?.getBoundingClientRect();
+      if(outer&&area.bottom>outer.bottom)content.scrollTop+=area.bottom-outer.bottom;
+    });
+    return()=>cancelAnimationFrame(frame);
+    // Recenter only for a search action; editing a matching card must keep its editor open.
+  },[searchNavigation]);
+  function drawAttachedLines(current,position){
+    for(const link of current.links){
+      const coordinates=link.from?segment(position,link.other):segment(link.other,position);
+      for(const [axis,value] of Object.entries(coordinates))link.element.setAttribute(axis,value);
+      if(link.label){link.label.setAttribute('x',(coordinates.x1+coordinates.x2)/2);link.label.setAttribute('y',(coordinates.y1+coordinates.y2)/2-8);}
+    }
+  }
+  const selectedNode=nodesById.get(selected),linkedPoint=points.find(item=>item.id===selectedNode?.pointId);
+  const selectedTags=nodeTags(selectedNode).join(', ');
+  useEffect(()=>{setTagInput(selectedTags);setTagError('');},[selected,selectedTags]);
+  function selectOnly(id){setSelected(id);setSelectedCards(id?new Set([id]):new Set());setLinkFrom(null);}
+  function selectCard(id,additive=false){
+    if(linkFrom&&linkFrom!==id&&!additive){connectNodes(linkFrom,id);return;}
+    if(!additive){selectOnly(id);return;}
+    const next=new Set(selectedCards);
+    if(next.has(id))next.delete(id);else next.add(id);
+    setSelectedCards(next);setSelected(next.has(id)?id:[...next].at(-1)||null);setLinkFrom(null);
+    setAnnouncement(`${next.size} cartões selecionados.`);
+  }
   function apply(update,undoable=false){
     const previous=boardValue.current,next=typeof update==='function'?update(previous):update;
     if(next===previous)return;
@@ -46,10 +104,10 @@ export default function NoteBoard({value,onChange,readOnly=false}){
     setEditingId(null);setLinkFrom(null);setAnnouncement('Ação refeita.');
     boardRef.current?.focus();
   }
-  function point(event){const rect=boardRef.current.getBoundingClientRect();return {x:bounded(Math.round(event.clientX-rect.left),BOARD_WIDTH),y:bounded(Math.round(event.clientY-rect.top),BOARD_HEIGHT)};}
+  function point(event){const rect=boardRef.current.getBoundingClientRect();return {x:bounded(Math.round((event.clientX-rect.left)/zoom),width),y:bounded(Math.round((event.clientY-rect.top)/zoom),height)};}
   function startPan(event){
     if(event.target!==event.currentTarget)return;
-    setSelected(null);setLinkFrom(null);setEditingId(null);
+    selectOnly(null);setEditingId(null);
     if(drawing||event.pointerType!=='mouse'||event.button!==0&&event.button!==1)return;
     const viewport=scrollRef.current;
     pan.current={pointerId:event.pointerId,x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};
@@ -57,29 +115,86 @@ export default function NoteBoard({value,onChange,readOnly=false}){
   }
   function movePan(event){const current=pan.current;if(!current||current.pointerId!==event.pointerId)return;const viewport=scrollRef.current;viewport.scrollLeft=current.left+current.x-event.clientX;viewport.scrollTop=current.top+current.y-event.clientY;}
   function endPan(event){if(pan.current?.pointerId===event.pointerId)pan.current=null;}
-  function center(){const viewport=scrollRef.current;return {x:bounded(Math.round((viewport.scrollLeft+viewport.clientWidth/2)-95),BOARD_WIDTH-220),y:bounded(Math.round((viewport.scrollTop+viewport.clientHeight/2)-50),BOARD_HEIGHT-150)};}
+  function center(){const viewport=scrollRef.current;return {x:bounded(Math.round((viewport.scrollLeft+viewport.clientWidth/2)/zoom-95),width-220),y:bounded(Math.round((viewport.scrollTop+viewport.clientHeight/2)/zoom-50),height-150)};}
+  function changeZoom(next){
+    const viewport=scrollRef.current,level=Math.max(MIN_ZOOM,Math.min(2,Math.round(next*20)/20));
+    if(!viewport||level===zoom)return;
+    const x=(viewport.scrollLeft+viewport.clientWidth/2)/zoom,y=(viewport.scrollTop+viewport.clientHeight/2)/zoom;
+    setZoom(level);
+    requestAnimationFrame(()=>{viewport.scrollLeft=x*level-viewport.clientWidth/2;viewport.scrollTop=y*level-viewport.clientHeight/2;});
+  }
+  function expand(){
+    if(readOnly)return;
+    const nextWidth=Math.min(MAX_WIDTH,width+480),nextHeight=Math.min(MAX_HEIGHT,height+310);
+    if(nextWidth===width&&nextHeight===height){setError('O quadro chegou ao tamanho máximo.');return;}
+    apply(previous=>({...previous,width:nextWidth,height:nextHeight}),true);
+    setError('');setAnnouncement('Quadro ampliado. Ctrl+Z desfaz.');
+  }
   function focusEditor(id){requestAnimationFrame(()=>{const field=boardRef.current?.querySelector(`[data-node-id="${id}"] textarea, [data-node-id="${id}"] input`);field?.focus();field?.select();});}
-  function startEditing(id){if(readOnly)return;setSelected(id);setEditingId(id);focusEditor(id);}
-  function addIdeaAt(x,y,{text='Nova ideia',from=null,edit=true}={}){
+  function startEditing(id){if(readOnly)return;selectOnly(id);setEditingId(id);focusEditor(id);}
+  function addIdeaAt(x,y,{text='Nova ideia',from=null,edit=true,metadata={}}={}){
     if(readOnly||boardValue.current.nodes.length>=80){setError('O mapa mental chegou ao limite de 80 elementos.');return;}
     if(from&&boardValue.current.edges.length>=120){setError('O mapa mental chegou ao limite de 120 conexões.');return;}
-    const id=crypto.randomUUID(),node={id,kind:'text',x:bounded(Math.round(x),BOARD_WIDTH-220),y:bounded(Math.round(y),BOARD_HEIGHT-150),text};
+    const id=crypto.randomUUID(),node={id,kind:'text',x:bounded(Math.round(x),width-220),y:bounded(Math.round(y),height-150),text,...metadata};
     apply(previous=>({...previous,nodes:[...previous.nodes,node],edges:from?[...previous.edges,{id:crypto.randomUUID(),from,to:id}]:previous.edges}),true);
-    setSelected(id);setLinkFrom(null);setError('');
+    setCategoryFilter('all');setTagFilter('all');
+    selectOnly(id);setError('');
     if(edit)startEditing(id);else requestAnimationFrame(()=>boardRef.current?.querySelector(`[data-node-id="${id}"] .note-board-node-grip`)?.focus());
   }
-  function createImage(file,x,y){
+  const assetPath=id=>`/api/rooms/${encodeURIComponent(roomId)}/note-assets/${encodeURIComponent(id)}`;
+  async function loadLibrary(){
+    setLibraryOpen(true);setLibraryLoading(true);setError('');
+    try{const items=await api(`/rooms/${encodeURIComponent(roomId)}/note-assets`);if(aliveRef.current)setAssets(items);}
+    catch(cause){if(aliveRef.current)setError(`Não foi possível abrir a coleção: ${cause.message}`);}
+    finally{if(aliveRef.current)setLibraryLoading(false);}
+  }
+  async function storeImage(nodeId,name,src){
+    if(!roomId)return;
+    setAssetUploads(count=>count+1);
+    try{
+      const asset=await api(`/rooms/${encodeURIComponent(roomId)}/note-assets`,{method:'POST',data:{name,src}});
+      if(!aliveRef.current)return;
+      setAssets(current=>current.some(item=>item.id===asset.id)?current:[asset,...current]);
+      if(readOnlyRef.current)return;
+      apply(previous=>{
+        const original=previous.nodes.find(node=>node.id===nodeId);
+        if(!original||original.src!==src)return previous;
+        return {...previous,nodes:previous.nodes.map(node=>node.id===nodeId?{...node,src:undefined,assetId:asset.id}:node)};
+      });
+      setAnnouncement('Imagem guardada na coleção. Salve a nota para manter a referência.');
+    }catch(cause){if(aliveRef.current)setError(`A imagem está no rascunho, mas não entrou na coleção: ${cause.message}`);}
+    finally{if(aliveRef.current)setAssetUploads(count=>count-1);}
+  }
+  function insertAsset(asset){
+    if(readOnly)return;
+    if(boardValue.current.nodes.length>=80){setError('O mapa mental chegou ao limite de 80 elementos.');return;}
+    const p=center(),id=crypto.randomUUID();
+    apply(previous=>({...previous,nodes:[...previous.nodes,{id,kind:'image',x:p.x,y:p.y,text:asset.name,assetId:asset.id}]}),true);
+    setCategoryFilter('all');setTagFilter('all');selectOnly(id);setLibraryOpen(false);setError('');setAnnouncement('Referência adicionada. Salve a nota para compartilhar.');
+  }
+  async function createImage(file,x,y){
     if(!file)return;
     if(boardValue.current.nodes.length>=80){setError('O mapa mental chegou ao limite de 80 elementos.');return;}
     if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>2*1024*1024){setError('Use PNG, JPEG ou WebP de até 2 MB.');return;}
+    try{if(!imageSignatureMatches(file.type,new Uint8Array(await file.slice(0,24).arrayBuffer()))){setError('O arquivo não contém uma imagem PNG, JPEG ou WebP válida.');return;}}
+    catch{setError('Não foi possível verificar a imagem. Tente outro arquivo.');return;}
     setError('');const reader=new FileReader();
     reader.onload=()=>{
-      if(!aliveRef.current)return;
-      if(readOnlyRef.current){setError('O salvamento começou antes de anexar a imagem. Tente novamente.');return;}
-      const id=crypto.randomUUID(),node={id,kind:'image',x:bounded(x,BOARD_WIDTH-220),y:bounded(y,BOARD_HEIGHT-150),text:file.name.slice(0,100),src:reader.result};
-      apply(previous=>({...previous,nodes:[...previous.nodes,node]}),true);setSelected(id);setAnnouncement('Imagem adicionada ao quadro.');
+      if(!aliveRef.current||typeof reader.result!=='string')return;
+      const preview=new Image();
+      preview.onload=()=>{
+        if(!aliveRef.current)return;
+        if(readOnlyRef.current){setError('O salvamento começou antes de anexar a imagem. Tente novamente.');return;}
+        if(boardValue.current.nodes.length>=80){setError('O mapa mental chegou ao limite de 80 elementos.');return;}
+        const id=crypto.randomUUID(),node={id,kind:'image',x:bounded(x,width-220),y:bounded(y,height-150),text:file.name.slice(0,100),src:reader.result};
+        apply(previous=>({...previous,nodes:[...previous.nodes,node]}),true);setCategoryFilter('all');setTagFilter('all');selectOnly(id);setAnnouncement('Imagem adicionada ao quadro.');
+        void storeImage(id,node.text,node.src);
+      };
+      preview.onerror=()=>{if(aliveRef.current)setError('Não foi possível abrir esta imagem. Use outro arquivo.');};
+      preview.src=reader.result;
     };
-    reader.onerror=()=>setError('Não foi possível ler a imagem.');reader.readAsDataURL(file);
+    reader.onerror=()=>setError('Não foi possível ler a imagem.');
+    try{reader.readAsDataURL(file);}catch{setError('Não foi possível ler a imagem. Tente outro arquivo.');}
   }
   function attachImage(event){const file=event.target.files?.[0];event.target.value='';const p=center();createImage(file,p.x,p.y);}
   function connectNodes(from,to){
@@ -88,26 +203,36 @@ export default function NoteBoard({value,onChange,readOnly=false}){
     if(current.edges.some(edge=>edge.from===from&&edge.to===to)){setLinkFrom(null);return;}
     if(current.edges.length>=120){setError('O mapa mental chegou ao limite de 120 conexões.');return;}
     apply(previous=>({...previous,edges:[...previous.edges,{id:crypto.randomUUID(),from,to}]}),true);
-    setLinkFrom(null);setSelected(to);setAnnouncement('Ideias conectadas.');
+    selectOnly(to);setAnnouncement('Ideias conectadas.');
   }
+  function saveEdgeLabel(){
+    if(!editingEdge||readOnly)return;
+    const label=edgeDraft.trim();
+    if(label.length>80){setError('O rótulo pode ter até 80 caracteres.');return;}
+    apply(previous=>({...previous,edges:previous.edges.map(edge=>edge.id===editingEdge?{...edge,label:label||undefined}:edge)}),true);
+    setEditingEdge(null);setEdgeDraft('');setError('');setAnnouncement(label?'Rótulo da conexão salvo.':'Rótulo da conexão removido.');
+  }
+  function focusEdgeEditor(){if(window.matchMedia('(min-width: 601px)').matches)requestAnimationFrame(()=>boardRef.current?.closest('.note-board')?.querySelector('.note-board-label-editor input')?.focus());}
   function chooseConnector(id){
     if(readOnly)return;
     if(linkFrom&&linkFrom!==id)connectNodes(linkFrom,id);
-    else{setLinkFrom(id);setSelected(id);setAnnouncement('Escolha o ponto de outra ideia para conectar.');}
+    else if(linkFrom===id){setLinkFrom(null);setAnnouncement('Conexão cancelada.');}
+    else{selectOnly(id);setLinkFrom(id);setAnnouncement('Clique em outro cartão para conectar.');}
   }
   function startLink(event,id){
     if(readOnly||drawing||event.button!==0)return;
     event.stopPropagation();event.currentTarget.setPointerCapture(event.pointerId);
-    linking.current={id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,moved:false};
+    linking.current={id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,moved:false,rect:boardRef.current.getBoundingClientRect(),zoom};
     const node=nodesById.get(id),line=linkPreview.current;
     line.setAttribute('x1',node.x+190);line.setAttribute('y1',node.y+54);
     line.setAttribute('x2',node.x+190);line.setAttribute('y2',node.y+54);line.style.visibility='visible';
-    setSelected(id);
+    setSelected(id);setSelectedCards(new Set([id]));
   }
   function moveLink(event){
     const current=linking.current;if(!current||current.pointerId!==event.pointerId)return;
     if(Math.hypot(event.clientX-current.startX,event.clientY-current.startY)>8)current.moved=true;
-    const p=point(event);linkPreview.current?.setAttribute('x2',p.x);linkPreview.current?.setAttribute('y2',p.y);
+    const p={x:bounded(Math.round((event.clientX-current.rect.left)/current.zoom),width),y:bounded(Math.round((event.clientY-current.rect.top)/current.zoom),height)};
+    linkPreview.current?.setAttribute('x2',p.x);linkPreview.current?.setAttribute('y2',p.y);
   }
   function finishLink(event){
     const current=linking.current;if(!current||current.pointerId!==event.pointerId)return;
@@ -122,24 +247,29 @@ export default function NoteBoard({value,onChange,readOnly=false}){
   }
   function cancelLink(){linking.current=null;if(linkPreview.current)linkPreview.current.style.visibility='hidden';}
   function moveNode(event,id){
-    if(readOnly||drawing||event.button!==0)return;
+    if(readOnly||drawing||event.button!==0||event.shiftKey||linkFrom)return;
     event.stopPropagation();
     const node=nodesById.get(id);if(!node)return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current={id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:node.x,y:node.y,element:event.currentTarget.closest('.note-board-node')};
-    setSelected(id);setLinkFrom(null);
+    const links=boardValue.current.edges.filter(edge=>edge.from===id||edge.to===id).map(edge=>({element:edgeElements.current.get(edge.id),label:edgeLabelElements.current.get(edge.id),from:edge.from===id,other:nodesById.get(edge.from===id?edge.to:edge.from)})).filter(link=>link.element&&link.other);
+    drag.current={id,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:node.x,y:node.y,node,links,element:event.currentTarget.closest('.note-board-node')};
+    selectOnly(id);
   }
   function dragging(event){
     const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
-    current.nextX=bounded(Math.round(current.x+event.clientX-current.startX),BOARD_WIDTH-220);
-    current.nextY=bounded(Math.round(current.y+event.clientY-current.startY),BOARD_HEIGHT-150);
+    current.nextX=bounded(Math.round(current.x+(event.clientX-current.startX)/zoom),width-220);
+    current.nextY=bounded(Math.round(current.y+(event.clientY-current.startY)/zoom),height-150);
     current.element.style.transform=`translate(${current.nextX-current.x}px,${current.nextY-current.y}px)`;
+    drawAttachedLines(current,{...current.node,x:current.nextX,y:current.nextY});
   }
   function finishDrag(event){
     const current=drag.current;if(!current||current.pointerId!==event.pointerId)return;
-    drag.current=null;current.element.style.transform='';
-    if(current.nextX===undefined||readOnlyRef.current||current.nextX===current.x&&current.nextY===current.y)return;
-    apply(previous=>({...previous,nodes:previous.nodes.map(node=>node.id===current.id?{...node,x:current.nextX,y:current.nextY}:node)}),true);
+    drag.current=null;
+    if(event.type==='pointercancel'||current.nextX===undefined||readOnlyRef.current||current.nextX===current.x&&current.nextY===current.y){
+      drawAttachedLines(current,current.node);current.element.style.transform='';return;
+    }
+    flushSync(()=>apply(previous=>({...previous,nodes:previous.nodes.map(node=>node.id===current.id?{...node,x:current.nextX,y:current.nextY}:node)}),true));
+    current.element.style.transform='';
   }
   function startStroke(event){
     if(readOnly||!drawing||event.button!==0)return;
@@ -156,8 +286,50 @@ export default function NoteBoard({value,onChange,readOnly=false}){
   function removeSelected(){
     if(!selected||readOnly)return;
     apply(previous=>({...previous,nodes:previous.nodes.filter(node=>node.id!==selected),edges:previous.edges.filter(edge=>edge.from!==selected&&edge.to!==selected)}),true);
-    setSelected(null);setEditingId(null);setLinkFrom(null);setAnnouncement('Ideia removida. Ctrl+Z desfaz.');
+    selectOnly(null);setEditingId(null);setAnnouncement('Ideia removida. Ctrl+Z desfaz.');
     boardRef.current?.focus();
+  }
+  function associatePoint(pointId){
+    if(!selectedNode||readOnly)return;
+    apply(previous=>({...previous,nodes:previous.nodes.map(node=>node.id===selected?{...node,...(pointId?{pointId}:{pointId:undefined})}:node)}),true);
+    setAnnouncement(pointId?'Ponto associado à ideia.':'Vínculo com ponto removido.');
+  }
+  function changeCategory(category){
+    if(!selectedNode||readOnly)return;
+    apply(previous=>({...previous,nodes:previous.nodes.map(node=>node.id===selected?{...node,category:category||undefined}:node)}),true);
+    setAnnouncement(category?`Cartão definido como ${CARD_TYPES[category]}.`:'Tipo do cartão removido.');
+  }
+  function saveTags(){
+    if(!selectedNode||readOnly)return;
+    const tags=tagInput.split(',').map(tag=>tag.trim()).filter(Boolean);
+    if(!validTags(tags)){
+      setTagError('Use até 8 etiquetas diferentes, com até 30 caracteres cada.');
+      return;
+    }
+    setTagError('');setTagInput(tags.join(', '));
+    const previousTags=nodeTags(selectedNode);
+    if(tags.length===previousTags.length&&tags.every((tag,index)=>tag===previousTags[index]))return;
+    apply(previous=>({...previous,nodes:previous.nodes.map(node=>node.id===selected?{...node,tags}:node)}),true);
+    setAnnouncement('Etiquetas atualizadas.');
+  }
+  function arrangeCards(action){
+    if(readOnly)return;
+    const cards=boardValue.current.nodes.filter(node=>selectedCards.has(node.id)&&visibleIds.has(node.id));
+    if(cards.length<(action.startsWith('distribute')?3:2))return;
+    const axis=action.endsWith('x')?'x':'y',positions=new Map();
+    if(action.startsWith('align')){
+      const boundary=Math.min(...cards.map(node=>node[axis]));
+      for(const node of cards)positions.set(node.id,boundary);
+    }else{
+      const sorted=[...cards].sort((a,b)=>a[axis]-b[axis]||a.id.localeCompare(b.id));
+      const first=sorted[0][axis],last=sorted.at(-1)[axis],step=(last-first)/(sorted.length-1);
+      sorted.forEach((node,index)=>positions.set(node.id,Math.round(first+step*index)));
+    }
+    apply(previous=>{
+      const nodes=previous.nodes.map(node=>positions.has(node.id)?{...node,[axis]:positions.get(node.id)}:node);
+      return nodes.every((node,index)=>node.x===previous.nodes[index].x&&node.y===previous.nodes[index].y)?previous:{...previous,nodes};
+    },true);
+    setAnnouncement(action.startsWith('align')?'Cartões alinhados. Ctrl+Z desfaz.':'Cartões distribuídos. Ctrl+Z desfaz.');
   }
   function editNodeText(id,event){
     const current=boardValue.current.nodes.find(node=>node.id===id)?.text,value=event.target.value;
@@ -182,12 +354,12 @@ export default function NoteBoard({value,onChange,readOnly=false}){
     const delta={ArrowLeft:[-10,0],ArrowRight:[10,0],ArrowUp:[0,-10],ArrowDown:[0,10]}[event.key];
     if(!delta||readOnly||drawing||event.ctrlKey||event.metaKey)return;
     event.preventDefault();const node=nodesById.get(id);
-    apply(previous=>({...previous,nodes:previous.nodes.map(item=>item.id===id?{...item,x:bounded(node.x+delta[0],BOARD_WIDTH-220),y:bounded(node.y+delta[1],BOARD_HEIGHT-150)}:item)}),true);
+    apply(previous=>({...previous,nodes:previous.nodes.map(item=>item.id===id?{...item,x:bounded(node.x+delta[0],width-220),y:bounded(node.y+delta[1],height-150)}:item)}),true);
   }
   function keyboardStroke(event){
     if(readOnly||!drawing||event.target!==event.currentTarget)return;
     const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
-    if(delta){event.preventDefault();const step=event.shiftKey?25:10;setPen(previous=>{const x=bounded(previous.x+delta[0]*step,BOARD_WIDTH),y=bounded(previous.y+delta[1]*step,BOARD_HEIGHT);return {x,y,path:previous.path?`${previous.path} L ${x} ${y}`:''};});return;}
+    if(delta){event.preventDefault();const step=event.shiftKey?25:10;setPen(previous=>{const x=bounded(previous.x+delta[0]*step,width),y=bounded(previous.y+delta[1]*step,height);return {x,y,path:previous.path?`${previous.path} L ${x} ${y}`:''};});return;}
     if(event.key==='Enter'||event.key===' '){event.preventDefault();if(!pen.path){if(boardValue.current.strokes.length>=150){setError('O mapa mental chegou ao limite de 150 traços.');return;}setPen(previous=>({...previous,path:`M ${previous.x} ${previous.y}`}));}
       else{if(pen.path.includes(' L '))apply(previous=>({...previous,strokes:[...previous.strokes,{id:crypto.randomUUID(),path:pen.path}]}),true);setPen(previous=>({...previous,path:''}));}}
   }
@@ -196,14 +368,14 @@ export default function NoteBoard({value,onChange,readOnly=false}){
     const key=event.key.toLowerCase(),modifier=event.ctrlKey||event.metaKey;
     if(!readOnly&&modifier&&!event.altKey&&(key==='z'||key==='y')){event.preventDefault();if(key==='y'||event.shiftKey)redo();else undo();return;}
     if(!readOnly&&(event.key==='Delete'||event.key==='Backspace')&&selected){event.preventDefault();removeSelected();return;}
-    if(event.key==='Escape'){setSelected(null);setEditingId(null);setLinkFrom(null);setPen(previous=>({...previous,path:''}));return;}
+    if(event.key==='Escape'){selectOnly(null);setEditingId(null);setPen(previous=>({...previous,path:''}));return;}
     if(!readOnly&&!modifier&&!event.altKey&&key==='n'){event.preventDefault();const p=center();addIdeaAt(p.x,p.y);return;}
     keyboardStroke(event);
   }
   function copyNode(event){
     if(isTextTarget(event.target)||!selected)return;
     const node=boardValue.current.nodes.find(item=>item.id===selected);if(!node)return;
-    event.preventDefault();const payload={kind:node.kind,text:node.text,src:node.src};
+    event.preventDefault();const payload={kind:node.kind,text:node.text,src:node.src,assetId:node.assetId,roomId,pointId:node.pointId,category:node.category,tags:node.tags};
     event.clipboardData.setData('text/plain',node.text||'Ideia');
     try{event.clipboardData.setData('application/x-grimorio-idea',JSON.stringify(payload));}catch{}
     setAnnouncement('Ideia copiada. Ctrl+V cria uma cópia.');
@@ -215,47 +387,85 @@ export default function NoteBoard({value,onChange,readOnly=false}){
     let payload=null;try{payload=JSON.parse(event.clipboardData.getData('application/x-grimorio-idea'));}catch{}
     const plain=event.clipboardData.getData('text/plain');
     const source=boardValue.current.nodes.find(node=>node.id===selected),location=source?{x:source.x+36,y:source.y+36}:center();
-    if(payload?.kind==='image'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(payload.src||'')&&payload.src.length<=3*1024*1024){
+    if(payload?.kind==='image'&&((typeof payload.assetId==='string'&&/^[a-zA-Z0-9-]{1,100}$/.test(payload.assetId)&&payload.roomId===roomId)||(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(payload.src||'')&&payload.src.length<=3*1024*1024))){
       event.preventDefault();if(boardValue.current.nodes.length>=80){setError('O mapa mental chegou ao limite de 80 elementos.');return;}
-      const id=crypto.randomUUID(),node={id,kind:'image',x:bounded(location.x,BOARD_WIDTH-220),y:bounded(location.y,BOARD_HEIGHT-150),text:String(payload.text||'Imagem').slice(0,100),src:payload.src};
-      apply(previous=>({...previous,nodes:[...previous.nodes,node]}),true);setSelected(id);setAnnouncement('Imagem duplicada.');return;
+      const id=crypto.randomUUID(),node={id,kind:'image',x:bounded(location.x,width-220),y:bounded(location.y,height-150),text:String(payload.text||'Imagem').slice(0,100),...(payload.assetId&&payload.roomId===roomId?{assetId:payload.assetId}:{src:payload.src}),...(points.some(item=>item.id===payload.pointId)?{pointId:payload.pointId}:{}),...copiedMetadata(payload)};
+      apply(previous=>({...previous,nodes:[...previous.nodes,node]}),true);setCategoryFilter('all');setTagFilter('all');selectOnly(id);setAnnouncement('Imagem duplicada.');return;
     }
     const text=payload?.kind==='text'?String(payload.text||'Nova ideia'):plain;
     if(!text)return;
     event.preventDefault();if(text.length>500){setError('Cole até 500 caracteres em uma ideia.');return;}
-    addIdeaAt(location.x,location.y,{text,edit:false});setAnnouncement('Ideia colada. Ctrl+Z desfaz.');
+    addIdeaAt(location.x,location.y,{text,edit:false,metadata:payload?.kind==='text'?copiedMetadata(payload):{}});setAnnouncement('Ideia colada. Ctrl+Z desfaz.');
   }
   return <section className="note-board" aria-label="Mapa mental da nota">
     <div className="note-board-tools" role="toolbar" aria-label="Ferramentas do mapa mental">
       {!readOnly&&<>
-        <button type="button" className="note-board-new" onClick={()=>{const p=center();addIdeaAt(p.x,p.y);}}><Plus size={16} aria-hidden="true"/>Nova ideia</button>
+        <button type="button" className="note-board-new" onClick={()=>{const p=center();addIdeaAt(p.x,p.y);}}><Plus size={16} aria-hidden="true"/>Novo cartão</button>
         <button type="button" onClick={()=>fileRef.current?.click()}><ImagePlus size={16} aria-hidden="true"/>Imagem</button>
-        <button type="button" aria-pressed={drawing} onClick={()=>{setDrawing(previous=>!previous);setSelected(null);setLinkFrom(null);}}><Pencil size={16} aria-hidden="true"/>{drawing?'Terminar desenho':'Caneta'}</button>
-        {drawing&&board.strokes.length>0&&<button type="button" onClick={()=>apply(previous=>({...previous,strokes:previous.strokes.slice(0,-1)}),true)}><Undo2 size={16} aria-hidden="true"/>Desfazer traço</button>}
+        <button type="button" aria-pressed={drawing} onClick={()=>{setDrawing(previous=>!previous);selectOnly(null);}}><Pencil size={16} aria-hidden="true"/>{drawing?'Terminar desenho':'Desenhar'}</button>
+        <button type="button" onClick={undo} disabled={!history.current.past.length}><Undo2 size={16} aria-hidden="true"/>Desfazer</button>
         <input ref={fileRef} className="note-board-file" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Anexar imagem ao mapa mental" tabIndex={-1} onChange={attachImage}/>
       </>}
+      <div className="note-board-zoom" role="group" aria-label="Zoom do quadro"><button type="button" aria-label="Afastar quadro" disabled={zoom<=MIN_ZOOM} onClick={()=>changeZoom(zoom-(zoom<=.5?.05:.25))}><ZoomOut size={16} aria-hidden="true"/></button><output aria-live="polite">{Math.round(zoom*100)}%</output><button type="button" aria-label="Aproximar quadro" disabled={zoom>=2} onClick={()=>changeZoom(zoom+(zoom<.5?.05:.25))}><ZoomIn size={16} aria-hidden="true"/></button></div>
     </div>
-    <p className="note-board-help">{drawing?'Desenhe com mouse, toque ou caneta. Pelo teclado, foque o quadro, use Enter e as setas.':readOnly?'Explore as ideias e suas conexões.':'Duplo clique cria · arraste o fundo para percorrer · arraste cartões para mover · puxe o ponto lateral para ligar · Ctrl+C/V duplica a ideia selecionada.'}</p>
+    {assetUploads>0&&<p className="note-board-asset-status" role="status">Guardando {assetUploads} {assetUploads===1?'imagem':'imagens'} na coleção…</p>}
+    {libraryOpen&&<section className="note-board-library" aria-label="Coleção de imagens da mesa">
+      <div className="note-board-library-heading"><strong>Referências da mesa</strong><button type="button" onClick={()=>setLibraryOpen(false)}>Fechar coleção</button></div>
+      <label>Encontrar imagem<input type="search" name="board-library-search" autoComplete="off" value={librarySearch} onChange={event=>setLibrarySearch(event.target.value)} placeholder="Nome da imagem"/></label>
+      {libraryLoading?<p role="status">Carregando imagens…</p>:assets.length?<ul>{matchingAssets.slice(0,40).map(asset=><li key={asset.id}><button type="button" disabled={readOnly} onClick={()=>insertAsset(asset)}><img src={assetPath(asset.id)} alt="" loading="lazy" width="58" height="46"/><span>{asset.name}<small>{Math.ceil(asset.bytes/1024)} KB · inserir no quadro</small></span></button></li>)}</ul>:<p role="status">Nenhuma imagem disponível. Use “Imagem” para enviar uma referência.</p>}
+      {!libraryLoading&&assets.length>0&&matchingAssets.length===0&&<p role="status">Nenhuma imagem com este nome.</p>}
+      {!libraryLoading&&matchingAssets.length>40&&<p role="status">Mostrando 40 de {matchingAssets.length} imagens. Busque pelo nome para encontrar as demais.</p>}
+    </section>}
+    <details className="note-board-options"><summary>Mais opções <span>{categoryFilter!=='all'||tagFilter!=='all'?`${visibleNodes.length} de ${board.nodes.length} cartões · filtro ativo`:`${board.nodes.length} ${board.nodes.length===1?'cartão':'cartões'}`}</span></summary><div className="note-board-options-content">
+      {!readOnly&&<div className="note-board-extra-tools"><button type="button" aria-expanded={libraryOpen} onClick={()=>libraryOpen?setLibraryOpen(false):void loadLibrary()}>Coleção de imagens</button><button type="button" onClick={expand} disabled={width>=MAX_WIDTH&&height>=MAX_HEIGHT}><Expand size={16} aria-hidden="true"/>Aumentar área de desenho</button></div>}
+    <div className="note-board-index" role="group" aria-label="Filtrar cartões do mapa mental">
+      <span className="note-board-index-title">Filtrar cartões</span>
+      <label>Tipo<select name="board-category-filter" autoComplete="off" value={categoryFilter} onChange={event=>setCategoryFilter(event.target.value)}><option value="all">Todos</option><option value="none">Sem tipo</option>{Object.entries(CARD_TYPES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+      <label>Etiqueta<select name="board-tag-filter" autoComplete="off" value={tagFilter} onChange={event=>setTagFilter(event.target.value)}><option value="all">Todas</option><option value="none">Sem etiqueta</option>{availableTags.map(tag=><option key={tag.toLocaleLowerCase('pt-BR')} value={tag.toLocaleLowerCase('pt-BR')}>{tag}</option>)}</select></label>
+      <output className="note-board-index-count" aria-live="polite">{visibleNodes.length} de {board.nodes.length} cartões</output>
+    </div>
+    <p className="note-board-shortcuts">Duplo clique no fundo cria um cartão. Shift+clique seleciona vários. Ctrl+C/V copia e cola. Ctrl+Z desfaz. Use as setas para mover um cartão selecionado ou percorrer o quadro. Para desenhar pelo teclado, foque o quadro, use Enter e as setas.</p>
+    {!!visibleEdges.length&&<details className="note-board-links"><summary>Conexões visíveis ({visibleEdges.length})</summary><ul>{visibleEdges.map(edge=>{const from=nodesById.get(edge.from)?.text||'Ideia',to=nodesById.get(edge.to)?.text||'Ideia';return <li key={edge.id} role="listitem">
+      <span className="note-board-relation">{from} — {to}{edge.label&&<em> · <NoteHighlight text={edge.label} query={searchQuery} active={activeSearch?.kind==='edge'&&activeSearch.id===edge.id?activeSearch:undefined}/></em>}</span>
+      {!readOnly&&<div className="note-board-link-actions"><button type="button" aria-label={`Editar rótulo da conexão entre ${from} e ${to}`} onClick={()=>{setEditingEdge(edge.id);setEdgeDraft(edge.label||'');setError('');focusEdgeEditor();}}>Rótulo</button><button type="button" aria-label={`Remover conexão entre ${from} e ${to}`} onClick={()=>{apply(previous=>({...previous,edges:previous.edges.filter(item=>item.id!==edge.id)}),true);if(editingEdge===edge.id)setEditingEdge(null);setAnnouncement('Conexão removida. Ctrl+Z desfaz.');}}><Trash2 size={14} aria-hidden="true"/></button></div>}
+      {editingEdge===edge.id&&!readOnly&&<div className="note-board-label-editor"><label>Rótulo da conexão<input name="board-edge-label" autoComplete="off" type="text" value={edgeDraft} maxLength={80} onChange={event=>setEdgeDraft(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();saveEdgeLabel();}else if(event.key==='Escape'){setEditingEdge(null);setEdgeDraft('');}}}/></label><button type="button" onClick={saveEdgeLabel}>Salvar rótulo</button><button type="button" onClick={()=>{setEditingEdge(null);setEdgeDraft('');}}>Cancelar</button></div>}
+    </li>;})}</ul></details>}
+    </div></details>
+    {!readOnly&&selectedCards.size>=2&&<div className="note-board-arrange" role="group" aria-label="Organizar cartões selecionados"><strong>{selectedCards.size} cartões selecionados</strong><button type="button" onClick={()=>arrangeCards('align-x')}>Alinhar à esquerda</button><button type="button" onClick={()=>arrangeCards('align-y')}>Alinhar ao topo</button><button type="button" disabled={selectedCards.size<3} onClick={()=>arrangeCards('distribute-x')}>Distribuir na horizontal</button><button type="button" disabled={selectedCards.size<3} onClick={()=>arrangeCards('distribute-y')}>Distribuir na vertical</button><button type="button" onClick={()=>selectOnly(null)}>Limpar seleção</button></div>}
+    {selectedNode&&<details key={selectedNode.id} className="note-board-card-details"><summary>Detalhes do cartão <span>{selectedNode.text.slice(0,36)||'Sem texto'}</span></summary>
+      {!readOnly&&<div className="note-board-card-actions"><button type="button" onClick={()=>startEditing(selectedNode.id)}>Editar texto</button><button type="button" aria-pressed={linkFrom===selectedNode.id} disabled={drawing} onClick={()=>chooseConnector(selectedNode.id)}><Link2 size={16} aria-hidden="true"/>{linkFrom===selectedNode.id?'Cancelar conexão':'Conectar a outro cartão'}</button><button type="button" onClick={removeSelected}><Trash2 size={16} aria-hidden="true"/>Excluir cartão</button></div>}
+    <div className="note-board-metadata" role="group" aria-label="Classificação do cartão selecionado">
+      {!readOnly?<>
+        <label>Tipo do cartão<select name="board-card-type" autoComplete="off" value={selectedNode.category||''} onChange={event=>changeCategory(event.target.value)}><option value="">Sem tipo</option>{Object.entries(CARD_TYPES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Etiquetas, separadas por vírgula<input name="board-card-tags" autoComplete="off" type="text" value={tagInput} maxLength={248} placeholder="Ex.: mistério, sessão 2…" onChange={event=>{setTagInput(event.target.value);setTagError('');}} onBlur={saveTags} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();saveTags();event.currentTarget.blur();}}}/></label>
+      </>:<><span>{selectedNode.category?CARD_TYPES[selectedNode.category]:'Sem tipo'}</span><span>{nodeTags(selectedNode).length?nodeTags(selectedNode).join(' · '):'Sem etiquetas'}</span></>}
+      {tagError&&<p className="note-board-error" role="alert">{tagError}</p>}
+    </div>
+    {!readOnly&&selectedNode?.kind==='image'&&selectedNode.src&&roomId&&<button type="button" className="note-board-collect" disabled={assetUploads>0} onClick={()=>void storeImage(selectedNode.id,selectedNode.text||'Imagem',selectedNode.src)}>Guardar esta imagem na coleção</button>}
+    {selectedNode&&<div className="note-board-point-link"><MapPin size={16} aria-hidden="true"/>{!readOnly&&<label>Vincular cartão a ponto<select name="board-card-point" autoComplete="off" aria-label="Ponto vinculado à ideia selecionada" value={selectedNode.pointId||''} onChange={event=>associatePoint(event.target.value)}><option value="">Nenhum ponto</option>{points.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}{selectedNode.pointId&&!linkedPoint&&<option value={selectedNode.pointId}>Ponto removido</option>}</select></label>}{linkedPoint?<button type="button" onClick={()=>onOpenPoint?.(linkedPoint.id)}>Abrir {linkedPoint.name} no mapa</button>:readOnly&&<span>{selectedNode.pointId?'Ponto removido':'Sem ponto vinculado'}</span>}</div>}
+    </details>}
+    <p className="note-board-help">{drawing?'Desenhe no quadro. Clique em “Terminar desenho” para voltar aos cartões.':linkFrom?'Clique em outro cartão para conectar. Escape cancela.':readOnly?'Arraste o fundo ou use as barras para explorar o quadro.':'Arraste cartões para organizar. Para conectar, puxe o círculo lateral até outro cartão.'}</p>
     {error&&<p className="note-board-error" role="alert">{error}</p>}
     <span className="note-board-announcement" role="status">{announcement}</span>
-    <div ref={scrollRef} className="note-board-scroll"><div ref={boardRef} className={`note-board-canvas ${drawing?'is-drawing':''}`} style={{width:BOARD_WIDTH,height:BOARD_HEIGHT}} tabIndex={0} role="group" aria-label={drawing?'Quadro de desenho; Enter inicia ou termina, setas traçam, Escape cancela':'Quadro de ideias; duplo clique cria, N cria pelo teclado, Ctrl+C/V copia e cola a ideia selecionada'} onKeyDown={boardKeyDown} onCopy={copyNode} onCut={event=>{if(selected&&!isTextTarget(event.target)){copyNode(event);removeSelected();}}} onPaste={pasteNode} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onDoubleClick={event=>{if(readOnly||drawing||event.target!==event.currentTarget)return;const p=point(event);addIdeaAt(p.x-95,p.y-50);}}>
-      <svg className={`note-board-lines ${drawing?'is-drawing':''}`} width={BOARD_WIDTH} height={BOARD_HEIGHT} viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`} aria-hidden="true" onPointerDown={startStroke} onPointerMove={draw} onPointerUp={finishStroke} onPointerCancel={finishStroke}>
-        <defs><marker id={markerId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 1 L 7 4 L 0 7" fill="none" stroke="#d9b777" strokeWidth="1.5"/></marker></defs>
-        {board.edges.map(edge=>{const from=nodesById.get(edge.from),to=nodesById.get(edge.to);return from&&to?<line key={edge.id} {...segment(from,to)} markerEnd={`url(#${markerId})`} stroke="#d9b777" strokeWidth="2"/>:null;})}
+    <div ref={scrollRef} className="note-board-scroll"><div className="note-board-extent" style={{width:width*zoom,height:height*zoom}}><div ref={boardRef} className={`note-board-canvas ${drawing?'is-drawing':''}`} style={{width,height,transform:`scale(${zoom})`}} tabIndex={0} role="group" aria-label={drawing?'Quadro de desenho; Enter inicia ou termina, setas traçam, Escape cancela':'Quadro de ideias; duplo clique cria, N cria pelo teclado, Ctrl+C/V copia e cola a ideia selecionada'} onKeyDown={boardKeyDown} onCopy={copyNode} onCut={event=>{if(selected&&!isTextTarget(event.target)){copyNode(event);removeSelected();}}} onPaste={pasteNode} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onDoubleClick={event=>{if(readOnly||drawing||event.target!==event.currentTarget)return;const p=point(event);addIdeaAt(p.x-95,p.y-50);}}>
+      <svg className={`note-board-lines ${drawing?'is-drawing':''}`} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true" onPointerDown={startStroke} onPointerMove={draw} onPointerUp={finishStroke} onPointerCancel={finishStroke}>
+        {visibleEdges.map(edge=>{const from=nodesById.get(edge.from),to=nodesById.get(edge.to);if(!from||!to)return null;const ends=segment(from,to);return <g key={edge.id}><line ref={element=>{if(element)edgeElements.current.set(edge.id,element);else edgeElements.current.delete(edge.id);}} className="note-board-edge" {...ends}/>{edge.label&&<text ref={element=>{if(element)edgeLabelElements.current.set(edge.id,element);else edgeLabelElements.current.delete(edge.id);}} className="note-board-edge-label" x={(ends.x1+ends.x2)/2} y={(ends.y1+ends.y2)/2-8} textAnchor="middle"><NoteHighlight text={searchQuery.trim()?edge.label:edge.label.length>28?`${edge.label.slice(0,27)}…`:edge.label} query={searchQuery} svg active={activeSearch?.kind==='edge'&&activeSearch.id===edge.id?activeSearch:undefined}/></text>}</g>;})}
         {board.strokes.map(item=><path key={item.id} d={item.path} fill="none" stroke="#e5c88d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>)}
         <line ref={linkPreview} className="note-board-link-preview" x1="0" y1="0" x2="0" y2="0"/>
         <path ref={strokePreview} fill="none" stroke="#e5c88d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
         {drawing&&<><path d={pen.path} fill="none" stroke="#e5c88d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><circle className="note-board-pen" cx={pen.x} cy={pen.y} r="6"/></>}
       </svg>
-      {!board.nodes.length&&!board.strokes.length&&<div className="note-board-empty" aria-hidden="true"><strong>Comece uma ideia</strong>Duplo clique no quadro ou use “Nova ideia”. Depois, arraste o ponto lateral para ligar outra.</div>}
-      {board.nodes.map(node=><article key={node.id} data-node-id={node.id} className={`note-board-node ${selected===node.id?'is-selected':''} ${linkFrom===node.id?'is-link-source':''}`} style={{left:node.x,top:node.y}} onClick={event=>{if(event.target.tagName==='IMG')setSelected(node.id);}}>
-        <button type="button" className={`note-board-node-grip ${readOnly?'is-readonly':''}`} aria-label={`Selecionar ${node.text||'ideia'}${readOnly?'':'; Enter edita e setas movem'}`} aria-pressed={selected===node.id} onClick={event=>{event.stopPropagation();setSelected(node.id);setLinkFrom(null);}} onDoubleClick={()=>startEditing(node.id)} onPointerDown={event=>moveNode(event,node.id)} onPointerMove={dragging} onPointerUp={finishDrag} onPointerCancel={finishDrag} onKeyDown={event=>{if(event.key==='Enter'&&!readOnly){event.preventDefault();startEditing(node.id);}else nudge(event,node.id);}}>{node.kind==='image'?'Imagem':'Ideia'}<span aria-hidden="true">⋮⋮</span></button>
-        {node.kind==='image'&&<img src={node.src} alt={node.text||'Imagem anexada'} width="170" height="106" loading="lazy" draggable="false"/>}
-        {editingId===node.id&&!readOnly?(node.kind==='image'?<input aria-label="Legenda da imagem" value={node.text} maxLength={100} autoComplete="off" onChange={event=>editNodeText(node.id,event)} onKeyDown={event=>nodeTextShortcut(node.id,event)} onBlur={()=>setEditingId(current=>current===node.id?null:current)}/>:<textarea aria-label="Texto da ideia" value={node.text} maxLength={500} autoComplete="off" onChange={event=>editNodeText(node.id,event)} onKeyDown={event=>nodeTextShortcut(node.id,event)} onBlur={()=>setEditingId(current=>current===node.id?null:current)}/>):<button type="button" className="note-board-preview" onClick={()=>{if(!readOnly&&selected===node.id)startEditing(node.id);else setSelected(node.id);}} onDoubleClick={()=>startEditing(node.id)} onKeyDown={event=>nudge(event,node.id)} aria-label={`${node.kind==='image'?'Legenda':'Texto'}: ${node.text||'sem texto'}.${readOnly?'':' Ative novamente para editar'}`}>{node.text||'Sem texto'}</button>}
+      {!board.nodes.length&&!board.strokes.length&&<div className="note-board-empty"><strong>Sua primeira ideia</strong>{readOnly?'Este mapa mental ainda está vazio.':'Clique em “Novo cartão”, escreva sua ideia e arraste para organizar.'}</div>}
+      {!!board.nodes.length&&!visibleNodes.length&&<div className="note-board-empty" role="status"><strong>Nenhum cartão neste filtro</strong>Altere o tipo ou a etiqueta no índice para ver mais ideias.</div>}
+      {visibleNodes.map(node=><article key={node.id} data-node-id={node.id} className={`note-board-node ${selected===node.id?'is-selected':''} ${selectedCards.has(node.id)?'is-group-selected':''} ${linkFrom===node.id?'is-link-source':''} ${activeSearch?.kind==='node'&&activeSearch.id===node.id?'has-find-current':''}`} style={{left:node.x,top:node.y}} onClick={event=>{if(event.target.tagName==='IMG')selectCard(node.id,event.shiftKey);}}>
+        <button type="button" className={`note-board-node-grip ${readOnly?'is-readonly':''}`} aria-label={`Selecionar ${node.text||'ideia'}${readOnly?'':'; Shift+clique ou Shift+Enter inclui na seleção, Enter edita e setas movem'}`} aria-pressed={selectedCards.has(node.id)} onClick={event=>{event.stopPropagation();selectCard(node.id,event.shiftKey);}} onDoubleClick={()=>startEditing(node.id)} onPointerDown={event=>moveNode(event,node.id)} onPointerMove={dragging} onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag} onKeyDown={event=>{if(event.shiftKey&&(event.key==='Enter'||event.key===' ')){event.preventDefault();event.stopPropagation();selectCard(node.id,true);}else if(event.key==='Enter'&&!readOnly){event.preventDefault();startEditing(node.id);}else nudge(event,node.id);}}>{node.kind==='image'?'Imagem':'Ideia'}<span aria-hidden="true">⋮⋮</span></button>
+        {node.kind==='image'&&<img src={node.assetId?assetPath(node.assetId):node.src} alt={node.text||'Imagem anexada'} width="170" height="106" loading="lazy" draggable="false"/>}
+        {(node.category||nodeTags(node).length>0)&&<div className="note-board-node-meta"><span>{CARD_TYPES[node.category]||'Sem tipo'}</span>{nodeTags(node).map(tag=><span key={tag} className="note-board-tag">{tag}</span>)}</div>}
+        {node.pointId&&<span className="note-board-node-point"><MapPin size={12} aria-hidden="true"/>{points.find(item=>item.id===node.pointId)?.name||'Ponto removido'}</span>}
+        {editingId===node.id&&!readOnly?(node.kind==='image'?<input aria-label="Legenda da imagem" value={node.text} maxLength={100} autoComplete="off" onChange={event=>editNodeText(node.id,event)} onKeyDown={event=>nodeTextShortcut(node.id,event)} onBlur={()=>setEditingId(current=>current===node.id?null:current)}/>:<textarea aria-label="Texto da ideia" value={node.text} maxLength={500} autoComplete="off" onChange={event=>editNodeText(node.id,event)} onKeyDown={event=>nodeTextShortcut(node.id,event)} onBlur={()=>setEditingId(current=>current===node.id?null:current)}/>):<button type="button" className="note-board-preview" onClick={()=>{if(!linkFrom&&!readOnly&&selected===node.id)startEditing(node.id);else selectCard(node.id);}} onDoubleClick={()=>startEditing(node.id)} onKeyDown={event=>nudge(event,node.id)} aria-label={`${node.kind==='image'?'Legenda':'Texto'}: ${node.text||'sem texto'}.${readOnly?'':' Ative novamente para editar'}`}><NoteHighlight text={node.text||'Sem texto'} query={searchQuery} active={activeSearch?.kind==='node'&&activeSearch.id===node.id?activeSearch:undefined}/></button>}
         {!readOnly&&!drawing&&<button type="button" className="note-board-connector" aria-label={`Ligar ${node.text||'ideia'} a outra ideia`} aria-pressed={linkFrom===node.id} onPointerDown={event=>startLink(event,node.id)} onPointerMove={moveLink} onPointerUp={finishLink} onPointerCancel={cancelLink} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();chooseConnector(node.id);}}}><Link2 size={17} aria-hidden="true"/></button>}
         {!readOnly&&selected===node.id&&!drawing&&<button type="button" className="note-board-node-delete" aria-label={`Excluir ${node.text||'ideia'}`} onClick={removeSelected}><Trash2 size={15} aria-hidden="true"/></button>}
       </article>)}
-    </div></div>
-    {!!board.edges.length&&<details className="note-board-links"><summary>Conexões ({board.edges.length})</summary><div>{board.edges.map(edge=><div key={edge.id}><span>{nodesById.get(edge.from)?.text||'Ideia'} → {nodesById.get(edge.to)?.text||'Ideia'}</span>{!readOnly&&<button type="button" aria-label={`Remover conexão de ${nodesById.get(edge.from)?.text||'ideia'} para ${nodesById.get(edge.to)?.text||'ideia'}`} onClick={()=>apply(previous=>({...previous,edges:previous.edges.filter(item=>item.id!==edge.id)}),true)}><Trash2 size={14} aria-hidden="true"/></button>}</div>)}</div></details>}
+    </div></div></div>
   </section>;
 }

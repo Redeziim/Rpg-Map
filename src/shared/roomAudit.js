@@ -1,0 +1,27 @@
+export const AUDIT_CATEGORIES={access:'Acesso',map:'Mapa 2D',notes:'Notas',sheets:'Fichas',tabletop:'Mesa 3D',campaign:'Campanha',turns:'Turnos'};
+export const AUDIT_ACTIONS={
+  'room.created':['access','Mesa criada'],
+  'member.added':['access','Participante adicionado'],
+  'member.joined':['access','Entrada por convite'],
+  'member.role':['access','Papel alterado'],
+  'member.removed':['access','Participante removido'],
+  'invite.created':['access','Convite criado'],
+  'invite.revoked':['access','Convite revogado'],
+  'map.image':['map','Imagem do mapa alterada'],
+  'map.points':['map','Pontos do mapa alterados'],
+  'map.fog':['map','Névoa de guerra alterada'],
+  'map.scale':['map','Escala do mapa alterada'],
+  'map.legend':['map','Legenda do mapa alterada'],
+  'map.routes':['map','Rotas do mapa alteradas'],
+  'map.strokes':['map','Traços do mapa alterados'],
+  'map.positions':['map','Opção de posições alterada'],
+  'sheet.template':['sheets','Modelo da ficha alterado'],
+  'sheet.changed':['sheets','Campos da ficha alterados'],
+  'profile.changed':['sheets','Perfil e barras alterados'],
+  'note.changed':['notes','Nota alterada'],
+  'note.access':['notes','Compartilhamento de nota alterado'],
+  'tabletop.changed':['tabletop','Objetos da mesa 3D alterados'],
+  'campaign.changed':['campaign','Cenas da campanha alteradas'],
+  'turns.changed':['turns','Ordem ou turno ativo alterado'],
+};
+export const AUDIT_RETENTION=1000;

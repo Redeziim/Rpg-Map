@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {Clapperboard,History,Lightbulb,MessageSquareText,Send} from 'lucide-react';
+import {History,Lightbulb,MessageSquareText,Send} from 'lucide-react';
 import {api} from '../api.js';
 import './CampaignPages.css';
 
@@ -7,15 +7,7 @@ const TYPES={suggestion:'Sugestão',issue:'Problema',other:'Outro'};
 const dateFormatter=new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
 function feedbackDraft(key){try{return JSON.parse(localStorage.getItem(key))||{};}catch{return {};}}
 
-export function ScenesPanel(){
-  return <main className="campaign-page scenes-page">
-    <header className="campaign-page-heading"><span className="campaign-kicker">Arquivo do mestre · 05</span><h2>Cenas</h2><p>Um espaço reservado para preparar os momentos da mesa.</p></header>
-    <section className="scenes-empty" aria-labelledby="scenes-empty-title">
-      <div className="scenes-reel" aria-hidden="true"><span>01</span><Clapperboard size={42}/></div>
-      <div><span className="campaign-kicker">Em preparação</span><h3 id="scenes-empty-title">Seu arquivo de cenas começa aqui</h3><p>Esta aba já está disponível para mestre e ADM. O suporte a vídeos e animações será adicionado em uma próxima etapa.</p></div>
-    </section>
-  </main>;
-}
+export {default as ScenesPanel} from './CampaignScenes.jsx';
 
 export function AboutPanel({roomId,username,role}){
   const draftKey=`grimorio-feedback-draft:${roomId}:${username}`;

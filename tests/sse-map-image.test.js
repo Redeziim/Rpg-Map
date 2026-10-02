@@ -4,13 +4,27 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createApplication} from '../server/app.js';
+import {testMapImage,secondTestMapImage} from './fixtures/mapImages.js';
+
+async function listenForFetch(server){
+  // Some Windows dynamic port ranges include ports blocked by Fetch itself.
+  for(let attempt=0;attempt<10;attempt++){
+    await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+    const base=`http://127.0.0.1:${server.address().port}/api`;
+    try{
+      const probe=await fetch(base+'/health',{headers:{Connection:'close'},signal:AbortSignal.timeout(5000)});
+      await probe.body.cancel();return base;
+    }catch(error){
+      await new Promise(resolve=>server.close(resolve));
+      if(error.cause?.message!=='bad port'||attempt===9)throw error;
+    }
+  }
+}
 
 test('SSE sends the map image once and repeats it only after an image change',async()=>{
   const directory=mkdtempSync(join(tmpdir(),'grimorio-map-image-'));
   const app=createApplication({dbPath:join(directory,'test.sqlite'),rateLimit:false});
-  await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
-  const base=`http://127.0.0.1:${app.server.address().port}/api`;
-  let cookie,controller;
+  let base,cookie,controller;
   async function request(path,method='GET',data){
     const response=await fetch(base+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});
     if(response.headers.has('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];
@@ -18,10 +32,11 @@ test('SSE sends the map image once and repeats it only after an image change',as
     return response.json();
   }
   try{
+    base=await listenForFetch(app.server);
     await request('/auth/register','POST',{username:'owner',password:'a-test-password-123'});
     const room=(await request('/rooms','POST',{name:'Imagem no SSE'})).id;
-    const firstImage='data:image/png;base64,iVBORw0KGgo=';
-    const secondImage='data:image/png;base64,iVBORw0KGgoAAA=';
+    const firstImage=testMapImage;
+    const secondImage=secondTestMapImage;
     await request(`/rooms/${room}/state`,'PATCH',{mapImage:firstImage});
     controller=new AbortController();
     const response=await fetch(`${base}/rooms/${room}/events`,{headers:{Cookie:cookie},signal:controller.signal});

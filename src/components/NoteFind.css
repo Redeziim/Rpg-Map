@@ -1,0 +1,18 @@
+.note-find-bar{position:sticky;top:0;z-index:6;flex-shrink:0;margin:0 0 10px;padding:9px 10px;border-left:2px solid var(--note-gold,#dbba75);background:#252a21;color:#e5d8bb}
+.note-find-controls{display:flex;align-items:center;gap:4px;margin-top:5px}
+.note-find-controls input{flex:1;min-width:0}
+.note-window .note-find-controls button{flex:none;width:44px;padding:0}
+.note-find-bar output{display:block;margin-top:5px;font-size:12px;color:#d4c7ad;font-variant-numeric:tabular-nums}
+.note-window .note-view-switch .note-find-toggle{margin-left:auto;flex:none}
+.note-text-editor{position:relative;min-width:0;flex:1;display:flex;flex-direction:column;background:#141815;border-radius:2px}
+.note-window .note-text-editor textarea{position:relative;display:block;margin:0;background:transparent;min-height:220px;color:#f0e8d5;tab-size:8}
+.note-find-mirror{position:absolute;inset:1px;overflow:hidden;pointer-events:none}
+.note-find-mirror-text{box-sizing:border-box;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:8;color:transparent;font:15px/1.5 'Source Sans 3',sans-serif}
+.note-find-mirror mark{color:transparent;background:#d5b56745;box-shadow:none;box-decoration-break:clone}
+.note-find-mirror .note-find-current{background:#dfbb756e;box-shadow:0 0 0 1px #e8ca91}
+.note-board mark{padding:0;background:#ddbd7b;color:#191b15;box-decoration-break:clone}
+.note-board .note-find-current{background:#f2dba7;color:#151811;box-shadow:0 0 0 1px #f2dba7}
+.note-board-node.has-find-current{border-color:#f2dba7;box-shadow:0 0 0 2px #c7a35c,0 3px 10px #0008}
+.note-board-edge-label .note-find-match,.note-board-edge-label .note-find-current{fill:#fff5db;stroke:#746031;stroke-width:6px}
+@media(max-width:600px){.note-find-mirror-text{font-size:16px}.note-window .note-view-switch .note-find-toggle{margin-left:0}}
+@media(forced-colors:active){.note-find-mirror mark{background:Highlight;forced-color-adjust:none}.note-board mark{background:Highlight;color:HighlightText}.note-board-node.has-find-current{outline:2px solid Highlight}}

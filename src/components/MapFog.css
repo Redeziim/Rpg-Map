@@ -1,0 +1,11 @@
+.mist-theme .map-fog-controls{--fog-ink:#e7d6b1;--fog-edge:#80663d;min-width:0;margin:16px 0;padding:10px;border:1px solid var(--fog-edge);background:#211f19;color:var(--fog-ink)}
+.map-fog-controls legend{padding:0 6px;font:600 13px Cinzel,Georgia,serif}
+.map-fog-controls p{margin:0 0 10px;font:14px/1.4 'Source Sans 3',sans-serif;color:#d2c7ae}
+.mist-theme .map-fog-controls button{min-height:44px;white-space:normal;margin:0 0 8px;width:100%;font:14px 'Source Sans 3',sans-serif;border:1px solid var(--fog-edge)}
+.mist-theme .map-fog-controls button[aria-pressed=true]{background:#735e32;border-color:#d9b777;color:#fff1cf}
+.map-fog-controls button:focus-visible{outline:2px solid #f0d391;outline-offset:2px}
+.map-fog-controls button:disabled{opacity:.55;cursor:not-allowed}
+.map-fog-controls p:last-child{margin-bottom:0}
+.map-fog-overlay{forced-color-adjust:none}
+.mist-theme .map-draw-error button{min-height:44px}
+@media(forced-colors:active){.mist-theme .map-fog-controls{border-color:CanvasText}.mist-theme .map-fog-controls button[aria-pressed=true]{outline:2px solid Highlight}}
