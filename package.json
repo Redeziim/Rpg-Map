@@ -9,6 +9,7 @@
     "backup": "node scripts/backup.js",
     "backup:auto": "node scripts/automaticBackup.js",
     "restore": "node scripts/restore.js",
+    "db:diagnose": "node scripts/diagnoseDatabase.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server/index.js",

@@ -1,8 +1,8 @@
-import {DATABASE_SCHEMA_V1_SQL,DATABASE_TABLES,DATABASE_USER_VERSION,DATABASE_APPLICATION_ID,databaseSchemaIdentity} from './databaseSchema.js';
+import {DATABASE_SCHEMA_V1_SQL,DATABASE_TABLES,DATABASE_EXPIRY_INDEXES,DATABASE_USER_VERSION,DATABASE_APPLICATION_ID,databaseSchemaIdentity} from './databaseSchema.js';
 import {ROOM_STATE_VERSION,migrateRoomState} from './roomState.js';
 import {assertRoomAudit} from './roomAudit.js';
 
-export const SCHEMA_MIGRATIONS=Object.freeze([{version:1,name:'001-versioned-database',sql:DATABASE_SCHEMA_V1_SQL},{version:2,name:'002-room-audit',sql:DATABASE_TABLES.room_audit+';'}]);
+export const SCHEMA_MIGRATIONS=Object.freeze([{version:1,name:'001-versioned-database',sql:DATABASE_SCHEMA_V1_SQL},{version:2,name:'002-room-audit',sql:DATABASE_TABLES.room_audit+';'},{version:3,name:'003-expiry-indexes',sql:Object.values(DATABASE_EXPIRY_INDEXES).join(';\n')+';'}]);
 export function assertMigrationLedger(db,{throughVersion=DATABASE_USER_VERSION}={}){
   const rows=db.prepare('SELECT version,name,applied_at FROM schema_migrations ORDER BY version').all();
   const expected=SCHEMA_MIGRATIONS.filter(item=>item.version<=throughVersion);

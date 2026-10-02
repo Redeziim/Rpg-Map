@@ -45,7 +45,7 @@ O identificador sozinho não dá acesso: sala, usuário e sessão precisam coinc
 
 O servidor escreve em diretório temporário próprio, com criação exclusiva e permissões restritas onde o sistema as suporta. Há backpressure e blocos de 64 KiB; os recursos são lidos por pacote/versão/imagem, sem montar todo o arquivo em um único Buffer ou Blob do navegador. SQLite e o estado existente continuam como fontes canônicas; não há tabela nova, serviço externo ou dependência nova.
 
-Limites: quatro arquivos/preparações por instância, um por usuário, até dois downloads simultâneos por arquivo, 1 GiB por arquivo e cinco minutos de disponibilidade. O limite de tamanho recusa a operação inteira, sem truncar conteúdo. A limpeza roda a cada 30 segundos, após cancelamento, falha, logout, download e encerramento normal. Diretórios deixados por um término abrupto do processo precisam da manutenção de arquivos temporários do servidor; essa manutenção geral integra o item 39 do plano.
+Limites: quatro arquivos/preparações por instância, um por usuário, até dois downloads simultâneos por arquivo, 1 GiB por arquivo e cinco minutos de disponibilidade. O limite de tamanho recusa a operação inteira, sem truncar conteúdo. A limpeza roda a cada 30 segundos, após cancelamento, falha, logout, download e encerramento normal. Diretórios de exportação novos deixados por término abrupto são recuperados somente quando a [manutenção](MAINTENANCE.md) comprova que seu processo dono terminou. Diretórios antigos sem marcador são preservados para inspeção manual.
 
 ## Validação em 2026-10-01 e 2026-10-02
 

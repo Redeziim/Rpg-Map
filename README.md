@@ -4,7 +4,7 @@ Aplicação web para condução e acompanhamento de campanhas de RPG. Reúne map
 
 ## Resumo e próximos passos
 
-As entregas concluídas e as features que ainda faltam estão em [docs/RESUMO_DA_ENTREGA.md](docs/RESUMO_DA_ENTREGA.md). A última feature concluída é a exportação portátil da mesa; a próxima é a limpeza e os limites de sessões, convites e temporários.
+As entregas concluídas e as features que ainda faltam estão em [docs/RESUMO_DA_ENTREGA.md](docs/RESUMO_DA_ENTREGA.md). Os diagnósticos seguros da API e do banco SQLite estão concluídos; a próxima etapa do plano trata a importação de modelos 3D grandes.
 
 ## Requisitos
 
@@ -31,6 +31,10 @@ Para instruções de convites, papéis e publicação, consulte [ONLINE.md](ONLI
 `npm run backup` cria uma cópia SQLite consistente e um manifesto com versão, esquema e SHA-256. Guarde os dois arquivos. `npm run restore -- --verify backup.sqlite` confere uma cópia; `npm run restore -- backup.sqlite banco-novo.sqlite` restaura em um caminho novo, com relatório e recusa de sobrescrita. O comando não muda `DB_PATH`. O [procedimento completo](docs/RESTORE.md) inclui backups antigos, teste isolado e troca do banco em uso.
 
 Ao iniciar, o servidor aplica [migrações numeradas de banco e mesas](docs/MIGRATIONS.md) numa transação, antes de abrir a API. Textos antigos são preservados em notas e os padrões de estado ficam gravados no SQLite. Faça backup e ensaie numa cópia antes de atualizar o projeto; formatos incompatíveis interrompem a abertura, sem migração parcial.
+
+A [manutenção local](docs/MAINTENANCE.md) remove sessões e convites vencidos em lotes e recupera exportações temporárias deixadas por processos encerrados, preservando pastas cujo dono não possa ser verificado. Para escolher uma pasta privada para esses arquivos, defina `EXPORT_TMP_DIR` com um caminho absoluto. O [diagnóstico de requisições](docs/DIAGNOSTICS.md) usa `X-Request-ID` e eventos controlados sem conteúdo privado.
+
+`npm run db:diagnose -- --full --json` verifica [integridade e ocupação do SQLite](docs/DATABASE_DIAGNOSTICS.md) em modo somente leitura. O comando informa tamanhos físicos e estimativas por mesa sem imprimir o conteúdo salvo.
 
 ADM em modo mestre e mestres consultam **Mesa → Registro da mesa** para conferir data, autor e tipo de mudanças confirmadas. O [registro de alterações](docs/ROOM_AUDIT.md) tem filtro e páginas, preserva até 1.000 entradas por mesa e não copia conteúdo de notas, imagens ou códigos de convite.
 

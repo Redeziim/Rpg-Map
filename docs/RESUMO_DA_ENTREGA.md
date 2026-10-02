@@ -1,6 +1,6 @@
 # Resumo da entrega — 2026-10-02
 
-Esta entrega fecha a exportação portátil da mesa, item 38, e reúne as melhorias acumuladas no projeto. O próximo item do plano é o 39. Os itens abaixo continuam pendentes; publicar o código não significa que todo o catálogo foi implementado.
+Esta entrega conclui os diagnósticos seguros da API e do SQLite, itens 40 e 41, junto da manutenção do item 39. O próximo item do plano é o 42. Os itens abaixo continuam pendentes.
 
 ## O que mudou
 
@@ -9,8 +9,8 @@ Esta entrega fecha a exportação portátil da mesa, item 38, e reúne as melhor
 | Notas | Criação em branco, busca no caderno e na janela aberta, destaque de resultados, rascunhos em localStorage/IndexedDB, revisão de conflitos por campo, compartilhamento e histórico com restauração seletiva. Coleção de imagens com validação e deduplicação. |
 | Mapa mental | Zoom e quadro expansível, janela fixa no canto inferior esquerdo com opção de soltar/redimensionar, vínculos com pontos 2D, conexões sem setas acompanhando o arraste, rótulos, tipos/etiquetas, seleção múltipla, alinhamento e distribuição. Controles agrupados em opções/detalhes. |
 | Mapa 2D | Prévia de imagem, troca controlada, revisão de conflitos por campo nos pontos, permissões do modo jogador, cores livres para traços, camadas, névoa protegida no servidor, grade/régua/escala, posições, vínculos a cenas/notas, rotas, legenda e exportação PNG da visão. |
-| Dados e confiabilidade | Backup verificável, restauração em banco novo, migrações explícitas, backups automáticos com retenção/alertas, revisão de transações, retomada de sessão/conexão, preservação de rascunhos, transferência de imagens por cache/referências e registro de alterações da mesa. |
-| Exportação da mesa | Arquivo JSON com estado permitido, fichas/status, notas/quadros, versões autorizadas, imagens incorporadas e pacotes completos da mesa 3D. Resumo de conteúdo/tamanho, cancelamento, prazo e download nativo. Notas privadas de terceiros e versões anteriores ao compartilhamento ficam fora; o modo jogador mantém pixels e geometria ocultos protegidos. |
+| Dados e confiabilidade | Backup verificável, restauração em banco novo, migrações explícitas, backups automáticos com retenção/alertas, revisão de transações, retomada de sessão/conexão, preservação de rascunhos, transferência de imagens por cache/referências, registro de alterações da mesa, limpeza limitada de registros vencidos, diagnóstico de requisições sem conteúdo privado e CLI de integridade/ocupação SQLite. |
+| Exportação da mesa | Arquivo JSON com estado permitido, fichas/status, notas/quadros, versões autorizadas, imagens incorporadas e pacotes completos da mesa 3D. Resumo de conteúdo/tamanho, cancelamento, prazo e download nativo. Notas privadas de terceiros e versões anteriores ao compartilhamento ficam fora; o modo jogador mantém pixels e geometria ocultos protegidos. Arquivos deixados após crash agora são removidos quando a propriedade e o fim do processo podem ser comprovados. |
 | Organização do projeto | Skills de desenvolvimento, instruções em AGENTS.md, convenções de issues/documentação e decisões de arquitetura registradas. Framework e persistência canônica preservados. |
 
 A cena 3D aberta por um ponto 2D foi removida. A **Mesa 3D independente** permanece. A rolagem usa a bandeja; a documentação foi alinhada. Modelos de nova nota, visão geral/Enquadrar tudo e PDF permanecem fora da interface conforme as decisões do projeto.
@@ -28,12 +28,6 @@ A cena 3D aberta por um ponto 2D foi removida. A **Mesa 3D independente** perman
 ### Mapa 2D
 
 - **23:** organização/filtros dos pontos por região, etiqueta, estado e tipo — adiado quando o foco mudou para buscar palavras nas notas.
-
-### Dados e confiabilidade
-
-- **39:** limites e limpeza de sessões, convites e registros temporários expirados, incluindo arquivos de exportação deixados por término abrupto do servidor.
-- **40:** observabilidade de falhas de envio, conexão e salvamento sem conteúdo privado nos logs.
-- **41:** manutenção para integridade, tamanho do banco e ocupação por mesa.
 
 ### Mesa 3D
 
@@ -56,16 +50,15 @@ A cena 3D aberta por um ponto 2D foi removida. A **Mesa 3D independente** perman
 
 O detalhamento e as prioridades continuam em [PLANO_DE_MELHORIAS.md](../PLANO_DE_MELHORIAS.md).
 
-## Limites da última feature
+## Limites da entrega
 
-O JSON exportado ainda não pode ser importado pela interface. Rascunhos não salvos e preferências locais não entram. A cópia de jogador é uma visão autorizada da mesa, não um backup integral do servidor. A restauração do banco segue [RESTORE.md](RESTORE.md); o formato e as permissões da cópia estão em [ROOM_EXPORT.md](ROOM_EXPORT.md).
+Diretórios de exportação do formato antigo, sem marcador de dono, não são excluídos automaticamente. Um PID reutilizado ou uma pasta com conteúdo inesperado também pode exigir inspeção manual. O procedimento está em [MAINTENANCE.md](MAINTENANCE.md). O JSON exportado ainda não pode ser importado pela interface; consulte [ROOM_EXPORT.md](ROOM_EXPORT.md).
+
+Os [eventos de diagnóstico](DIAGNOSTICS.md) são limitados a 60 por minuto; a rotação do log do processo é externa. A [ocupação do banco](DATABASE_DIAGNOSTICS.md) é uma estimativa de payload, separada dos bytes físicos de índices, páginas e WAL. A verificação completa de um banco grande pode demorar; use uma cópia consistente para uma análise pesada.
 
 ## Validação
 
-- A exportação recebeu **três testes novos** de conteúdo, permissões/névoa e ciclo de vida.
-- A suíte completa passou: **86 testes, sem falhas**.
-- Corrigida a preparação do teste de posições para evitar portas bloqueadas pelo Fetch no Windows e fechar recursos após falha. Os três testes existentes também passaram com a porta bloqueada forçada.
-- Build de produção e `npm run dev` foram verificados; a exportação foi operada em desktop e 390 px com downloads reais e inspeção do JSON/pixels.
-- Docker não foi executado neste ambiente. O build mantém o aviso conhecido de tamanho do pacote Three.js; a otimização ampla da mesa 3D continua no plano.
-
-A publicação desta entrega é no repositório Git. O servidor hospedado precisa receber a versão e sua configuração de implantação para servir as mudanças.
+- Nove testes novos cobrem manutenção de sessões/temporários, classificação e privacidade dos eventos, falha do destino de log, integridade/contagens, referência inválida, arquivo ilegível e WAL ativo sem alteração dos arquivos.
+- Migração a partir do banco 2, backup antigo, exportação existente e rollback permanecem cobertos pelos testes relacionados.
+- Suíte completa: **95 testes, sem falhas**. Build de produção passou, com o aviso já conhecido de tamanho do pacote Three.js.
+- `npm run dev` com SQLite descartável abriu a tela de login no navegador e respondeu `/api/health` com `X-Request-ID`. O CLI com `--full --json` aprovou integridade, referências e esquema do banco ativo. A verificação visual detalhada de desktop/celular da interface não foi repetida porque esta etapa não alterou componentes ou estilos.

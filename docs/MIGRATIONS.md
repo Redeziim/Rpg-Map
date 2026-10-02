@@ -6,9 +6,10 @@ O servidor atualiza formatos conhecidos **antes de abrir a API**. Banco, registr
 
 | Formato | Identificação | Migração |
 | --- | --- | --- |
-| Legado | `user_version=0`, `application_id=0` e esquema conhecido | Atualiza para banco 2 e estado 1 |
-| Banco anterior | `user_version=1`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta a tabela de registro; mantém estado e revisão das mesas |
-| Banco atual | `user_version=2`, `application_id=0x4752494d` (`GRIM`) | Conferido; não regravado se já estiver atualizado |
+| Legado | `user_version=0`, `application_id=0` e esquema conhecido | Atualiza para banco 3 e estado 1 |
+| Banco 1 | `user_version=1`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta registro e índices; mantém estado e revisão das mesas |
+| Banco 2 | `user_version=2`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta os índices de vencimento; mantém dados e revisões |
+| Banco atual | `user_version=3`, `application_id=0x4752494d` (`GRIM`) | Conferido; não regravado se já estiver atualizado |
 | Estado de mesa atual | `stateVersion: 1` no JSON persistido | Conferido; novos estados já nascem nessa versão |
 
 O número sozinho não basta: o esquema efetivo e o histórico também são conferidos. Uma versão futura, esquema desconhecido, histórico inconsistente, referência quebrada ou estado incompatível impede a abertura. Não altere os marcadores manualmente para contornar esse erro.
@@ -24,7 +25,7 @@ No primeiro início bem-sucedido, o terminal informa somente quantas migrações
 
 ## Migração 001 do banco
 
-`server/databaseMigrations.js` registra `001-versioned-database`, cria as tabelas de biblioteca/histórico de notas quando ausentes e acrescenta:
+`server/databaseMigrations.js` registra `001-versioned-database`, cria as tabelas de biblioteca/histórico de notas e feedback quando ausentes em bancos legados e acrescenta:
 
 - `schema_migrations`: número, nome e data da migração do banco;
 - `room_state_migrations`: mesa, versão anterior/nova, revisões anterior/nova e data.
@@ -36,6 +37,10 @@ Contas, sessões, convites, papéis, arquivos 3D, BLOBs de imagens e histórico 
 `002-room-audit` acrescenta somente `room_audit`, com autoria, tipo, metadados permitidos, data, sequência e revisão. Estados permanecem na versão 1; esta migração não aumenta a revisão de mesas existentes nem cria registros fictícios. Inicialização e backup conferem o formato do registro e sua retenção de até 1.000 entradas por mesa.
 
 O DDL original da migração 001 permanece em `DATABASE_SCHEMA_V1_SQL`, separado do esquema atual. Recuperação identifica o banco 1 pelas tabelas e ledger correspondentes, mantendo as contagens e a identidade esperadas nos seus manifestos. Restaurar preserva os bytes da origem; o servidor migra somente a cópia ao abri-la. Consulte [registro da mesa](ROOM_AUDIT.md).
+
+## Migração 003 do banco
+
+`003-expiry-indexes` cria `idx_sessions_expires` e `idx_invites_expires` para a [manutenção limitada](MAINTENANCE.md). Não remove registros durante a migração, não altera estados ou revisões e mantém os descritores de banco 1 e 2 para verificação de backups anteriores. A limpeza normal inicia depois que a migração termina.
 
 ## Migração 001 do estado das mesas
 

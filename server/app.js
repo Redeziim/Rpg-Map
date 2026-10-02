@@ -21,6 +21,9 @@ import {createRoomMediaTransfer,roomImageSources} from './roomMedia.js';
 import {isRoomImageReference,mapNoteBoardImages} from '../src/shared/roomMedia.js';
 import {createRoomAuditStore,roomAuditChanges} from './roomAudit.js';
 import {createRoomExports} from './roomExport.js';
+import {createMaintenance} from './maintenance.js';
+import {createDiagnostics} from './diagnostics.js';
+import {defaultExportRoot,exportRootPath} from './exportWorkspace.js';
 import {AUDIT_CATEGORIES} from '../src/shared/roomAudit.js';
 import { randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -91,12 +94,13 @@ function normalizeTurns(state,members){
 async function body(req,maxBytes=10*1024*1024) {
   if(!req.headers['content-type']?.startsWith('application/json')) fail(415,'Envie JSON.');
   let size=0,chunks=[];
-  for await (const chunk of req) { size+=chunk.length;if(size>maxBytes)fail(413,'Arquivo muito grande para esta operação.');chunks.push(chunk); }
+  for await (const chunk of req) { size+=chunk.length;req.diagnosticBytes=size;if(size>maxBytes)fail(413,'Arquivo muito grande para esta operação.');chunks.push(chunk); }
   let value;try{value=JSON.parse(Buffer.concat(chunks).toString());}catch{fail(400,'JSON inválido.');}
   if(!object(value))fail(400,'Dados inválidos.');safeKeys(value);return value;
 }
 
-export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPath=resolve('dist'),production=false,publicOrigin='',rateLimit=true,heartbeatMs=20000}={}) {
+export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPath=resolve('dist'),production=false,publicOrigin='',rateLimit=true,heartbeatMs=20000,exportRoot=defaultExportRoot(),maintenanceBatchSize=100,maintenanceMaxExportDirs=16,maintenanceIntervalMs=30000,maintenanceLogger=(code,reason)=>console.warn(`Manutenção Grimório: ${code} (${reason})`),diagnosticsLogger=line=>console.info(line)}={}) {
+  exportRoot=exportRootPath(exportRoot,{create:true});
   if(dbPath!==':memory:')mkdirSync(dirname(dbPath),{recursive:true,mode:0o700});
   const db=new DatabaseSync(dbPath,{timeout:10000});
   let migration;
@@ -108,7 +112,10 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   // Callbacks are synchronous. Responses and live events are sent only after this returns.
   const transaction=fn=>{if(db.isTransaction)return fn();db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){if(db.isTransaction)db.exec('ROLLBACK');throw e;}};
   const clients=new Set(),limits=new Map(),trayRolls=new Map(),renderMapFog=createMapFogRenderer(),validateMapImage=createMapImageValidator(),roomMedia=createRoomMediaTransfer();
-  const roomExports=createRoomExports({db,renderMapFog,normalizeTurns});
+  const roomExports=createRoomExports({db,renderMapFog,normalizeTurns,exportRoot});
+  const maintenance=createMaintenance({db,exportRoot,batchSize:maintenanceBatchSize,maxExportDirs:maintenanceMaxExportDirs,intervalMs:maintenanceIntervalMs,onIssue:maintenanceLogger});
+  const diagnostics=createDiagnostics({logger:diagnosticsLogger});
+  maintenance.start();
   const fogVersion=state=>digest((state.mapImage||'')+JSON.stringify(state.mapFog||emptyMapFog()));
   const fogImageVersion=state=>digest((state.mapImage||'')+fogVersion(state));
   const mapScaleVersion=state=>digest(digest(state.mapImage||'')+JSON.stringify(state.mapScale||null));
@@ -216,7 +223,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       }
     }catch(error){
       if(error.status===401||error.status===403)revoke(client,error.status);
-      else {client.res.end();clients.delete(client);}
+      else {client.diagnostic?.streamFailure(error);client.res.end();clients.delete(client);}
     }
   }
   const broadcast=roomId=>{for(const c of clients)if(c.roomId===roomId)send(c);};
@@ -240,7 +247,6 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     });
   }
   const timer=setInterval(()=>{
-    run('DELETE FROM sessions WHERE expires<?',Date.now());
     for(const [key,v] of limits)if(v.until<Date.now())limits.delete(key);
     for(const client of clients)send(client,true);
   },heartbeatMs);timer.unref();
@@ -582,7 +588,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     if(path[3]==='events'&&method==='GET'){
       if([...clients].filter(c=>c.userId===user.id).length>=10)fail(429,'Muitas salas abertas. Feche algumas abas.');
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
-      const client={roomId,userId:user.id,tokenHash:user.token_hash,res,mediaFormat:url.searchParams.get('media')==='1'};clients.add(client);send(client);res.on('close',()=>clients.delete(client));return;
+      const client={roomId,userId:user.id,tokenHash:user.token_hash,res,diagnostic:res.diagnostic,mediaFormat:url.searchParams.get('media')==='1'};clients.add(client);send(client);res.on('close',()=>clients.delete(client));return;
     }
     if(path[3]==='tray-rolls'&&method==='POST'){
       const previous=trayRolls.get(roomId);
@@ -905,6 +911,17 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     }
     fail(404,'Rota não encontrada.');
   }
-  const server=createServer((req,res)=>route(req,res).catch(e=>{if(res.headersSent)return res.end();if(!e.status)console.error(e);json(res,e.status||500,{error:e.status?e.message:'Não foi possível concluir a operação.'});}));
-  return {server,db,migration,close:()=>{roomExports.close();clearInterval(timer);for(const c of clients)c.res.end();server.close();db.close();}};
+  const server=createServer((req,res)=>{
+    const diagnostic=diagnostics.observe(req,res);res.diagnostic=diagnostic;
+    route(req,res).catch(e=>{
+      diagnostic?.failed(e);
+      if(res.headersSent)return res.end();
+      json(res,e.status||500,{error:e.status?e.message:'Não foi possível concluir a operação.',...(diagnostic?{requestId:diagnostic.requestId}:{})});
+    });
+  });
+  return {server,db,migration,maintenance,diagnostics,close:()=>{
+    try{maintenance.stop();}catch(error){try{maintenanceLogger('maintenance-close',error.code||'failed');}catch{}}
+    try{roomExports.close();}catch(error){try{maintenanceLogger('export-close',error.code||'failed');}catch{}}
+    clearInterval(timer);for(const c of clients)c.res.end();server.close();db.close();
+  }};
 }

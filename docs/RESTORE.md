@@ -2,7 +2,7 @@
 
 Este procedimento restaura **todas as mesas** em um arquivo novo. Contas, papéis, sessões, convites, notas, histórico, imagens, arquivos 3D e registros de alterações estão no SQLite. Rascunhos que só existem no navegador e uma rolagem de bandeja ainda em memória não entram no backup.
 
-Banco atual: versão 2. Backups conhecidos da versão 1 permanecem reconhecidos com seu esquema, ledger e contagens originais; a restauração não migra a origem. Abrir a cópia no servidor acrescenta a tabela de registro, mantendo conteúdo/revisões e sem inventar ações antigas. Consulte [MIGRATIONS.md](MIGRATIONS.md).
+Banco atual: versão 3. Backups conhecidos das versões 1 e 2 permanecem reconhecidos com seu esquema, ledger e contagens originais; a restauração não migra a origem. Abrir a cópia no servidor acrescenta as migrações pendentes, mantendo conteúdo e revisões das mesas. Consulte [MIGRATIONS.md](MIGRATIONS.md).
 
 ## 1. Criar e guardar uma cópia
 
@@ -35,7 +35,7 @@ npm run restore -- --verify /caminho/seguro/campanha.sqlite
 
 Isso abre a origem em leitura, sem criar ou alterar o banco de destino. Banco corrompido, JSON inválido, referências quebradas, esquema desconhecido, versão não suportada ou manifesto divergente encerram o comando com código `1`.
 
-**Versão atual:** o banco usa `user_version=1` e `application_id=0x4752494d` (`GRIM`), e cada mesa tem `stateVersion: 1` persistida. O comando confere esquema, estados e ledgers. Bancos anteriores com `user_version=0` e `application_id=0` continuam aceitos se tiverem o esquema conhecido, incluindo as etapas anteriores à biblioteca/histórico e à criação do histórico. Histórico sem biblioteca é recusado como esquema incompleto. Manifestos antigos permanecem compatíveis. Consulte [as migrações e o ensaio de atualização](MIGRATIONS.md).
+**Versão atual:** o banco usa `user_version=3` e `application_id=0x4752494d` (`GRIM`), e cada mesa tem `stateVersion: 1` persistida. O comando confere esquema, estados e ledgers. Bancos anteriores conhecidos das versões 0, 1 e 2 continuam aceitos; histórico sem biblioteca é recusado como esquema incompleto. Manifestos antigos permanecem compatíveis. Consulte [as migrações e o ensaio de atualização](MIGRATIONS.md).
 
 Para um backup antigo do projeto que não tenha manifesto:
 

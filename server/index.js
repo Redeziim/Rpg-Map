@@ -6,7 +6,7 @@ const backupConfig=automaticBackupConfig();
 const production=process.env.NODE_ENV==='production';
 const publicOrigin=process.env.PUBLIC_ORIGIN || '';
 if(production&&!publicOrigin.startsWith('https://'))throw Error('Defina PUBLIC_ORIGIN com o endereço HTTPS público do site.');
-const app=createApplication({dbPath:process.env.DB_PATH||resolve('data/grimorio.sqlite'),production,publicOrigin});
+const app=createApplication({dbPath:process.env.DB_PATH||resolve('data/grimorio.sqlite'),production,publicOrigin,...(process.env.EXPORT_TMP_DIR?{exportRoot:process.env.EXPORT_TMP_DIR}:{})});
 if(app.migration.schemaApplied||app.migration.roomsMigrated)console.log(`Migrações aplicadas: ${app.migration.schemaApplied} de banco; ${app.migration.roomsMigrated} mesas atualizadas.`);
 const port=Number(process.env.PORT||3001),host=process.env.HOST||(production?'0.0.0.0':'127.0.0.1');
 let backups,stopping=false;

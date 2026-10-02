@@ -1,7 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {mkdtempSync,createWriteStream,createReadStream,rmSync} from 'node:fs';
+import {createWriteStream,createReadStream,rmSync} from 'node:fs';
 import {stat} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {once} from 'node:events';
 import {pipeline} from 'node:stream/promises';
@@ -13,6 +12,7 @@ import {isMapPointRevealed,isMapStrokeRevealed} from '../src/shared/mapFog.js';
 import {visibleMapPositions} from '../src/shared/mapPositions.js';
 import {visibleMapRoutes} from '../src/shared/mapExploration.js';
 import {visibleCampaignScenes} from '../src/shared/campaignScenes.js';
+import {createExportWorkspace,defaultExportRoot} from './exportWorkspace.js';
 
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value,key)).map(key=>[key,value[key]]));
@@ -79,8 +79,8 @@ function projection(db,{roomId,user,viewMode,normalizeTurns}){
     counts:{points:state.points.length,notes:notes.length,versions:histories.reduce((n,h)=>n+h.versions.length,0),noteImages:noteAssets.length,models:models.length,scenes:state.campaignScenes.length,participants:members.length,audit:audit.length}};
 }
 
-export function createRoomExports({db,renderMapFog,normalizeTurns}){
-  const jobs=new Map();let directory,closed=false;
+export function createRoomExports({db,renderMapFog,normalizeTurns,exportRoot=defaultExportRoot()}){
+  const jobs=new Map();let workspace,closed=false;
   const guard=roomId=>{
     const room=db.prepare('SELECT revision FROM rooms WHERE id=?').get(roomId);
     const members=db.prepare('SELECT user_id,role FROM members WHERE room_id=? ORDER BY user_id').all(roomId);
@@ -128,8 +128,8 @@ export function createRoomExports({db,renderMapFog,normalizeTurns}){
           plan.state.mapImage='data:image/png;base64,'+image.toString('base64');
         }
         check(job,checkAccess);
-        directory||=mkdtempSync(join(tmpdir(),'grimorio-export-files-'));
-        job.path=join(directory,job.id+'.json');job.filename=`grimorio-mesa-${roomId}-${new Date().toISOString().slice(0,10)}.json`;
+        workspace||=createExportWorkspace(exportRoot);
+        job.path=join(workspace.directory,job.id+'.json');job.filename=`grimorio-mesa-${roomId}-${new Date().toISOString().slice(0,10)}.json`;
         job.stream=createWriteStream(job.path,{flags:'wx',mode:0o600});
         // Capture failures even while waiting on another resource or a backpressure drain.
         job.stream.on('error',()=>job.controller.abort());
@@ -185,6 +185,6 @@ export function createRoomExports({db,renderMapFog,normalizeTurns}){
     },
     cancel({roomId,id,user}){remove(lookup(roomId,id,user));},
     revokeSession(tokenHash){for(const job of jobs.values())if(job.tokenHash===tokenHash)remove(job);},
-    close(){closed=true;clearInterval(timer);for(const job of jobs.values())remove(job);if(directory)rmSync(directory,{recursive:true,force:true});},
+    close(){closed=true;clearInterval(timer);for(const job of jobs.values())remove(job);workspace?.close();},
   };
 }
