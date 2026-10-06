@@ -21,6 +21,9 @@ Use `npm` e `package-lock.json`. Não troque framework, gerenciador de pacotes o
 - Auditoria de UI, UX ou acessibilidade: use `web-design-guidelines` depois da implementação.
 - Animações, transições e microinterações: use `web-animation-design`.
 - Escrita, revisão ou refatoração React: use `vercel-react-best-practices` e aplique apenas regras pertinentes ao ambiente real do projeto.
+- Direção estética de qualquer tela nova ou redesenho: use `design-taste-frontend` junto com `frontend-design`; consulte `awesome-design` para referências de sistema visual.
+- Implementar a partir de imagens de design: use `image-to-code` (as imagens devem existir ou ser fornecidas).
+- Verificar a interface no navegador (capturas, fluxos, regressão visual): use `playwright-cli`.
 
 ## Direção visual
 
@@ -69,3 +72,13 @@ Tarefas e especificações em GitHub Issues de `Redeziim/Rpg-Map`. Consulte `doc
 ### Domain docs
 
 Um único contexto: glossário em `GLOSSARY.md` e decisões em `docs/adr/`, criados conforme necessário. Consulte `docs/agents/domain.md`.
+
+## Contexto no vault
+
+Antes de começar, leia no vault `~/RPG-Dev-Vault` (outro computador: ajuste o caminho):
+
+- `Projetos/RPG-Map-Explorer/PROJECT_CONTEXT_FOR_DEV_VAULT.md`
+- `Projetos/RPG-Map-Explorer/Progresso-e-Planejamento.md`
+- `Instrucoes-IA.md` para qualquer documentação escrita.
+
+Ao terminar a sessão, execute `/fechar-sessao` para atualizar o vault. Skills compartilhadas ficam em `~/RPG-Dev-Vault/Skills/`; use `~/RPG-Dev-Vault/scripts/link-skills.sh <este-diretorio>` para ligá-las.
