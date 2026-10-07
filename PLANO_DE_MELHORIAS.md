@@ -138,7 +138,7 @@ Referência de design autorizada para consulta: [Hallmark](https://github.com/Nu
 
 ### P2
 
-59. Resumos de sessão e preparação do mestre.
+59. Entregue em 2026-10-07 na linha do tempo: o resumo de sessão é o registro de tipo Sessão, escrito à mão pelo mestre e publicado quando quiser; a preparação é um tipo novo, sempre reservada (o servidor recusa publicá-la), com roteiro inicial opcional e filtro próprio. Nenhum serviço de IA foi usado; um resumo assistido continua como opção futura, dependendo de decisão sobre custo e privacidade.
 
 ## 6. Visual e acessibilidade
 

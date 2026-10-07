@@ -1,12 +1,13 @@
 import {useEffect,useRef} from 'react';
-import {TIMELINE_KINDS,formatTimelineDate} from '../shared/campaignTimeline.js';
+import {TIMELINE_KINDS,TIMELINE_KIND_PLURALS,formatTimelineDate} from '../shared/campaignTimeline.js';
 import './CampaignTimeline.css';
 
 const EMPTY=[];
+const READER_KINDS=['session','decision'];
 
 // Reading is independent of the pending decision about who may write.
 // The parent supplies an authorized page; this component does not infer access.
-export default function CampaignTimeline({entries=EMPTY,points=EMPTY,scenes=EMPTY,kind='all',onKindChange,pageKey='first',hasMore=false,isFirstPage=true,loading=false,error='',connection='online',onRetry,onEarlier,onFirst,onOpenPoint,onOpenScene,renderActions,emptyHint}){
+export default function CampaignTimeline({entries=EMPTY,points=EMPTY,scenes=EMPTY,kind='all',onKindChange,pageKey='first',hasMore=false,isFirstPage=true,loading=false,error='',connection='online',onRetry,onEarlier,onFirst,onOpenPoint,onOpenScene,renderActions,emptyHint,kinds=READER_KINDS}){
   const heading=useRef(null),requestedPageFocus=useRef(false);
   const pointNames=new Map(points.map(point=>[point.id,point.name]));
   const sceneNames=new Map(scenes.filter(scene=>!scene.archived).map(scene=>[scene.id,scene.title]));
@@ -14,7 +15,7 @@ export default function CampaignTimeline({entries=EMPTY,points=EMPTY,scenes=EMPT
   const navigate=action=>{requestedPageFocus.current=true;action?.();};
   return <section className="campaign-timeline" aria-labelledby="campaign-timeline-title" aria-busy={loading}>
     <header className="timeline-header"><div><span className="timeline-kicker">Diário da campanha</span><h2 ref={heading} tabIndex={-1} id="campaign-timeline-title">Linha do tempo</h2><p>Sessões, acontecimentos e decisões, dos mais recentes aos mais antigos.</p></div>
-      <label>Mostrar<select name="timeline-kind" autoComplete="off" value={kind} disabled={loading||connection!=='online'||!onKindChange} onChange={event=>navigate(()=>onKindChange(event.target.value))}><option value="all">Sessões e decisões</option>{Object.entries(TIMELINE_KINDS).map(([value,label])=><option key={value} value={value}>{label==='Sessão'?'Sessões':'Decisões'}</option>)}</select></label>
+      <label>Mostrar<select name="timeline-kind" autoComplete="off" value={kind} disabled={loading||connection!=='online'||!onKindChange} onChange={event=>navigate(()=>onKindChange(event.target.value))}><option value="all">{kinds.includes('prep')?'Todos os registros':'Sessões e decisões'}</option>{kinds.map(value=><option key={value} value={value}>{TIMELINE_KIND_PLURALS[value]}</option>)}</select></label>
     </header>
     {connection!=='online'&&<p className="timeline-message" role="status">Reconectando à mesa. Estes são os últimos registros recebidos.</p>}
     {error&&<div className="timeline-message timeline-error" role="alert"><p>{error}</p>{onRetry&&<button type="button" disabled={loading} onClick={()=>navigate(onRetry)}>Tentar novamente</button>}</div>}
@@ -30,7 +31,7 @@ export default function CampaignTimeline({entries=EMPTY,points=EMPTY,scenes=EMPT
         <footer>Registrado por {entry.author}</footer>
         {renderActions&&<div className="timeline-actions" role="group" aria-label={`Ações de ${entry.title}`}>{renderActions(entry)}</div>}
       </article>
-    </li>)}</ol>:!loading&&!error?<div className="timeline-empty"><h3>{kind==='decision'?'Nenhuma decisão registrada.':kind==='session'?'Nenhuma sessão registrada.':'Nenhum registro da campanha.'}</h3><p>{emptyHint||'Os registros disponíveis para você aparecerão aqui.'}</p></div>:null}
+    </li>)}</ol>:!loading&&!error?<div className="timeline-empty"><h3>{kind==='decision'?'Nenhuma decisão registrada.':kind==='session'?'Nenhuma sessão registrada.':kind==='prep'?'Nenhuma preparação registrada.':'Nenhum registro da campanha.'}</h3><p>{emptyHint||'Os registros disponíveis para você aparecerão aqui.'}</p></div>:null}
     {(!isFirstPage||hasMore)&&<nav className="timeline-pagination" aria-label="Páginas da campanha">{!isFirstPage&&<button type="button" disabled={loading||connection!=='online'||!onFirst} onClick={()=>navigate(onFirst)}>Voltar aos mais recentes</button>}{hasMore&&<button type="button" disabled={loading||connection!=='online'||!onEarlier} onClick={()=>navigate(onEarlier)}>Ver registros mais antigos</button>}</nav>}
   </section>;
 }

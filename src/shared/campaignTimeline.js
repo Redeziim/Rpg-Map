@@ -1,4 +1,7 @@
-export const TIMELINE_KINDS=Object.freeze({session:'Sessão',decision:'Decisão'});
+export const TIMELINE_KINDS=Object.freeze({session:'Sessão',decision:'Decisão',prep:'Preparação'});
+// Preparação é anotação do mestre para a próxima sessão: nunca é publicada para jogadores.
+export const TIMELINE_RESERVED_KINDS=Object.freeze(['prep']);
+export const TIMELINE_KIND_PLURALS=Object.freeze({session:'Sessões',decision:'Decisões',prep:'Preparações'});
 export const TIMELINE_PAGE_SIZE=20;
 const idPattern=/^[a-zA-Z0-9-]{1,100}$/;
 

@@ -4,6 +4,11 @@
 
 Entregue em 2026-10-07. Somente mestres e o ADM no modo mestre criam, editam, arquivam e restauram. Jogadores consultam os registros publicados. A aba **Linha do tempo** (rótulo curto "Diário" no celular) está na navegação principal. Decisão registrada em `docs/adr/034-linha-do-tempo-da-campanha.md`.
 
+## Tipos
+
+- **Sessão** e **Decisão**: podem ser publicadas para jogadores. O resumo de uma sessão é o texto do registro de Sessão, escrito pelo mestre.
+- **Preparação**: anotação do mestre para a próxima sessão. É sempre reservada: criar ou editar com `visibility: table` retorna 400, e mudar um registro publicado para Preparação exige `visibility: master` na mesma edição. O editor oferece um roteiro inicial (objetivo, cenas e pontos, personagens e ameaças, pontas soltas, decisões pendentes).
+
 ## Registro
 
 `id`, `kind` (`session` ou `decision`), `date` (`AAAA-MM-DD`, validada no calendário), `title` (até 120), `body` (até 10.000), `visibility` (`master` ou `table`), `pointIds` e `sceneIds` (até 20 cada), `archived`, `author`, `createdAt`, `updatedAt`, `version`.

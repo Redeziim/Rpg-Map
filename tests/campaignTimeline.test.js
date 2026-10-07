@@ -85,13 +85,28 @@ test('timeline: authorship, privacy, paging, conflicts, restore, export and reco
     assert.equal((await call('mestre',line)).body.entries.some(entry=>entry.id===first.id),false);
     assert.equal((await call('mestre',line+'/'+first.id,'PATCH',{expectedVersion:5,archived:false})).body.entry.archived,false);
 
+    // Preparação is the master's own note for the next session: reserved by kind, never published, never listed for players.
+    assert.equal((await call('mestre',line,'POST',draft({kind:'prep',visibility:'table'}))).status,400);
+    const prep=draft({kind:'prep',title:'Roteiro da próxima sessão'});
+    assert.equal((await call('mestre',line,'POST',prep)).status,201);
+    assert.equal((await call('mestre',line+'/'+prep.id,'PATCH',{expectedVersion:1,visibility:'table'})).status,400);
+    assert.equal((await call('mestre',line+'?kind=prep')).body.entries.map(entry=>entry.id).join(),prep.id);
+    assert.equal((await call('alice',line+'?kind=prep')).body.entries.length,0);assert.equal((await call('alice',line+'/'+prep.id)).status,404);
+    // Turning a published entry into a preparation needs the reserved visibility in the same edit.
+    const live=(await call('mestre',line+'/'+first.id)).body.entry;assert.equal(live.visibility,'master');
+    assert.equal((await call('mestre',line+'/'+first.id,'PATCH',{expectedVersion:live.version,visibility:'table'})).status,200);
+    assert.equal((await call('mestre',line+'/'+first.id,'PATCH',{expectedVersion:live.version+1,kind:'prep'})).status,400);
+    assert.equal((await call('mestre',line+'/'+first.id,'PATCH',{expectedVersion:live.version+1,kind:'prep',visibility:'master'})).status,200);
+    assert.equal((await call('alice',line+'/'+first.id)).status,404);
+    assert.equal((await call('mestre',line+'/'+first.id,'PATCH',{expectedVersion:live.version+2,kind:'session'})).status,200);
+    const versionCount=(await call('mestre',line+'/'+first.id+'/versions')).body.versions.length;
     // Audit holds the action type only, never the text.
     const audit=(await call('owner',root+'/audit')).body.entries;assert.ok(audit.some(entry=>entry.action==='timeline.changed'&&Object.keys(entry.details).length===0));
 
     // Export carries reserved entries only for a master and respects the viewer's projection.
     const exportFor=async(who,body)=>{const job=(await call(who,root+'/exports','POST',body)).body;return {job,data:(await call(who,job.downloadUrl.replace(/^\/api/,''))).body};};
     const master=await exportFor('owner',{viewMode:'master'}),player=await exportFor('alice',{viewMode:'player'});
-    assert.equal(master.data.timeline.length,25);assert.equal(master.job.counts.timeline,25);
+    assert.equal(master.data.timeline.length,26);assert.equal(master.job.counts.timeline,26);
     assert.equal(player.data.timeline.length,24);assert.equal(player.data.timeline.every(entry=>entry.visibility==='table'&&!entry.archived),true);
     assert.equal(JSON.stringify(player.data).includes(hidden),false);
 
@@ -102,7 +117,7 @@ test('timeline: authorship, privacy, paging, conflicts, restore, export and reco
     const backupPath=join(directory,'backup.sqlite'),restoredPath=join(directory,'restored.sqlite');
     await createBackup(dbPath,backupPath);await restoreBackup(backupPath,restoredPath);await stop();await start(restoredPath);
     assert.deepEqual((await call('mestre',line)).body.entries,before);
-    assert.equal((await call('mestre',line+'/'+first.id+'/versions')).body.versions.length,6);
+    assert.equal((await call('mestre',line+'/'+first.id+'/versions')).body.versions.length,versionCount);
     // Recovery rejects a record the API would never have accepted, without publishing a backup.
     app.db.prepare("UPDATE timeline_entries SET entry_date='2026-13-45' WHERE id=?").run(first.id);
     await assert.rejects(createBackup(restoredPath,join(directory,'invalid.sqlite')),/linha do tempo/i);

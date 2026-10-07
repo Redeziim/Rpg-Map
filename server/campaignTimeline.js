@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {TIMELINE_KINDS,TIMELINE_PAGE_SIZE,isTimelineDate,timelinePage,visibleTimelineEntries} from '../src/shared/campaignTimeline.js';
+import {TIMELINE_KINDS,TIMELINE_PAGE_SIZE,TIMELINE_RESERVED_KINDS,isTimelineDate,timelinePage,visibleTimelineEntries} from '../src/shared/campaignTimeline.js';
 
 const fail=(status,message,details)=>{throw Object.assign(Error(message),{status,...(details?{details}:{})});};
 export const TIMELINE_LIMITS=Object.freeze({title:120,body:10000,links:20,entries:500,versions:50});
@@ -15,6 +15,7 @@ const links=(value,label)=>{
 // Shared by new input and by saved rows, so a backup cannot carry an entry the API would refuse.
 export function assertTimelineEntry(entry){
   if(!entry||!identifier(entry.id)||!Object.hasOwn(TIMELINE_KINDS,entry.kind)||!isTimelineDate(entry.date)||typeof entry.title!=='string'||!entry.title.trim()||entry.title.length>TIMELINE_LIMITS.title||typeof entry.body!=='string'||entry.body.length>TIMELINE_LIMITS.body||!VISIBILITY.includes(entry.visibility)||typeof entry.archived!=='boolean'||typeof entry.author!=='string'||!entry.author||!Number.isSafeInteger(entry.createdAt)||entry.createdAt<1||!Number.isSafeInteger(entry.updatedAt)||entry.updatedAt<entry.createdAt||!Number.isSafeInteger(entry.version)||entry.version<1)throw Error('Registro da linha do tempo inválido.');
+  if(TIMELINE_RESERVED_KINDS.includes(entry.kind)&&entry.visibility!=='master')throw Error('Registro da linha do tempo inválido.');
   if(!Array.isArray(entry.pointIds)||!Array.isArray(entry.sceneIds)||entry.pointIds.length>TIMELINE_LIMITS.links||entry.sceneIds.length>TIMELINE_LIMITS.links||[...entry.pointIds,...entry.sceneIds].some(item=>!linkId(item)))throw Error('Vínculos da linha do tempo inválidos.');
   return entry;
 }
@@ -36,6 +37,7 @@ function parseFields(data,{partial,allowed}){
   if(data.sceneIds!==undefined)fields.sceneIds=links(data.sceneIds,'Cenas');
   return fields;
 }
+const requireReservedKind=entry=>{if(TIMELINE_RESERVED_KINDS.includes(entry.kind)&&entry.visibility!=='master')fail(400,'A preparação do mestre é sempre reservada. Mude o tipo antes de publicar.');};
 // Master entries stay reserved until the master publishes them.
 export function createCampaignTimeline(db){
   const byRoom=db.prepare('SELECT * FROM timeline_entries WHERE room_id=?');
@@ -86,6 +88,7 @@ export function createCampaignTimeline(db){
       requireKnownLinks(fields,known);
       const existing=one.get(roomId,id);
       const entry={id,kind:fields.kind,date:fields.date,title:fields.title,body:fields.body,visibility:fields.visibility||'master',pointIds:fields.pointIds||[],sceneIds:fields.sceneIds||[],archived:false,author:user.username,createdAt:now,updatedAt:now,version:1};
+      requireReservedKind(entry);
       if(existing){
         const saved=entryFromRow(existing);
         // A repeated request after a lost response must not duplicate or overwrite the entry.
@@ -109,6 +112,7 @@ export function createCampaignTimeline(db){
       if(current.version!==expectedVersion)fail(409,'O registro mudou em outra janela. Revise antes de salvar.',{current});
       if(!Number.isSafeInteger(current.version+1))fail(409,'Limite de versão do registro atingido.');
       const next={...current,...fields,archived:archived??current.archived,version:current.version+1,updatedAt:Math.max(now,current.updatedAt)};
+      requireReservedKind(next);
       if(snapshotOf(next)===snapshotOf(current))return {entry:current,changed:false};
       db.prepare('UPDATE timeline_entries SET version=?,kind=?,entry_date=?,title=?,body=?,visibility=?,point_ids=?,scene_ids=?,archived=?,updated_at=? WHERE room_id=? AND id=?').run(next.version,next.kind,next.date,next.title,next.body,next.visibility,JSON.stringify(next.pointIds),JSON.stringify(next.sceneIds),next.archived?1:0,next.updatedAt,roomId,id);
       save(roomId,next,user.username);
