@@ -7,7 +7,8 @@ const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
 
 const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
   const [trayEnabled,setUseTray]=useState(false),[trayBusy,setTrayBusy]=useState(false),[trayError,setTrayError]=useState('');
-  const [privateRoll,setPrivateRoll]=useState(false);
+  // Rolagem na mesa (aba Status do Grupo) começa pública; rolagem pela ficha começa privada.
+  const [privateRoll,setPrivateRoll]=useState(!sharedOnly);
   const useTray=sharedOnly||trayEnabled;
   const [terms, setTerms] = useState([{ id: 'init', sign: 1, qty: 1, sides: 20 }]);
   const [nextSign, setNextSign] = useState(1);
@@ -142,8 +143,8 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
         ))}
       </div>
 
-      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja · visível para a mesa</label>}
-      {onTrayRoll&&useTray&&<label className="tray-option tray-private-option"><input type="checkbox" checked={privateRoll} disabled={rolling||trayBusy} onChange={e=>setPrivateRoll(e.target.checked)}/>Rolagem privada · só você e o ADM veem o resultado</label>}
+      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja</label>}
+      {onTrayRoll&&useTray&&<label className="tray-option tray-private-option"><input type="checkbox" checked={privateRoll} disabled={rolling||trayBusy} onChange={e=>setPrivateRoll(e.target.checked)}/>Rolagem privada · só você e o ADM veem o resultado e o histórico</label>}
       {!useTray&&<div className="dice-display-area">
         {terms.length === 0 ? (
           <div className="dice-face-3d dice-face-3d-empty">

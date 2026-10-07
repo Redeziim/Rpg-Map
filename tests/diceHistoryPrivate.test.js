@@ -40,6 +40,27 @@ test('private rolls are readable only by their author and the ADM, in history, s
     assert.equal((await call('alice',root+'/tray-rolls','POST',secret)).body.rollReceipt.id,id);
     assert.equal((await call('alice',root+'/tray-rolls','POST',{...secret,private:false})).status,409);
 
+    // padrão: rolagem feita pela ficha (ou sem origem) é privada; rolagem na mesa (grupo) é pública; a marca explícita vence
+    clearLive(room.id);
+    const bySheet=await call('alice',root+'/tray-rolls','POST',roll({origin:'sheet'}));assert.equal(bySheet.status,201);
+    clearLive(room.id);
+    const noOrigin=await call('alice',root+'/tray-rolls','POST',{operationId:randomUUID(),requestedAt:Date.now(),terms:[{sides:6,qty:1,sign:1}],skinId:'carmesim'});assert.equal(noOrigin.status,201);
+    clearLive(room.id);
+    const sheetOpen=await call('alice',root+'/tray-rolls','POST',roll({origin:'sheet',private:false}));assert.equal(sheetOpen.status,201);
+    clearLive(room.id);
+    const groupSecret=await call('alice',root+'/tray-rolls','POST',roll({origin:'group',private:true}));assert.equal(groupSecret.status,201);
+    const visibility=Object.fromEntries((await call('alice',root+'/dice-history')).body.entries.map(entry=>[entry.id,entry.visibility]));
+    assert.equal(visibility[bySheet.body.rollReceipt.id],'private');
+    assert.equal(visibility[noOrigin.body.rollReceipt.id],'private');
+    assert.equal(visibility[sheetOpen.body.rollReceipt.id],'public');
+    assert.equal(visibility[groupSecret.body.rollReceipt.id],'private');
+    const bobSees=new Set((await call('bob',root+'/dice-history')).body.entries.map(entry=>entry.id));
+    assert.equal(bobSees.has(bySheet.body.rollReceipt.id),false);assert.equal(bobSees.has(noOrigin.body.rollReceipt.id),false);
+    assert.equal(bobSees.has(sheetOpen.body.rollReceipt.id),true);assert.equal(bobSees.has(groupSecret.body.rollReceipt.id),false);
+    // limpa as rolagens extras para manter as contagens do restante do teste
+    app.db.prepare('DELETE FROM dice_rolls WHERE id IN (?,?,?,?)').run(bySheet.body.rollReceipt.id,noOrigin.body.rollReceipt.id,sheetOpen.body.rollReceipt.id,groupSecret.body.rollReceipt.id);
+    clearLive(room.id);
+
     // a public roll afterwards is visible to everyone, and bob keeps seeing only the public one
     clearLive(room.id);
     const open=await call('alice',root+'/tray-rolls','POST',roll());assert.equal(open.status,201);

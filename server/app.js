@@ -5,7 +5,7 @@ import {readMapAssetRequest,sendMapAsset} from './mapAssetTransfer.js';
 import {MAP_ASSET_MEDIA,mapAssetPlacement} from '../src/shared/mapAssetTransfer.js';
 import {createModelValidator} from './modelValidation.js';
 import {createMapImports} from './mapImports.js';
-import {createDiceHistory} from './diceHistory.js';
+import {createDiceHistory,isPrivateRoll} from './diceHistory.js';
 import {createCombatOperations} from './combatOperations.js';
 import {changeTabletopObjects} from './tabletopObjects.js';
 import {assertLinkTarget,projectNoteBoard,projectTabletopReferences,resolveTabletopReference} from './tabletopReferences.js';
@@ -703,7 +703,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(requestBody.sceneId&&!view.state.campaignScenes.some(scene=>scene.id===requestBody.sceneId))fail(403,'Esta cena não está disponível para sua rolagem.');
         const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics);
         roll.structureId='tray';
-        if(requestBody.private===true)roll.private=true;
+        if(isPrivateRoll(requestBody))roll.private=true;
         return {receipt:diceHistory.record(view,user,requestBody,operation,roll,view.state.campaignScenes)};
       });
       if(!result.repeated)broadcast(roomId);

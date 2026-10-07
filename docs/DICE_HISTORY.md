@@ -40,9 +40,10 @@ Navegador com `npm run dev`, SQLite descartável e larguras 1440/390 px: estado 
 
 ## Rolagens privadas (decisão de 2026-10-07)
 
-Decisão do usuário: cada pessoa vê o próprio histórico de rolagens privadas e o ADM vê o de todos.
+Decisão do usuário: cada pessoa vê o próprio histórico de rolagens privadas e o ADM vê o de todos. Depois: todas as rolagens são privadas por padrão e só a rolagem na mesa é pública.
 
-- Quem lança marca **Rolagem privada · só você e o ADM veem o resultado** antes de pegar os dados. O corpo de `POST /tray-rolls` aceita `private: true|false` (outro tipo devolve `400`). A opção faz parte da identidade da operação: repetir o mesmo corpo devolve o mesmo recibo; repetir com outra visibilidade devolve `409`.
+- **Padrão (decisão de 2026-10-07): todas as rolagens são privadas, exceto a rolagem na mesa.** A rolagem feita pela Ficha começa privada. A rolagem na mesa, feita na aba Status do Grupo (origem `group`), começa pública. No servidor, `private` omitido vale `true` para qualquer origem diferente de `group`; `private: true|false` explícito sempre vence o padrão.
+- Quem lança pode mudar a marca **Rolagem privada · só você e o ADM veem o resultado e o histórico** antes de pegar os dados. O corpo de `POST /tray-rolls` aceita `private: true|false` (outro tipo devolve `400`). A opção faz parte da identidade da operação: repetir o mesmo corpo devolve o mesmo recibo; repetir com outra visibilidade devolve `409`.
 - O registro guarda `visibility: "private"` no mesmo JSON do SQLite, sem nova migração (`user_version` continua 7, `stateVersion` 5).
 - Leitores permitidos: o **autor** e o **ADM da mesa**, em qualquer modo de visão. Outros mestres e jogadores não recebem a rolagem em `dice-history`, no snapshot/SSE (`diceHistory`), na exportação e, para a animação da bandeja, em `trayRoll` (que chega como `null`). A paginação filtra no SQL, então `hasMore` e o cursor `before` seguem consistentes.
 - A trava interna "aguarde os dados pararem" continua usando a última rolagem de verdade, privada ou não, para que ninguém lance por cima.

@@ -16,6 +16,6 @@ Projetar o contexto das cenas pelas permissões atuais também em consultas e ex
 
 ## Limites
 
-Rolagens públicas permanecem como antes. Rolagens privadas, decididas em 2026-10-07: lidas apenas por quem rolou e pelo ADM (histórico, snapshot, SSE, animação da bandeja e exportação). Rolagens locais fora da bandeja não passam a ser confirmadas pelo servidor. Os dados anteriores em memória não são reconstruídos.
+Padrão decidido em 2026-10-07: rolagens privadas por padrão, públicas apenas na rolagem na mesa (origem `group`), com marca explícita vencendo o padrão. Rolagem privada: lida apenas por quem rolou e pelo ADM (histórico, snapshot, SSE, animação da bandeja e exportação). Rolagens locais fora da bandeja não passam a ser confirmadas pelo servidor. Os dados anteriores em memória não são reconstruídos.
 
 Contrato, evidências e continuidade em [DICE_HISTORY.md](../DICE_HISTORY.md). Um teste HTTP integrado, suíte 131/131, build e navegador desktop/celular aprovados.

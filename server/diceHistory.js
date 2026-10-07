@@ -28,6 +28,9 @@ export function assertSavedDiceHistory(db){
     if(!entry||roll.id!==entry.id||roll.username!==entry.author||roll.total!==entry.total||!!roll.cocked!==entry.cocked||!isDeepStrictEqual(roll.parts,entry.parts)||!Number.isSafeInteger(roll.startedAt)||roll.startedAt<=0||!Number.isFinite(roll.duration)||roll.duration<=0||roll.structureId!=='tray'||!Array.isArray(roll.dice)||!Array.isArray(roll.frames)||roll.frames.length<2)throw Error('Última rolagem incompatível com o histórico.');
   }
 }
+// Padrão de privacidade (decisão de 2026-10-07): só a rolagem feita na mesa (origem "group") é pública; as demais são privadas.
+// Uma marca explícita (true/false) sempre vence o padrão.
+export const isPrivateRoll=body=>typeof body.private==='boolean'?body.private:(body.origin??'tray')!=='group';
 // Rolagem privada: lida por quem rolou e pelo ADM da mesa. O leitor é {userId,username,admin}.
 export const canReadPrivate=(viewer,author)=>!!viewer&&(viewer.admin===true||viewer.username===author);
 export function createDiceHistory(db){
@@ -44,7 +47,7 @@ export function createDiceHistory(db){
       if(body.sceneId!==undefined&&body.sceneId!==null&&(typeof body.sceneId!=='string'||body.sceneId.length>100))fail(400,'Cena de rolagem inválida.');
       const legacy=body.operationId===undefined&&body.requestedAt===undefined,operationId=legacy?randomUUID():body.operationId,requestedAt=legacy?Date.now():body.requestedAt;
       if(!identifier(operationId)||!Number.isSafeInteger(requestedAt))fail(400,'Identidade do lançamento inválida.');
-      const requestHash=createHash('sha256').update(JSON.stringify({private:!!body.private,terms:Array.isArray(body.terms)?body.terms.map(term=>({sides:term?.sides,qty:term?.qty,sign:term?.sign})):body.terms,skinId:body.skinId??null,gesture:body.gesture?['x','z','vx','vz'].map(key=>body.gesture[key]):null,physics:body.physics?Object.keys(body.physics).sort().map(key=>[key,body.physics[key]]):null,origin:body.origin||'tray',sceneId:body.sceneId||null})).digest('hex');
+      const requestHash=createHash('sha256').update(JSON.stringify({private:isPrivateRoll(body),terms:Array.isArray(body.terms)?body.terms.map(term=>({sides:term?.sides,qty:term?.qty,sign:term?.sign})):body.terms,skinId:body.skinId??null,gesture:body.gesture?['x','z','vx','vz'].map(key=>body.gesture[key]):null,physics:body.physics?Object.keys(body.physics).sort().map(key=>[key,body.physics[key]]):null,origin:body.origin||'tray',sceneId:body.sceneId||null})).digest('hex');
       const previous=receipt.get(roomId,userId,operationId),now=Date.now();
       if(previous){
         if(previous.requested_at!==requestedAt||previous.request_hash!==requestHash)fail(409,'Este lançamento já foi enviado com outros dados. Confira o histórico.');
@@ -59,7 +62,7 @@ export function createDiceHistory(db){
     record(room,user,body,operation,roll,scenes){
       const scene=body.sceneId?scenes.find(scene=>scene.id===body.sceneId):null;
       if(body.sceneId&&!scene)fail(403,'Esta cena não está disponível para sua rolagem.');
-      const entry=assertDiceEntry({schemaVersion:1,id:roll.id,author:user.username,createdAt:Date.now(),expression:expression(roll.parts),parts:roll.parts,total:roll.total,cocked:!!roll.cocked,origin:body.origin||'tray',visibility:body.private?'private':'public',context:{roomName:room.name,scene:scene?{id:scene.id,title:scene.title}:null,combat:{version:room.state.combat.version,activeId:room.state.combat.activeId,round:room.state.combat.round}}});
+      const entry=assertDiceEntry({schemaVersion:1,id:roll.id,author:user.username,createdAt:Date.now(),expression:expression(roll.parts),parts:roll.parts,total:roll.total,cocked:!!roll.cocked,origin:body.origin||'tray',visibility:isPrivateRoll(body)?'private':'public',context:{roomName:room.name,scene:scene?{id:scene.id,title:scene.title}:null,combat:{version:room.state.combat.version,activeId:room.state.combat.activeId,round:room.state.combat.round}}});
       db.prepare('INSERT INTO dice_rolls VALUES(?,?,?,?,?)').run(roll.id,room.id,user.id,entry.createdAt,JSON.stringify(entry));
       db.prepare('INSERT INTO dice_receipts VALUES(?,?,?,?,?,?,?)').run(room.id,user.id,operation.operationId,operation.requestedAt,operation.requestHash,roll.id,Date.now()+DICE_RECEIPT_TTL);
       db.prepare('INSERT INTO dice_live VALUES(?,?) ON CONFLICT(room_id) DO UPDATE SET roll=excluded.roll').run(room.id,JSON.stringify(roll));

@@ -31,7 +31,7 @@ test('accounts, room isolation, role enforcement, invites, live updates and pers
     for(const [username,role] of [['master','master'],['alice','player'],['bob','player']])assert.equal((await request('owner',`/rooms/${room}/members`,'POST',{username,role})).status,200);
     assert.equal((await request('outsider',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:1,sign:1}]})).status,403);
     assert.equal((await request('alice',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:21,sign:1}]})).status,400);
-    const tray=(await request('alice',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:2,sign:1},{sides:100,qty:1,sign:-1}],skinId:'carmesim'}));
+    const tray=(await request('alice',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:2,sign:1},{sides:100,qty:1,sign:-1}],skinId:'carmesim',origin:'group'}));
     assert.equal(tray.status,201);assert.equal(tray.body.trayRoll.username,'alice');assert.equal(tray.body.trayRoll.dice.length,4);
     assert.deepEqual((await request('bob',`/rooms/${room}`)).body.trayRoll,tray.body.trayRoll);
     assert.equal((await request('bob',`/rooms/${room}/tray-rolls`,'POST',{terms:[{sides:6,qty:1,sign:1}]})).status,409);

@@ -21,7 +21,7 @@ test('map assets and object changes enforce permissions, isolate rooms, stream a
     const created=await call('master',root+'/map-assets','POST',bundle);assert.equal(created.status,201);
     assert.equal((await call('viewer',root+'/dice-structures','POST',{})).status,404);
     for(const structureId of ['tower','invalid'])assert.equal((await call('viewer',root+'/tray-rolls','POST',{terms:[{sides:6,qty:1,sign:1}],structureId})).status,400);
-    const trayRoll=await call('viewer',root+'/tray-rolls','POST',{terms:[{sides:6,qty:1,sign:1}]});
+    const trayRoll=await call('viewer',root+'/tray-rolls','POST',{terms:[{sides:6,qty:1,sign:1}],origin:'group'});
     assert.equal(trayRoll.status,201);assert.equal(trayRoll.data.trayRoll.structureId,'tray');
     assert.deepEqual((await call('master',root)).data.trayRoll,trayRoll.data.trayRoll);
     const item=created.data.state.mapObjects[0];assert.equal(item.name,'terrain.obj');
