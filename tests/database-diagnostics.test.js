@@ -5,11 +5,12 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
 import {createApplication} from '../server/app.js';
 import {inspectDatabaseUsage} from '../server/databaseDiagnostics.js';
 
 const sha=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
-const cli=(...args)=>spawnSync(process.execPath,['scripts/diagnoseDatabase.js',...args],{cwd:new URL('..',import.meta.url).pathname,encoding:'utf8'});
+const cli=(...args)=>spawnSync(process.execPath,['scripts/diagnoseDatabase.js',...args],{cwd:fileURLToPath(new URL('..',import.meta.url)),encoding:'utf8'});
 async function fixture(){
   const directory=mkdtempSync(join(tmpdir(),'grimorio-db-diagnostic-')),path=join(directory,'test.sqlite');
   const app=createApplication({dbPath:path,exportRoot:join(directory,'exports'),rateLimit:false,diagnosticsLogger:()=>{}});

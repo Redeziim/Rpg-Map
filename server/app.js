@@ -1,6 +1,16 @@
 import {tower} from './structurePhysics.js';
 import {validateStructure} from './structures.js';
 import {validateMapAsset,validateMapTransform} from './mapAssets.js';
+import {readMapAssetRequest,sendMapAsset} from './mapAssetTransfer.js';
+import {MAP_ASSET_MEDIA,mapAssetPlacement} from '../src/shared/mapAssetTransfer.js';
+import {createModelValidator} from './modelValidation.js';
+import {createMapImports} from './mapImports.js';
+import {createDiceHistory} from './diceHistory.js';
+import {createCombatOperations} from './combatOperations.js';
+import {changeTabletopObjects} from './tabletopObjects.js';
+import {assertLinkTarget,projectNoteBoard,projectTabletopReferences,resolveTabletopReference} from './tabletopReferences.js';
+import {isLightingPreset} from '../src/shared/tabletopLighting.js';
+import {assertCombat,changeCombat,reconcileCombat,projectCombat} from './combat.js';
 import {imageSignatureMatches} from '../src/shared/imageSignature.js';
 import {canAnnotateMap,canEraseMapStroke,canManageMap} from '../src/shared/mapPermissions.js';
 import {isMapStrokeColor} from '../src/shared/mapStrokeColor.js';
@@ -10,6 +20,8 @@ import {mapImageDimensions,createMapFogRenderer} from './mapFog.js';
 import {isMapScale} from '../src/shared/mapMeasurement.js';
 import {emptyMapPositions,canShareMapPosition,isMapPosition,visibleMapPositions} from '../src/shared/mapPositions.js';
 import {sceneFields,visibleCampaignScenes} from '../src/shared/campaignScenes.js';
+import {readSceneMedia,mediaMetadata,changeScenePresentation,sendSceneMedia} from './sceneMedia.js';
+import {emptyScenePresentation} from '../src/shared/scenePresentation.js';
 import {createMapImageValidator} from './mapImages.js';
 import {defaultMapLegend,isMapLegend,isMapRouteFields,visibleMapRoutes} from '../src/shared/mapExploration.js';
 import { createTrayRoll } from './tray.js';
@@ -83,14 +95,6 @@ function noteBoard(value){
   return {...value,width,height};
 }
 const initialState=createRoomState;
-function normalizeTurns(state,members){
-  const players=members.filter(member=>member.role!=='master').map(member=>member.username);
-  const excluded=(state.turnExcluded||[]).filter(name=>players.includes(name));
-  const npcs=state.turnNpcs||[];
-  const available=[...players.filter(name=>!excluded.includes(name)),...npcs.map(npc=>npc.id)];
-  const order=[...new Set([...(state.turnOrder||[]).filter(id=>available.includes(id)),...available])];
-  return {...state,turnExcluded:excluded,turnNpcs:npcs,turnOrder:order,activePlayer:available.includes(state.activePlayer)?state.activePlayer:null};
-}
 async function body(req,maxBytes=10*1024*1024) {
   if(!req.headers['content-type']?.startsWith('application/json')) fail(415,'Envie JSON.');
   let size=0,chunks=[];
@@ -99,7 +103,8 @@ async function body(req,maxBytes=10*1024*1024) {
   if(!object(value))fail(400,'Dados inválidos.');safeKeys(value);return value;
 }
 
-export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPath=resolve('dist'),production=false,publicOrigin='',rateLimit=true,heartbeatMs=20000,exportRoot=defaultExportRoot(),maintenanceBatchSize=100,maintenanceMaxExportDirs=16,maintenanceIntervalMs=30000,maintenanceLogger=(code,reason)=>console.warn(`Manutenção Grimório: ${code} (${reason})`),diagnosticsLogger=line=>console.info(line)}={}) {
+export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPath=resolve('dist'),production=false,publicOrigin='',rateLimit=true,heartbeatMs=20000,exportRoot=defaultExportRoot(),maintenanceBatchSize=100,maintenanceMaxExportDirs=16,maintenanceIntervalMs=30000,maintenanceLogger=(code,reason)=>console.warn(`Manutenção Grimório: ${code} (${reason})`),diagnosticsLogger=line=>console.info(line),modelValidationTimeoutMs=20000,modelValidationMaxWorkers=2}={}) {
+  const modelValidator=createModelValidator({timeoutMs:modelValidationTimeoutMs,maxWorkers:modelValidationMaxWorkers});
   exportRoot=exportRootPath(exportRoot,{create:true});
   if(dbPath!==':memory:')mkdirSync(dirname(dbPath),{recursive:true,mode:0o700});
   const db=new DatabaseSync(dbPath,{timeout:10000});
@@ -111,8 +116,11 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const run=(sql,...params)=>db.prepare(sql).run(...params);
   // Callbacks are synchronous. Responses and live events are sent only after this returns.
   const transaction=fn=>{if(db.isTransaction)return fn();db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){if(db.isTransaction)db.exec('ROLLBACK');throw e;}};
-  const clients=new Set(),limits=new Map(),trayRolls=new Map(),renderMapFog=createMapFogRenderer(),validateMapImage=createMapImageValidator(),roomMedia=createRoomMediaTransfer();
-  const roomExports=createRoomExports({db,renderMapFog,normalizeTurns,exportRoot});
+  const clients=new Set(),limits=new Map(),renderMapFog=createMapFogRenderer(),validateMapImage=createMapImageValidator(),roomMedia=createRoomMediaTransfer();
+  const diceHistory=createDiceHistory(db);
+  const combatOperations=createCombatOperations(db);
+  const roomExports=createRoomExports({db,renderMapFog,exportRoot});
+  const mapImports=createMapImports(db);
   const maintenance=createMaintenance({db,exportRoot,batchSize:maintenanceBatchSize,maxExportDirs:maintenanceMaxExportDirs,intervalMs:maintenanceIntervalMs,onIssue:maintenanceLogger});
   const diagnostics=createDiagnostics({logger:diagnosticsLogger});
   maintenance.start();
@@ -123,6 +131,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const mapRouteVersion=(state,route)=>digest(digest(state.mapImage||'')+JSON.stringify(route));
   const positionSettingsVersion=state=>digest(digest(state.mapImage||'')+JSON.stringify([state.mapPositions?.enabled===true,state.mapPositions?.generation||'initial']));
   const ownPositionVersion=(state,userId)=>digest(positionSettingsVersion(state)+(state.mapPositions?.markers?.[userId]?.version||'none'));
+  const mapObjectsVersion=state=>digest(JSON.stringify([state.mapObjects,state.mapGroups]));
   function limit(key,max){
     if(!rateLimit)return;
     const now=Date.now(),entry=limits.get(key);
@@ -178,33 +187,41 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     return ids;
   }
   function canReadNoteAsset(asset,roomId,userId){return asset?.owner_id===userId||visibleNoteAssetIds(roomId,userId).has(asset?.id);}
-  function snapshot(roomId,userId){
+  function snapshot(roomId,userId,viewMode){
     const m=membership(roomId,userId),room=query('SELECT * FROM rooms WHERE id=?',roomId);
     const members=all('SELECT u.id,u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE room_id=? ORDER BY u.username',roomId);
     const viewer=members.find(member=>member.id===userId)?.username;
-    const state=normalizeTurns(JSON.parse(room.state),members);
+    const state=JSON.parse(room.state);
+    const master=canManageMap(m.role,viewMode),currentMapObjectsVersion=mapObjectsVersion(state);
+    state.mapObjects=projectTabletopReferences(state,{username:viewer,role:m.role,viewMode,members});
     const currentFogVersion=fogVersion(state),mapImageVersion=digest(state.mapImage||''),currentScaleVersion=mapScaleVersion(state);
     const mapPositionSettingsVersion=positionSettingsVersion(state),ownMapPositionVersion=ownPositionVersion(state,userId);
     const positions=state.mapPositions||emptyMapPositions(),hasOwnMapPosition=positions.enabled&&m.role!=='master'&&!!positions.markers[userId];
-    state.mapPositions={enabled:positions.enabled,markers:visibleMapPositions(positions,members,m.role!=='player',state.mapFog)};
+    state.mapPositions={enabled:positions.enabled,markers:visibleMapPositions(positions,members,master,state.mapFog)};
     const usernames=new Set(members.map(u=>u.username));
     const groupBars=Object.fromEntries(members.map(u=>[u.username,{...(state.statusBarsData[u.username]||{avatar:null,bars:[]}),bars:[...(state.statusBarsData[u.username]?.bars||[]),...state.sheetFields.filter(f=>f.type==='status').map((f,i)=>({id:f.id,label:f.label,color:['#a84d51','#c8a65e','#ddd0b2'][i%3],...(state.playerSheets[u.username]?.values?.[f.id]||{current:0,max:0})}))]}]));
     state.sharedNotebooks=[
-      ...state.masterNotebooks.filter(note=>note.sharedWith.includes(viewer)&&!['master','admin'].includes(m.role)).map(note=>({...note,scope:'@master',owner:'Mestre'})),
+      ...state.masterNotebooks.filter(note=>note.sharedWith.includes(viewer)&&!master).map(note=>({...note,scope:'@master',owner:'Mestre'})),
       ...Object.entries(state.playerSheets).flatMap(([scope,sheet])=>scope===viewer||!usernames.has(scope)?[]:sheet.notebooks.filter(note=>note.sharedWith.includes(viewer)).map(note=>({...note,scope,owner:scope})))
     ];
-    state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(m.role!=='player'||members.find(u=>u.id===userId)?.username===name)));
+    state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(master||viewer===name)).map(([name,sheet])=>[name,{...sheet,observations:name===viewer?sheet.observations:'',notebooks:sheet.notebooks.filter(note=>name===viewer||note.sharedWith.includes(viewer))}]));
     state.statusBarsData=Object.fromEntries(Object.entries(state.statusBarsData).filter(([name])=>usernames.has(name)));
-    if(m.role==='player'){delete state.masterNotes;delete state.masterNotebooks;}
-    state.mapStrokes=(state.mapStrokes||[]).filter(stroke=>canReadMapStroke(m.role,undefined,stroke));
-    if(m.role==='player'&&state.mapFog?.enabled){
+    state.combat=projectCombat(state.combat,master);
+    if(!master){delete state.masterNotes;delete state.masterNotebooks;}
+    state.mapStrokes=(state.mapStrokes||[]).filter(stroke=>canReadMapStroke(m.role,viewMode,stroke));
+    if(!master&&state.mapFog?.enabled){
       state.points=(state.points||[]).filter(point=>isMapPointRevealed(state.mapFog,point));
       state.mapStrokes=state.mapStrokes.filter(stroke=>isMapStrokeRevealed(state.mapFog,stroke));
       state.mapImage=`/api/rooms/${roomId}/map-image?v=${fogImageVersion(state)}`;
     }
-    state.campaignScenes=visibleCampaignScenes(state.campaignScenes,state.points||[],m.role!=='player');
-    state.mapRoutes=visibleMapRoutes(state.mapRoutes,m.role!=='player',state.mapFog);
-    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:trayRolls.get(roomId)||null,serverTime:Date.now()};
+    state.campaignScenes=visibleCampaignScenes(state.campaignScenes,state.points||[],master,state.scenePresentation).map(scene=>({...scene,media:scene.mediaId?mediaMetadata(query('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? AND id=?',roomId,scene.mediaId)):null}));
+    state.mapRoutes=visibleMapRoutes(state.mapRoutes,master,state.mapFog);
+    const pointIds=new Set(state.points.map(point=>point.id)),cleanNote=note=>({...note,board:projectNoteBoard(note.board,pointIds)});
+    if(state.masterNotebooks)state.masterNotebooks=state.masterNotebooks.map(cleanNote);
+    state.sharedNotebooks=state.sharedNotebooks.map(cleanNote);
+    for(const sheet of Object.values(state.playerSheets))sheet.notebooks=sheet.notebooks.map(cleanNote);
+    const history=diceHistory.page(roomId,state.campaignScenes);
+    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,serverTime:Date.now()};
   }
   function revoke(client,status){
     client.res.write(`event: revoked\ndata: ${JSON.stringify({status})}\n\n`);client.res.end();clients.delete(client);
@@ -214,7 +231,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(!query('SELECT 1 FROM sessions WHERE token_hash=? AND expires>?',client.tokenHash,Date.now()))fail(401,'Sua sessão expirou.');
       if(heartbeat){membership(client.roomId,client.userId);client.res.write(': heartbeat\n\n');}
       else {
-        let room=snapshot(client.roomId,client.userId);
+        let room=snapshot(client.roomId,client.userId,client.viewMode);
         const imageHash=digest(room.state.mapImage||'');
         if(client.mediaFormat){room=roomMedia.encode(room,client.userId,client.mediaVersion);client.mediaVersion=room.roomMedia.version;}
         if(client.mapImageHash===imageHash){delete room.state.mapImage;room.mapImageUnchanged=true;}
@@ -228,9 +245,11 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   }
   const broadcast=roomId=>{for(const c of clients)if(c.roomId===roomId)send(c);};
   function saveState(roomId,state,actor){
-    assertRoomState(state);
-    const json=JSON.stringify(state);if(Buffer.byteLength(json)>20*1024*1024)fail(413,'A mesa atingiu o limite de 20 MB. Reduza as imagens.');
     transaction(()=>{
+      assertCombat(state.combat);
+      state.combat=reconcileCombat(state.combat,all('SELECT u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=? ORDER BY u.username',roomId));
+      assertRoomState(state);
+      const json=JSON.stringify(state);if(Buffer.byteLength(json)>20*1024*1024)fail(413,'A mesa atingiu o limite de 20 MB. Reduza as imagens.');
       const before=actor?JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state):null;
       run('UPDATE rooms SET state=?,revision=revision+1 WHERE id=?',json,roomId);
       if(actor)for(const change of roomAuditChanges(before,state))audit.record(roomId,actor,change.action,change.details);
@@ -242,7 +261,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     transaction(()=>{
       run('INSERT INTO members VALUES(?,?,?)',roomId,userId,role);
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      ensureRoomMemberState(state,username);state.turnExcluded=(state.turnExcluded||[]).filter(name=>name!==username);saveState(roomId,state);
+      ensureRoomMemberState(state,username);saveState(roomId,state);
       if(actor)audit.record(roomId,actor,action,{target:username,role});
     });
   }
@@ -254,8 +273,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     if(res.mediaFormat&&data?.state&&Array.isArray(data.members)&&typeof data.revision==='number')data=roomMedia.encode(data,res.mediaUserId,res.mediaVersion);
     res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));
   }
-  function assetResponse(req,res,mime,content,hash){
-    const etag=`"${hash}"`,headers={'Content-Type':mime,'Cache-Control':'private, no-cache, must-revalidate','Vary':'Cookie','ETag':etag};
+  function assetResponse(req,res,mime,content,hash,vary='Cookie'){
+    const etag=`"${hash}"`,headers={'Content-Type':mime,'Cache-Control':'private, no-cache, must-revalidate','Vary':vary,'ETag':etag};
     const matches=(req.headers['if-none-match']||'').split(',').some(tag=>tag.trim()==='*'||tag.trim().replace(/^W\//,'')===etag);
     // Call only after session, membership and resource visibility have been checked.
     if(matches){res.writeHead(304,headers);return res.end();}
@@ -264,6 +283,11 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   async function route(req,res){
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');
     const url=new URL(req.url,'http://server'),path=url.pathname.split('/').filter(Boolean).map(decodeURIComponent),method=req.method;
+    const mapView=()=>{
+      const mode=url.searchParams.get('mapViewMode')??undefined;
+      if(mode!==undefined&&!['player','master'].includes(mode))fail(400,'Modo do mapa inválido.');
+      return mode;
+    };
     if(path[0]!=='api'){
       if(!['GET','HEAD'].includes(method))fail(405,'Método inválido.');
       let file=resolve(distPath,'.'+url.pathname);
@@ -281,9 +305,23 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(req.headers.origin && req.headers.origin!==allowed)fail(403,'Origem não autorizada.');
       if(req.headers['sec-fetch-site']==='cross-site')fail(403,'Origem não autorizada.');
     }
+    if(path[1]==='rooms'&&path[3]==='map-assets'&&method==='POST'&&path.length===4)return importMapAsset(req,res,path[2],mapView(),url.searchParams.get('importId'));
+    if(path[1]==='rooms'&&path[3]==='scene-media'&&path.length===4&&method==='POST'){
+      let uploader=auth(req);if(!canManageMap(membership(path[2],uploader.id).role,mapView()))fail(403,'Enviar mídia exige o modo mestre.');
+      const file=await readSceneMedia(req,url.searchParams.get('name'));
+      uploader=auth(req);if(!canManageMap(membership(path[2],uploader.id).role,mapView()))fail(403,'Seu acesso ao envio de mídia mudou.');
+      const result=transaction(()=>{
+        const existing=query('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? AND hash=?',path[2],file.hash);if(existing)return {asset:mediaMetadata(existing),status:200};
+        const used=query('SELECT count(*) AS count,COALESCE(sum(bytes),0) AS bytes FROM scene_media WHERE room_id=?',path[2]);
+        if(used.count>=100||used.bytes+file.bytes>500*1024*1024)fail(413,'Limite de 100 arquivos ou 500 MB por mesa. Exclua arquivos sem uso para liberar espaço.');
+        const asset={id:randomUUID(),name:file.name,mime:file.mime,bytes:file.bytes};
+        run('INSERT INTO scene_media VALUES(?,?,?,?,?,?,?,?)',asset.id,path[2],file.hash,file.name,file.mime,file.data,file.bytes,Date.now());return {asset,status:201};
+      });return json(res,result.status,result.asset);
+    }
     // Read the entire payload before checking current permissions; slow requests must not retain revoked access.
-    if(path[3]==='map-assets'&&method==='POST')privileged(membership(path[2],auth(req).id));
-    const requestBody=['POST','PATCH'].includes(method)&&url.pathname!=='/api/auth/logout'?await body(req,path[3]==='map-assets'?72*1024*1024:10*1024*1024):{};
+    if(path[3]==='map-assets'&&method==='POST'&&!canManageMap(membership(path[2],auth(req).id).role,mapView()))fail(403,'Importar modelos exige o modo mestre.');
+    const binaryModel=path[3]==='map-assets'&&method==='POST'&&req.headers['content-type']?.split(';')[0]===MAP_ASSET_MEDIA;
+    const requestBody=['POST','PATCH'].includes(method)&&url.pathname!=='/api/auth/logout'?(binaryModel?await readMapAssetRequest(req):await body(req,path[3]==='map-assets'?72*1024*1024:10*1024*1024)):{};
     if(path[1]==='auth'&&['login','register'].includes(path[2])&&method==='POST'){
       limit(`auth:${ip}`,12);const data=requestBody;
       const username=string(data.username,30,'Usuário',3).trim().toLowerCase();
@@ -338,17 +376,35 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     const requestImage=value=>{
       if(!isRoomImageReference(value))return value;
       if(!res.mediaFormat)fail(400,'Referência de imagem inválida.');
-      requestImages||=roomImageSources(snapshot(roomId,user.id)).images;
+      requestImages||=roomImageSources(snapshot(roomId,user.id,mapView())).images;
       const source=requestImages.get(value._roomImage);
       if(!source)fail(400,'Imagem de referência indisponível nesta visão. Confira a mesa ou envie a imagem novamente.');
       return source;
     };
-    const mapView=()=>{
-      const mode=url.searchParams.get('mapViewMode')??undefined;
-      if(mode!==undefined&&!['player','master'].includes(mode))fail(400,'Modo do mapa inválido.');
-      return mode;
-    };
-    if(path.length===3&&method==='GET')return json(res,200,snapshot(roomId,user.id));
+    if(path.length===3&&method==='GET')return json(res,200,snapshot(roomId,user.id,mapView()));
+    if(path[3]==='scene-media'){
+      const master=canManageMap(m.role,mapView());
+      if(path.length===4&&method==='GET'){
+        if(!master)fail(403,'A biblioteca de arquivos exige o modo mestre.');
+        const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),used=new Set(state.campaignScenes.map(scene=>scene.mediaId));
+        return json(res,200,all('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? ORDER BY created_at DESC',roomId).map(row=>({...mediaMetadata(row),inUse:used.has(row.id)})));
+      }
+      if(path.length===5&&['GET','HEAD'].includes(method)){
+        const row=query('SELECT id,name,mime,bytes,hash FROM scene_media WHERE room_id=? AND id=?',roomId,path[4]);
+        if(!row||!master&&!snapshot(roomId,user.id,mapView()).state.campaignScenes.some(scene=>scene.mediaId===row.id))fail(404,'Arquivo indisponível nesta visão.');
+        return sendSceneMedia(req,res,row,(start,length)=>Buffer.from(query('SELECT substr(data,?,?) AS data FROM scene_media WHERE room_id=? AND id=?',start+1,length,roomId,row.id).data));
+      }
+      if(path.length===5&&method==='DELETE'){
+        if(!master)fail(403,'Excluir arquivos exige o modo mestre.');
+        transaction(()=>{const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);if(state.campaignScenes.some(scene=>scene.mediaId===path[4]))fail(409,'Retire o arquivo das cenas, inclusive arquivadas, antes de excluí-lo.');run('DELETE FROM scene_media WHERE room_id=? AND id=?',roomId,path[4]);});return json(res,200,{ok:true});
+      }
+      fail(404,'Rota não encontrada.');
+    }
+    if(path[3]==='scene-presentation'&&path.length===4&&method==='POST'){
+      if(!canManageMap(m.role,mapView()))fail(403,'Exibir cenas exige o modo mestre.');
+      transaction(()=>{const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),next=changeScenePresentation(state,requestBody);if(next!==state.scenePresentation){state.scenePresentation=next;saveState(roomId,state,user);}});
+      broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
+    }
     if(path[3]==='audit'&&path.length===4&&method==='GET'){
       privileged(m);if(mapView()==='player')fail(403,'Consultar registros exige o modo mestre.');
       const before=url.searchParams.get('before'),rawLimit=url.searchParams.get('limit'),category=url.searchParams.get('category');
@@ -358,14 +414,14 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     }
     if(path[3]==='campaign-scenes'){
       if(path.length===5&&method==='GET'){
-        const scene=snapshot(roomId,user.id).state.campaignScenes.find(scene=>scene.id===path[4]);
+        const scene=snapshot(roomId,user.id,mapView()).state.campaignScenes.find(scene=>scene.id===path[4]);
         if(!scene)fail(404,'Cena indisponível nesta visão.');return json(res,200,scene);
       }
       if(!canManageMap(m.role,mapView()))fail(403,'Alterar cenas exige o modo mestre e papel de mestre ou ADM.');
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),scenes=state.campaignScenes||[];
       const data=requestBody,creating=path.length===4&&method==='POST',editing=path.length===5&&method==='PATCH';
       if(!creating&&!editing)fail(404,'Rota não encontrada.');
-      const allowed=creating?['id','title','body','pointIds','visibility']:['title','body','pointIds','visibility','archived','version'];
+      const allowed=creating?['id','title','body','pointIds','visibility','mediaId']:['title','body','pointIds','visibility','mediaId','archived','version'];
       if(Object.keys(data).some(key=>!allowed.includes(key)))fail(400,'Campo da cena inválido.');
       const id=creating?data.id:path[4];
       if(typeof id!=='string'||!/^[a-zA-Z0-9-]{1,100}$/.test(id))fail(400,'Identificador de cena inválido.');
@@ -373,6 +429,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(editing&&!previous)fail(404,'Esta cena não está mais disponível. Seu rascunho foi mantido.');
       if(editing&&data.version!==previous.version)fail(409,'A cena mudou em outra tela. Revise antes de salvar.');
       const fields=sceneFields(previous);
+      if('mediaId'in data){if(data.mediaId!==null&&(typeof data.mediaId!=='string'||!query('SELECT 1 FROM scene_media WHERE room_id=? AND id=?',roomId,data.mediaId)))fail(400,'Arquivo indisponível nesta mesa. Envie ou escolha o arquivo novamente.');fields.mediaId=data.mediaId;}
       if('title'in data||creating){fields.title=string(data.title,120,'Título da cena',1).trim();if(!fields.title)fail(400,'Dê um título à cena.');}
       if('body'in data||creating)fields.body=string(data.body,10000,'Texto da cena');
       if('visibility'in data){if(!['master','table'].includes(data.visibility))fail(400,'Visibilidade da cena inválida.');fields.visibility=data.visibility;}
@@ -382,13 +439,15 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       }
       if('archived'in data&&typeof data.archived!=='boolean')fail(400,'Opção de arquivo inválida.');
       if(creating&&previous){
-        if(!previous.archived&&JSON.stringify(sceneFields(previous))===JSON.stringify(fields))return json(res,200,snapshot(roomId,user.id));
+        if(!previous.archived&&JSON.stringify(sceneFields(previous))===JSON.stringify(fields))return json(res,200,snapshot(roomId,user.id,mapView()));
         fail(409,'Esta cena já existe na mesa. Revise a versão salva.');
       }
       if(creating&&scenes.length>=100)fail(400,'Limite de 100 cenas por mesa.');
       const now=Date.now(),scene={...previous,...fields,id,archived:data.archived??previous?.archived??false,version:(previous?.version||0)+1,createdAt:previous?.createdAt||now,updatedAt:now,updatedBy:user.username};
       if(index<0)scenes.push(scene);else scenes[index]=scene;
-      state.campaignScenes=scenes;saveState(roomId,state,user);broadcast(roomId);return json(res,creating?201:200,snapshot(roomId,user.id));
+      state.campaignScenes=scenes;
+      if(state.scenePresentation.sceneId===id&&(scene.archived||scene.mediaId!==previous?.mediaId))state.scenePresentation={...emptyScenePresentation(),changedAt:Date.now(),version:state.scenePresentation.version+1};
+      saveState(roomId,state,user);broadcast(roomId);return json(res,creating?201:200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-position-settings'&&path.length===4&&method==='PATCH'){
       if(!canManageMap(m.role,mapView()))fail(403,'Liberar posições exige o modo mestre.');
@@ -398,9 +457,9 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(version!==positionSettingsVersion(state))fail(409,'A opção de posições mudou. Confira a mesa e tente novamente.');
       if(!state.mapImage&&enabled)fail(400,'Envie uma imagem antes de liberar posições.');
       const previous=state.mapPositions||emptyMapPositions();
-      if(previous.enabled===enabled)return json(res,200,snapshot(roomId,user.id));
+      if(previous.enabled===enabled)return json(res,200,snapshot(roomId,user.id,mapView()));
       state.mapPositions={enabled,markers:{},generation:randomUUID()};
-      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-position'&&path.length===4&&method==='PATCH'){
       const viewMode=mapView();
@@ -425,7 +484,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(!isMapPointRevealed(state.mapFog,position))fail(403,'Compartilhe sua posição somente em áreas reveladas.');
         state.mapPositions.markers[user.id]={...position,version:randomUUID()};
       }else delete state.mapPositions.markers[user.id];
-      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-legend'&&path.length===4&&method==='PATCH'){
       if(!canManageMap(m.role,mapView()))fail(403,'Editar a legenda exige o modo mestre.');
@@ -433,7 +492,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(Object.keys(requestBody).some(key=>!['legend','version'].includes(key))||!isMapLegend(legend))fail(400,'Legenda inválida. Use nomes de 1 a 40 caracteres e cores para os cinco tipos.');
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
       if(version!==mapLegendVersion(state))fail(409,'A legenda mudou em outra tela. Revise seus ajustes antes de salvar.');
-      state.mapLegend=legend.map(entry=>({...entry,color:entry.color.toLowerCase()}));saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      state.mapLegend=legend.map(entry=>({...entry,color:entry.color.toLowerCase()}));saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-routes'&&(['POST','PATCH'].includes(method))){
       if(!canManageMap(m.role,mapView()))fail(403,'Editar rotas exige o modo mestre.');
@@ -461,7 +520,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       }
       const previous=check(),next=archive?{...previous,archived}:{...previous,...fields,id:routeId,archived:false,color:fields.color.toLowerCase()};
       state.mapRoutes=create?[...(state.mapRoutes||[]),next]:state.mapRoutes.map(route=>route.id===routeId?next:route);
-      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-scale'&&path.length===4&&method==='PATCH'){
       if(!canManageMap(m.role,mapView()))fail(403,'Definir a escala exige o modo mestre.');
@@ -470,7 +529,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
       if(!state.mapImage)fail(400,'Envie uma imagem antes de definir a escala.');
       if(version!==mapScaleVersion(state))fail(409,'A escala mudou em outra tela. Revise os ajustes antes de salvar.');
-      state.mapScale=scale;saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      state.mapScale=scale;saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-image'&&path.length===4&&method==='GET'){
       limit(`map-image:${user.id}`,120);
@@ -523,7 +582,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
           fog={...fog,areas};
         }
       }
-      state.mapFog=fog;saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      state.mapFog=fog;saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='feedback'&&path.length===4){
       if(method==='GET'){
@@ -562,42 +621,92 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(method==='GET'&&path[4]){
         const asset=query('SELECT bundle FROM map_assets WHERE id=? AND room_id=?',path[4],roomId);
         if(!asset)fail(404,'Modelo não encontrado.');
-        return assetResponse(req,res,'application/json; charset=utf-8',asset.bundle,digest(asset.bundle));
-      }
-      if(method==='POST'&&path.length===4){
-        privileged(m);limit(`map-upload:${user.id}`,12);
-        const bundle=validateMapAsset(requestBody),state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-        const objects=state.mapObjects||[];
-        if(objects.length>=100)fail(400,'Limite de 100 objetos por mesa.');
-        const used=query('SELECT COALESCE(SUM(bytes),0) AS size FROM map_assets WHERE room_id=?',roomId).size;
-        if(used+bundle.bytes>300*1024*1024)fail(413,'Limite de 300 MB de modelos por mesa.');
-        const id=randomUUID();
-        state.mapObjects=[...objects,{id,assetId:id,name:bundle.main.split('/').pop().slice(0,120),position:[0,0,0],rotation:[0,0,0],scale:[1,1,1]}];
-        transaction(()=>{run('INSERT INTO map_assets VALUES(?,?,?,?)',id,roomId,JSON.stringify(bundle),bundle.bytes);saveState(roomId,state,user);});
-        broadcast(roomId);return json(res,201,snapshot(roomId,user.id));
+        if(req.headers.accept?.split(',').some(type=>type.trim()===MAP_ASSET_MEDIA)){
+          const hash=digest(asset.bundle),controller=new AbortController(),abort=()=>controller.abort();res.once('close',abort);
+          try{await modelValidator.validateSaved(asset.bundle,controller.signal,hash);}finally{res.off('close',abort);}
+          if(res.destroyed||controller.signal.aborted)fail(499,'Carregamento cancelado.');
+          return sendMapAsset(req,res,asset.bundle,hash,()=>{
+            membership(roomId,auth(req).id);
+            if(!query('SELECT 1 FROM map_assets WHERE id=? AND room_id=?',path[4],roomId))fail(404,'Modelo não encontrado.');
+          });
+        }
+        return assetResponse(req,res,'application/json; charset=utf-8',asset.bundle,digest(asset.bundle),'Cookie, Accept');
       }
     }
-    if(path[3]==='map-objects'&&path[4]&&['PATCH','DELETE'].includes(method)){
-      privileged(m);const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      const item=state.mapObjects?.find(o=>o.id===path[4]);if(!item)fail(404,'Objeto não encontrado.');
-      if(method==='PATCH')Object.assign(item,validateMapTransform(requestBody));
-      else state.mapObjects=state.mapObjects.filter(o=>o.id!==item.id);
-      transaction(()=>{saveState(roomId,state,user);if(method==='DELETE'&&!state.mapObjects.some(object=>object.assetId===item.assetId))run('DELETE FROM map_assets WHERE id=? AND room_id=?',item.assetId,roomId);});
-      broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+    if(path[3]==='map-imports'){
+      if(method==='POST'&&path.length===4){
+        if(!canManageMap(m.role,mapView()))fail(403,'Importar modelos exige o modo mestre.');
+        if(Object.keys(requestBody).length)fail(400,'Configuração da importação inválida.');limit(`map-prepare:${user.id}`,12);
+        return json(res,201,mapImports.prepare(roomId,user.id));
+      }
+      if(method==='GET'&&path.length===5)return json(res,200,mapImports.status(roomId,user.id,path[4]));
+      if(method==='DELETE'&&path.length===5)return json(res,200,mapImports.cancel(roomId,user.id,path[4]));
+    }
+    if(path[3]==='tabletop-lighting'&&path.length===4&&method==='PATCH'){
+      if(!canManageMap(m.role,mapView()))fail(403,'Alterar a luz da mesa exige o modo mestre.');
+      if(Object.keys(requestBody).some(key=>!['preset','version'].includes(key))||!isLightingPreset(requestBody.preset))fail(400,'Escolha Padrão, Luz clara ou Luz baixa.');
+      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+      if(requestBody.version!==digest(state.tabletopLighting))fail(409,'A iluminação mudou em outra tela. Confira a luz atual antes de escolher novamente.');
+      if(state.tabletopLighting!==requestBody.preset){state.tabletopLighting=requestBody.preset;saveState(roomId,state,user);broadcast(roomId);}
+      return json(res,200,snapshot(roomId,user.id,mapView()));
+    }
+    if(path[3]==='map-object-actions'&&path.length===4&&method==='POST'){
+      if(!canManageMap(m.role,mapView()))fail(403,'Editar objetos exige o modo mestre.');
+      let result;transaction(()=>{
+        const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+        if(requestBody.version!==mapObjectsVersion(state))fail(409,'Os objetos mudaram em outra janela. Confira a mesa antes de tentar novamente.');
+        if(requestBody.action==='link')assertLinkTarget(state,requestBody.reference,{username:user.username,role:m.role,viewMode:mapView(),members:all('SELECT u.username FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=?',roomId)});
+        result=changeTabletopObjects(state,requestBody);saveState(roomId,state,user);
+        for(const assetId of result.removedAssetIds)if(!state.mapObjects.some(item=>item.assetId===assetId))run('DELETE FROM map_assets WHERE id=? AND room_id=?',assetId,roomId);
+      });broadcast(roomId);return json(res,200,{...snapshot(roomId,user.id,mapView()),mapAction:{selectionIds:result.selectionIds}});
+    }
+    if(path[3]==='map-objects'&&path[5]==='references'&&path.length===7&&method==='GET'){
+      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),item=state.mapObjects.find(item=>item.id===path[4]),ref=item?.references.find(ref=>ref.id===path[6]);
+      const target=ref&&resolveTabletopReference(state,ref,{username:user.username,role:m.role,viewMode:mapView(),members:all('SELECT u.username FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=?',roomId)});
+      if(!target)fail(404,'Destino indisponível nesta visão.');
+      return json(res,200,{...snapshot(roomId,user.id,mapView()),referenceTarget:{kind:ref.kind,target}});
+    }
+    if(path[3]==='map-objects'&&path.length===5&&path[4]&&['PATCH','DELETE'].includes(method)){
+      if(!canManageMap(m.role,mapView()))fail(403,'Editar modelos exige o modo mestre.');
+      transaction(()=>{
+        const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+        const item=state.mapObjects?.find(o=>o.id===path[4]);if(!item)fail(404,'Objeto não encontrado.');
+        const {expectedVersion,...patch}=requestBody;
+        if(expectedVersion!==undefined&&expectedVersion!==item.version)fail(409,'O objeto mudou em outra janela. Confira a mesa antes de tentar novamente.');
+        if(method==='PATCH'){
+          const validated=validateMapTransform(patch),moves=['position','rotation','scale'].some(key=>key in validated);
+          if(moves&&item.locked)fail(423,'Desbloqueie o objeto antes de mover, girar ou mudar o tamanho.');
+          if(moves&&item.groupId)fail(409,'Transforme o grupo inteiro ou desagrupe antes de editar este objeto.');
+          if(!Number.isSafeInteger(item.version+1))fail(409,'Limite de versão do objeto atingido.');Object.assign(item,validated);item.version++;
+        }else {state.mapObjects=state.mapObjects.filter(o=>o.id!==item.id);state.mapGroups=state.mapGroups.filter(group=>state.mapObjects.some(object=>object.groupId===group.id));}
+        saveState(roomId,state,user);if(method==='DELETE'&&!state.mapObjects.some(object=>object.assetId===item.assetId))run('DELETE FROM map_assets WHERE id=? AND room_id=?',item.assetId,roomId);
+      });
+      broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='events'&&method==='GET'){
       if([...clients].filter(c=>c.userId===user.id).length>=10)fail(429,'Muitas salas abertas. Feche algumas abas.');
       res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
-      const client={roomId,userId:user.id,tokenHash:user.token_hash,res,diagnostic:res.diagnostic,mediaFormat:url.searchParams.get('media')==='1'};clients.add(client);send(client);res.on('close',()=>clients.delete(client));return;
+      const client={roomId,userId:user.id,tokenHash:user.token_hash,res,diagnostic:res.diagnostic,viewMode:mapView(),mediaFormat:url.searchParams.get('media')==='1'};clients.add(client);send(client);res.on('close',()=>clients.delete(client));return;
     }
-    if(path[3]==='tray-rolls'&&method==='POST'){
-      const previous=trayRolls.get(roomId);
-      if(previous&&Date.now()<previous.startedAt+previous.duration)fail(409,'Aguarde os dados da mesa pararem.');
-      limit(`tray:${user.id}`,30);
-      if(requestBody.structureId && requestBody.structureId!=='tray')fail(400,'As rolagens usam apenas a bandeja.');
-      const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics);
-      roll.structureId='tray';
-      trayRolls.set(roomId,roll);broadcast(roomId);return json(res,201,snapshot(roomId,user.id));
+    if(path[3]==='dice-history'&&method==='GET'&&path.length===4){
+      const view=snapshot(roomId,user.id,mapView());
+      return json(res,200,{...diceHistory.page(roomId,view.state.campaignScenes,url.searchParams.get('before')),revision:view.revision});
+    }
+    if(path[3]==='tray-rolls'&&method==='POST'&&path.length===4){
+      const result=transaction(()=>{
+        const operation=diceHistory.prepare(roomId,user.id,requestBody);
+        if(operation.confirmed)return {repeated:true,receipt:operation.confirmed};
+        const previous=diceHistory.latest(roomId);
+        if(previous&&Date.now()<previous.startedAt+previous.duration)fail(409,'Aguarde os dados da mesa pararem.');
+        limit(`tray:${user.id}`,30);
+        const view=snapshot(roomId,user.id,mapView());
+        if(requestBody.sceneId&&!view.state.campaignScenes.some(scene=>scene.id===requestBody.sceneId))fail(403,'Esta cena não está disponível para sua rolagem.');
+        const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics);
+        roll.structureId='tray';
+        return {receipt:diceHistory.record(view,user,requestBody,operation,roll,view.state.campaignScenes)};
+      });
+      if(!result.repeated)broadcast(roomId);
+      return json(res,result.repeated?200:201,{...snapshot(roomId,user.id,mapView()),rollReceipt:result.receipt});
     }
     if(path[3]==='note-assets'){
       if(method==='GET'&&path.length===4){
@@ -628,49 +737,28 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         return json(res,201,{id,name,mime,bytes:data.length,createdAt});
       }
     }
-    if(path[3]==='turns'&&method==='POST'){
-      privileged(m);
-      const {action,player}=requestBody;
-      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      const view=snapshot(roomId,user.id),current=view.state;
-      let order=[...current.turnOrder],npcs=[...current.turnNpcs],excluded=[...current.turnExcluded];
-      let active=current.activePlayer;
-      if(['select','up','down','remove'].includes(action)&&!order.includes(player))fail(400,'Participante não encontrado na ordem de turnos.');
-      if(action==='select')active=player;
-      else if(action==='end')active=null;
-      else if(action==='next'){
-        if(!order.length)fail(400,'Adicione participantes antes de iniciar os turnos.');
-        active=order[(order.indexOf(active)+1)%order.length];
-      }else if(action==='add'){
-        if(npcs.length>=40)fail(400,'A ordem já tem 40 inimigos ou NPCs.');
-        const name=string(requestBody.name,50,'Nome',2).trim();
-        if(name.length<2)fail(400,'Dê um nome ao personagem.');
-        if(!['enemy','npc'].includes(requestBody.kind))fail(400,'Tipo de personagem inválido.');
-        const npc={id:`npc:${randomUUID()}`,name,kind:requestBody.kind};
-        npcs.push(npc);order.push(npc.id);
-      }else if(action==='remove'){
-        const removedIndex=order.indexOf(player);
-        if(player.startsWith('npc:'))npcs=npcs.filter(npc=>npc.id!==player);
-        else excluded.push(player);
-        order=order.filter(id=>id!==player);
-        if(active===player)active=order.length?order[removedIndex%order.length]:null;
-      }else if(action==='include'){
-        if(!excluded.includes(player)||!view.members.some(member=>member.username===player&&member.role!=='master'))fail(400,'Jogador não está fora do combate.');
-        excluded=excluded.filter(name=>name!==player);order.push(player);
-      }else if(action==='up'||action==='down'){
-        const index=order.indexOf(player),target=index+(action==='up'?-1:1);
-        if(target<0||target>=order.length)fail(400,'O jogador já está no limite da ordem.');
-        [order[index],order[target]]=[order[target],order[index]];
-      }else fail(400,'Ação de turno inválida.');
-      saveState(roomId,{...state,turnOrder:order,turnNpcs:npcs,turnExcluded:excluded,activePlayer:active},user);
-      broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+    if(path[3]==='turn-operations'&&path.length===5&&method==='GET'){
+      const operation=combatOperations.status(roomId,user.id,path[4],Number(url.searchParams.get('requestedAt')));
+      return json(res,200,{...snapshot(roomId,user.id,mapView()),combatOperation:operation});
+    }
+    if(path[3]==='turns'&&path.length===4&&method==='POST'){
+      if(!canManageMap(m.role,mapView()))fail(403,'Esta ação é exclusiva do mestre ou ADM em modo mestre.');
+      let changed=false,operation;
+      transaction(()=>{
+        const prepared=combatOperations.prepare(roomId,user.id,requestBody);
+        if(prepared.confirmed){operation=prepared.confirmed;return;}
+        const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),combat=changeCombat(state.combat,prepared.command);
+        if(combat!==state.combat){state.combat=combat;saveState(roomId,state,user);changed=true;}
+        operation=combatOperations.confirm(roomId,user.id,prepared.operation,prepared.command,state.combat,changed);
+      });
+      if(changed)broadcast(roomId);return json(res,200,{...snapshot(roomId,user.id,mapView()),...(operation?{combatOperation:operation}:{})});
     }
     if(path[3]==='notes'&&path[4]&&path[5]&&['GET','PATCH'].includes(method)){
       const scope=path[4],id=string(path[5],100,'Identificador',1);
       if(!/^[a-zA-Z0-9-]+$/.test(id))fail(400,'Identificador de nota inválido.');
       const target=scope==='@master'?null:query('SELECT u.id FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=? AND u.username=?',roomId,scope);
       if(scope!=='@master'&&!target)fail(404,'Jogador não encontrado nesta mesa.');
-      const canManage=scope==='@master'?['master','admin'].includes(m.role):m.role==='admin'||target.id===user.id;
+      const canManage=scope==='@master'?canManageMap(m.role,mapView()):target.id===user.id;
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
       const container=scope==='@master'?state:state.playerSheets[scope];
       const key=scope==='@master'?'masterNotebooks':'notebooks';
@@ -679,6 +767,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       const previous=notes[index];
       if(!canManage&&(!previous||!previous.sharedWith?.includes(user.username)))fail(403,'Esta nota não foi compartilhada com você.');
       const version=previous?.version||1;
+      const visiblePointIds=new Set(state.points.filter(point=>canManageMap(m.role,mapView())||isMapPointRevealed(state.mapFog,point)).map(point=>point.id));
       if(method==='GET'){
         if(path[6]!=='history'||![7,8].includes(path.length))fail(404,'Rota não encontrada.');
         if(!previous)fail(404,'Nota não encontrada.');
@@ -694,8 +783,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         const requested=Number(path[7]);
         if(!Number.isSafeInteger(requested)||requested<1)fail(400,'Versão inválida.');
         const row=query('SELECT * FROM note_versions WHERE room_id=? AND scope=? AND note_id=? AND version=?',roomId,scope,id,requested);
-        if(row&&visible(row))return json(res,200,{...JSON.parse(row.content),version:row.version,author:row.author,createdAt:row.created_at,kind:row.kind});
-        if(!row&&requested===version)return json(res,200,{title:previous.title,body:previous.body||'',board:previous.board||emptyBoard(),version,author:null,createdAt:null,kind:'baseline'});
+        if(row&&visible(row)){const content=JSON.parse(row.content);return json(res,200,{...content,board:projectNoteBoard(content.board||emptyBoard(),visiblePointIds),version:row.version,author:row.author,createdAt:row.created_at,kind:row.kind});}
+        if(!row&&requested===version)return json(res,200,{title:previous.title,body:previous.body||'',board:projectNoteBoard(previous.board||emptyBoard(),visiblePointIds),version,author:null,createdAt:null,kind:'baseline'});
         fail(404,'Versão não encontrada ou indisponível para você.');
       }
       if(path[6]==='share'){
@@ -711,7 +800,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
           const next={...previous,sharedWith,version:version+1};notes[index]=next;container[key]=notes;
           saveState(roomId,state,user);recordNoteVersion(roomId,scope,next,user.username,'access');pruneNoteVersions(roomId,scope,id);
         });
-        broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+        broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
       }
       if(path.length!==6||Object.keys(requestBody).some(field=>!['title','body','board','version'].includes(field)))fail(400,'Alteração de nota inválida.');
       if(index<0&&notes.length>=30)fail(400,'Limite de 30 notas por bloco.');
@@ -721,6 +810,11 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(!title)fail(400,'Dê um nome à nota.');
       const noteBody=string(requestBody.body,50000,'Texto da nota');
       const board=requestBody.board===undefined?(previous?.board||emptyBoard()):noteBoard(mapNoteBoardImages(requestBody.board,requestImage));
+      // A filtered point binding is not a request to delete it when saving other note changes.
+      if(requestBody.board!==undefined&&previous&&!canManageMap(m.role,mapView())){
+        const priorNodes=new Map(previous.board.nodes.map(node=>[node.id,node]));
+        board.nodes=board.nodes.map(node=>{const prior=priorNodes.get(node.id);return !node.pointId&&prior?.pointId&&!visiblePointIds.has(prior.pointId)?{...node,pointId:prior.pointId}:node;});
+      }
       for(const node of board.nodes)if(node.kind==='image'&&node.assetId){
         const asset=query('SELECT id,owner_id FROM note_assets WHERE id=? AND room_id=?',node.assetId,roomId);
         if(!asset||!canReadNoteAsset(asset,roomId,user.id))fail(400,'Imagem de referência indisponível para esta nota.');
@@ -733,7 +827,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(previous)recordNoteVersion(roomId,scope,previous);
         saveState(roomId,state,user);recordNoteVersion(roomId,scope,note,user.username,'save');pruneNoteVersions(roomId,scope,id);
       });
-      broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='points'&&path.length===5&&method==='PATCH'){
       if(!canManageMap(m.role,mapView()))fail(403,'Editar pontos exige o modo mestre e papel de mestre ou ADM.');
@@ -747,7 +841,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(index<0)fail(404,'Este ponto foi excluído da mesa. Seu rascunho continua aberto.');
       if(typeof version!=='string'||version!==digest(JSON.stringify(state.points[index])))fail(409,'Este ponto mudou em outra tela. Seu rascunho foi mantido; revise as alterações antes de salvar.');
       state.points[index]={...state.points[index],...patch};
-      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='state'&&method==='PATCH'){
       privileged(m);const {pointsVersion,mapImageVersion,...patch}=requestBody;const allowed=['points','mapImage','sheetFields','sheetFont','masterNotes'];
@@ -782,7 +876,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       transaction(()=>{
         if('masterNotes'in patch)writeLegacyText(roomId,'@master',state,patch.masterNotes,user.username);
         saveState(roomId,{...state,...patch,...('mapImage'in patch?{mapStrokes:[],mapRoutes:[],mapFog:emptyMapFog(),mapScale:null,mapPositions:{...(state.mapPositions||emptyMapPositions()),markers:{},generation:randomUUID()}}:{})},user);
-      });broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      });broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-strokes'){
       const viewMode=mapView();
@@ -809,7 +903,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if((state.mapStrokes||[]).length>=300)fail(400,'O mapa atingiu o limite de 300 traços.');
         if((state.mapStrokes||[]).some(item=>item.id===strokeId))fail(409,'Este traço já existe no mapa.');
         state.mapStrokes=[...(state.mapStrokes||[]),{id:strokeId,path:strokePath,color:requestBody.color.toLowerCase(),author,visibility}];
-        saveState(roomId,state,user);broadcast(roomId);return json(res,201,snapshot(roomId,user.id));
+        saveState(roomId,state,user);broadcast(roomId);return json(res,201,snapshot(roomId,user.id,mapView()));
       }
       if(path.length===5&&method==='PATCH'){
         if(!canManageMap(m.role,viewMode))fail(403,'Alterar a visibilidade exige o modo mestre.');
@@ -818,7 +912,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(!stroke)fail(404,'Traço não encontrado.');
         if(strokeVisibility(stroke)!==requestBody.previousVisibility)fail(409,'A visibilidade mudou em outra tela. Revise e tente novamente.');
         stroke.visibility=requestBody.visibility;
-        saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+        saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
       }
       if(path.length===5&&method==='DELETE'){
         const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
@@ -826,7 +920,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(!stroke||!canReadMapStroke(m.role,viewMode,stroke)||!canManageMap(m.role,viewMode)&&!isMapStrokeRevealed(state.mapFog,stroke))fail(404,'Traço não encontrado.');
         if(!canEraseMapStroke(m.role,user.username,stroke.author,viewMode))fail(403,'Você pode apagar apenas seus próprios traços no modo jogador.');
         state.mapStrokes=state.mapStrokes.filter(item=>item.id!==stroke.id);
-        saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+        saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
       }
     }
     if(['sheets','profiles'].includes(path[3])&&path[4]&&method==='PATCH'){
@@ -835,6 +929,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(m.role!=='admin'&&(m.role!=='player'||target.id!==user.id))fail(403,'Você pode editar apenas a sua ficha como jogador.');
       const patch=requestBody,state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
       if(path[3]==='sheets'){
+        if('observations'in patch&&target.id!==user.id)fail(403,'As notas pessoais só podem ser alteradas pelo dono ou por compartilhamento explícito.');
         if(Object.keys(patch).some(k=>!['values','observations'].includes(k)))fail(400,'Jogadores podem preencher campos e observações, sem alterar o modelo.');
         if('observations'in patch)string(patch.observations,50000,'Observações');
         if('values'in patch){
@@ -862,14 +957,14 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       transaction(()=>{
         if(path[3]==='sheets'&&'observations'in patch)writeLegacyText(roomId,target.username,state.playerSheets[target.username],patch.observations,user.username);
         saveState(roomId,state,user);
-      });broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+      });broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='members'){
       if(method==='POST'){
         privileged(m);const data=requestBody,role=data.role||'player';
         if(!['player','master'].includes(role)||(m.role==='master'&&role!=='player'))fail(403,'Apenas o ADM pode nomear mestres.');
         const target=query('SELECT id FROM users WHERE username=?',string(data.username,30,'Usuário',3).toLowerCase().trim());if(!target)fail(404,'Conta não encontrada. Envie um convite para a pessoa se cadastrar.');
-        addMember(roomId,target.id,role,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+        addMember(roomId,target.id,role,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
       }
       if(path[4]&&['PATCH','DELETE'].includes(method)){
         admin(m);
@@ -877,21 +972,15 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
           const target=membership(roomId,path[4]);if(target.role==='admin')fail(400,'O criador da mesa permanece ADM.');
           if(method==='DELETE')run('DELETE FROM members WHERE room_id=? AND user_id=?',roomId,path[4]);
           else{const data=requestBody;if(!['player','master'].includes(data.role))fail(400,'Papel inválido.');run('UPDATE members SET role=? WHERE room_id=? AND user_id=?',data.role,roomId,path[4]);}
-          if(method==='DELETE'||requestBody.role==='master'){
-            const username=query('SELECT username FROM users WHERE id=?',path[4]).username;
-            const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-            state.turnOrder=state.turnOrder.filter(name=>name!==username);
-            state.turnExcluded=state.turnExcluded.filter(name=>name!==username);
-            delete state.mapPositions.markers[path[4]];
-            if(state.activePlayer===username)state.activePlayer=null;
-            saveState(roomId,state);
-          }else run('UPDATE rooms SET revision=revision+1 WHERE id=?',roomId);
+          const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
+          if(method==='DELETE'||requestBody.role==='master')delete state.mapPositions.markers[path[4]];
+          saveState(roomId,state,user);
           // Invitations granted by a removed or demoted member are no longer valid.
           if(method==='DELETE'||requestBody.role==='player')run('DELETE FROM invites WHERE room_id=? AND created_by=?',roomId,path[4]);
           const username=query('SELECT username FROM users WHERE id=?',path[4]).username;
           if(method==='DELETE'||target.role!==requestBody.role)audit.record(roomId,user,method==='DELETE'?'member.removed':'member.role',{target:username,fromRole:target.role,...(method==='PATCH'?{role:requestBody.role}:{})});
         });
-        broadcast(roomId);return json(res,200,snapshot(roomId,user.id));
+        broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
       }
     }
     if(path[3]==='invites'){
@@ -911,6 +1000,37 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     }
     fail(404,'Rota não encontrada.');
   }
+  async function importMapAsset(req,res,roomId,viewMode,importId){
+    const user=auth(req);if(!canManageMap(membership(roomId,user.id).role,viewMode))fail(403,'Importar modelos exige o modo mestre.');
+    limit(`map-upload:${user.id}`,12);
+    if(importId!==null){
+      if(!/^[a-f0-9-]{36}$/.test(importId))fail(400,'Identificador de importação inválido.');
+      const receipt=mapImports.status(roomId,user.id,importId);
+      if(receipt.phase==='confirmed'){req.resume();return json(res,200,{...snapshot(roomId,user.id,viewMode),import:receipt,modelValidation:{warnings:receipt.warnings}});}
+      mapImports.begin(roomId,user.id,importId);
+    }
+    const controller=new AbortController(),abort=()=>{controller.abort();if(importId)mapImports.failed(importId,Object.assign(Error('Importação interrompida.'),{status:499}));};res.once('close',abort);
+    const unwatch=importId?mapImports.watch(roomId,user.id,importId,()=>{controller.abort();if(!req.complete)req.destroy();}):()=>{};
+    try{
+      const requestBody=req.headers['content-type']?.split(';')[0]===MAP_ASSET_MEDIA?await readMapAssetRequest(req):await body(req,72*1024*1024);
+      const placement=mapAssetPlacement(requestBody?.placement),bundle=validateMapAsset(requestBody),serialized=JSON.stringify(bundle);
+      if(importId)mapImports.checking(roomId,user.id,importId);
+      const modelValidation=await modelValidator.validate(bundle,controller.signal,digest(serialized));
+      if(res.destroyed||controller.signal.aborted)fail(499,'Importação cancelada.');
+      if(!canManageMap(membership(roomId,auth(req).id).role,viewMode))fail(403,'Importar modelos exige o modo mestre.');
+      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),objects=state.mapObjects||[];
+      if(objects.length>=100)fail(400,'Limite de 100 objetos por mesa.');
+      const used=query('SELECT COALESCE(SUM(bytes),0) AS size FROM map_assets WHERE room_id=?',roomId).size;
+      if(used+bundle.bytes>300*1024*1024)fail(413,'Limite de 300 MB de modelos por mesa.');
+      const id=randomUUID();state.mapObjects=[...objects,{id,assetId:id,name:bundle.main.split('/').pop().slice(0,120),version:1,locked:false,groupId:null,references:[],...placement}];
+      transaction(()=>{
+        run('INSERT INTO map_assets VALUES(?,?,?,?)',id,roomId,serialized,bundle.bytes);saveState(roomId,state,user);
+        if(importId)mapImports.confirmed(roomId,user.id,importId,id,modelValidation.warnings);
+      });
+      broadcast(roomId);return json(res,201,{...snapshot(roomId,user.id,viewMode),modelValidation,...(importId?{import:mapImports.status(roomId,user.id,importId)}:{})});
+    }catch(error){if(importId)mapImports.failed(importId,error);throw error;}
+    finally{unwatch();res.off('close',abort);}
+  }
   const server=createServer((req,res)=>{
     const diagnostic=diagnostics.observe(req,res);res.diagnostic=diagnostic;
     route(req,res).catch(e=>{
@@ -920,6 +1040,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     });
   });
   return {server,db,migration,maintenance,diagnostics,close:()=>{
+    mapImports.close();
+    modelValidator.close();
     try{maintenance.stop();}catch(error){try{maintenanceLogger('maintenance-close',error.code||'failed');}catch{}}
     try{roomExports.close();}catch(error){try{maintenanceLogger('export-close',error.code||'failed');}catch{}}
     clearInterval(timer);for(const c of clients)c.res.end();server.close();db.close();

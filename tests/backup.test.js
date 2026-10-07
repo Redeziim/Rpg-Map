@@ -17,6 +17,7 @@ test('backup cria uma cópia íntegra sem alterar o banco ativo',()=>{
     const original=app.db;
     original.prepare('INSERT INTO users VALUES(?,?,?,?)').run('owner','owner','hash','salt');
     const state={...createRoomState(),masterNotes:'campanha',playerSheets:{owner:newPlayerSheet()},statusBarsData:{owner:newStatusProfile()}};
+    state.combat.order=['owner'];
     original.prepare('INSERT INTO rooms VALUES(?,?,?,?,?)').run('room','Campanha','owner',JSON.stringify(state),2);
     original.prepare('INSERT INTO members VALUES(?,?,?)').run('room','owner','admin');
     const result=spawnSync(process.execPath,['scripts/backup.js',destination],{cwd:process.cwd(),env:{...process.env,DB_PATH:source},encoding:'utf8'});

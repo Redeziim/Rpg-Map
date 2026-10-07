@@ -10,7 +10,7 @@ import NoteConflictReview from './NoteConflictReview.jsx';
 import NoteVersionHistory from './NoteVersionHistory.jsx';
 import {restoreNoteFields} from './noteHistory.js';
 import {editedNoteFields,resolveNoteConflict,sameNoteField,sameRecipients} from './noteConflict.js';
-import {draftTabId,loadDraftWindows,saveDraftWindows} from './noteDraftStore.js';
+import {draftTabId,loadDraftWindows,saveDraftWindows,readLocalDraftWindows,saveLocalDraftWindows,listDraftCopies} from './noteDraftStore.js';
 import './Notebook.css';
 
 const noteKey=note=>`${note.scope||''}:${note.id}`;
@@ -30,7 +30,7 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosi
   const [saved,setSaved]=useState(()=>({...normalized(latest&&latest.version===note.version?latest:note),version:note.version||0}));
   const [editedFields,setEditedFields]=useState(()=>note.editedFields||editedNoteFields(note,latest||note));
   const [retainedDirty,setRetainedDirty]=useState(()=>Boolean(note.contentDirty??(note.dirty||latest&&latest.version>note.version&&Object.values(editedNoteFields(note,latest)).some(Boolean))));
-  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[shareOpen,setShareOpen]=useState(false),[compareOpen,setCompareOpen]=useState(false),[boardOpen,setBoardOpen]=useState(Boolean(note.boardOpen||openRequest?.id===note.id&&openRequest?.scope===note.scope));
+  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[shareOpen,setShareOpen]=useState(false),[compareOpen,setCompareOpen]=useState(false),[boardOpen,setBoardOpen]=useState(Boolean(note.boardOpen||openRequest?.id===note.id&&openRequest?.scope===note.scope&&!openRequest.view));
   const [recipients,setRecipients]=useState(()=>note.pendingRecipients||latest?.sharedWith||note.sharedWith||[]);
   const [historyOpen,setHistoryOpen]=useState(false),[restorationUndo,setRestorationUndo]=useState(null),[boardEpoch,setBoardEpoch]=useState(0);
   const [findOpen,setFindOpen]=useState(false),[findQuery,setFindQuery]=useState(''),[findCursor,setFindCursor]=useState(0);
@@ -45,7 +45,7 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosi
   const findToggle=useRef(null);
   const textHistory=useRef({title:{past:[],future:[]},body:{past:[],future:[]}});
   useEffect(()=>{panel.current?.querySelector('.note-drag')?.focus();},[]);
-  useEffect(()=>{if(openRequest?.id===note.id&&openRequest?.scope===note.scope)setBoardOpen(true);},[openRequest?.token]);
+  useEffect(()=>{if(openRequest?.id!==note.id||openRequest?.scope!==note.scope)return;if(!openRequest.view||openRequest.view==='board')setBoardOpen(true);else if(openRequest.view==='text')setBoardOpen(false);},[openRequest?.token]);
   const scope=note.scope;
   const boardDirty=useMemo(()=>JSON.stringify(draft.board)!==JSON.stringify(saved.board),[draft.board,saved.board]);
   const dirty=retainedDirty||!persisted.current||draft.title!==saved.title||draft.body!==saved.body||boardDirty;
@@ -191,12 +191,13 @@ export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=fa
   const library=useRef(null),positions=useRef(null),openers=useRef(new Map()),tabId=useRef(null);
   if(tabId.current===null)tabId.current=draftTabId();
   if(positions.current===null){try{positions.current=JSON.parse(localStorage.getItem(key+':positions'))||{};}catch{positions.current={};}}
-  const [localSnapshot]=useState(()=>{try{const owner=localStorage.getItem(key+':tabId');if(owner&&owner!==tabId.current)return {windows:[],updatedAt:0};return {windows:validDraftWindows(JSON.parse(localStorage.getItem(key)),scope,notes),updatedAt:Number(localStorage.getItem(key+':updatedAt'))||0};}catch{return {windows:[],updatedAt:0};}});
+  const [localSnapshot]=useState(()=>{const record=readLocalDraftWindows(key,tabId.current);return {...record,windows:validDraftWindows(record.windows,scope,notes)};});
   const [windows,setWindows]=useState(localSnapshot.windows),[ready,setReady]=useState(false);
   const [search,setSearch]=useState('');
   const visibleWindows=useMemo(()=>scope==='shared'?windows.filter(windowNote=>notes.some(item=>noteKey(item)===noteKey(windowNote))):windows,[scope,windows,notes]);
   const matches=useMemo(()=>{const query=searchable(search.trim());return query?notes.filter(note=>[note.title,note.body,...(note.board?.nodes||[]).map(node=>node.text)].some(value=>searchable(value).includes(query))):notes;},[notes,search]);
   const [draftStorageError,setDraftStorageError]=useState('');
+  const [copies,setCopies]=useState(null),[copiesBusy,setCopiesBusy]=useState(false),[copyError,setCopyError]=useState(''),[recoveryEpoch,setRecoveryEpoch]=useState(0),[recoveryNotice,setRecoveryNotice]=useState('');
   const latestWindows=useRef(visibleWindows);latestWindows.current=visibleWindows;
   useEffect(()=>{
     let active=true;
@@ -207,20 +208,40 @@ export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=fa
   },[key]);
   const persist=useCallback(async items=>{
     const updatedAt=Date.now();let localSaved=false,idbSaved=false;
-    try{localStorage.setItem(key,JSON.stringify(items));localStorage.setItem(key+':updatedAt',String(updatedAt));localStorage.setItem(key+':tabId',tabId.current);localSaved=true;}catch{}
+    try{saveLocalDraftWindows(key,tabId.current,items,updatedAt);localSaved=true;}catch{}
     try{await saveDraftWindows(key,tabId.current,items,updatedAt);idbSaved=true;}catch{}
     setDraftStorageError(localSaved||idbSaved?'':'O navegador não conseguiu guardar este rascunho. Baixe uma cópia antes de fechar a página.');
   },[key]);
   useEffect(()=>{if(!ready)return;const timer=setTimeout(()=>{void persist(visibleWindows);},250);return()=>clearTimeout(timer);},[ready,visibleWindows,persist]);
-  useEffect(()=>{if(!ready)return;const flush=()=>{const items=latestWindows.current,updatedAt=Date.now();try{localStorage.setItem(key,JSON.stringify(items));localStorage.setItem(key+':updatedAt',String(updatedAt));localStorage.setItem(key+':tabId',tabId.current);}catch{}void saveDraftWindows(key,tabId.current,items,updatedAt).catch(()=>{});};window.addEventListener('pagehide',flush);return()=>{window.removeEventListener('pagehide',flush);flush();};},[key,ready]);
+  useEffect(()=>{if(!ready)return;const flush=()=>{const items=latestWindows.current,updatedAt=Date.now();try{saveLocalDraftWindows(key,tabId.current,items,updatedAt);}catch{}void saveDraftWindows(key,tabId.current,items,updatedAt).catch(()=>{});};window.addEventListener('pagehide',flush);return()=>{window.removeEventListener('pagehide',flush);flush();};},[key,ready]);
   useEffect(()=>{if(ready&&scope==='shared')setWindows(previous=>previous.filter(windowNote=>notes.some(item=>noteKey(item)===noteKey(windowNote))));},[ready,scope,notes]);
   function update(id,patch){setWindows(previous=>previous.map(windowNote=>noteKey(windowNote)===id?{...windowNote,...patch}:windowNote));}
   function place(id,position){positions.current[id]=position;try{localStorage.setItem(key+':positions',JSON.stringify(positions.current));}catch{}update(id,{position});}
   function open(raw,opener){const note={...raw,scope:raw.scope||scope};const id=noteKey(note);if(opener)openers.current.set(id,opener);setWindows(previous=>previous.some(windowNote=>noteKey(windowNote)===id)?[...previous.filter(windowNote=>noteKey(windowNote)!==id),previous.find(windowNote=>noteKey(windowNote)===id)]:previous.length>=10?previous:[...previous,{...note,position:positions.current[id]||clampPosition(110+previous.length*28,80+previous.length*28)}]);requestAnimationFrame(()=>document.getElementById(`note-window-${note.scope}-${note.id}`)?.querySelector('.note-drag')?.focus());}
   useEffect(()=>{if(!ready||!openRequest)return;const target=notes.find(note=>note.id===openRequest.id&&(note.scope||scope)===openRequest.scope);if(target)open(target);},[ready,openRequest?.token]);
   function focus(id){setWindows(previous=>{const found=previous.find(windowNote=>noteKey(windowNote)===id);return !found||previous.at(-1)===found?previous:[...previous.filter(windowNote=>noteKey(windowNote)!==id),found];});}
+  async function showCopies(){
+    setCopiesBusy(true);setCopyError('');
+    try{const records=await listDraftCopies(key,tabId.current);setCopies(records.map(record=>({...record,windows:validDraftWindows(record.windows,scope,notes)})).filter(record=>record.windows.some(note=>note.dirty||note.isNew||note.contentDirty)));}
+    catch{setCopyError('Não foi possível consultar as cópias. Tente novamente.');}
+    finally{setCopiesBusy(false);}
+  }
+  async function recoverCopy(record){
+    setCopiesBusy(true);setCopyError('');
+    // Retain current text as a separate copy before replacing open windows.
+    if(latestWindows.current.some(note=>note.dirty||note.isNew||note.contentDirty)){
+      const backupId=crypto.randomUUID(),updatedAt=Date.now();let kept=false;
+      try{saveLocalDraftWindows(key,backupId,latestWindows.current,updatedAt);kept=true;}catch{}
+      try{await saveDraftWindows(key,backupId,latestWindows.current,updatedAt);kept=true;}catch{}
+      if(!kept){setCopyError('Não foi possível guardar as janelas atuais. Baixe suas cópias antes de trocar o rascunho.');setCopiesBusy(false);return;}
+    }
+    setRecoveryEpoch(value=>value+1);setWindows(record.windows);setCopies(null);setCopiesBusy(false);setRecoveryNotice('Cópia recuperada. Revise as notas e salve quando quiser. Suas janelas anteriores também foram preservadas.');
+  }
   return <><details ref={library} className={`notebook notebook-library ${className}`}><summary><NotebookPen size={18} aria-hidden="true"/><span>{title}<small>{hint} · {notes.length} {notes.length===1?'nota':'notas'}</small></span></summary><div className="notebook-library-list">
     {!ready&&<p role="status">Preparando rascunhos…</p>}
+    {ready&&<button type="button" disabled={copiesBusy} onClick={showCopies}><History size={16} aria-hidden="true"/>{copiesBusy?'Consultando cópias…':'Recuperar rascunhos'}</button>}
+    {copies&&<section className="note-recovery" aria-label="Cópias locais"><h3>Cópias neste navegador</h3><p>Escolha uma cópia desta mesa e deste caderno. Ela será aberta para revisão, sem salvar na mesa.</p>{!copies.length&&<p>Nenhum outro rascunho disponível.</p>}{copies.map(record=><button key={record.id} type="button" disabled={copiesBusy} onClick={()=>recoverCopy(record)}><span>{record.windows.map(note=>note.title||'Nova nota').join(', ')}<small>{new Date(record.updatedAt).toLocaleString('pt-BR')}</small><small>{record.windows.map(note=>note.body||'').join(' · ').slice(0,100)}</small></span><span>Abrir cópia</span></button>)}<button type="button" disabled={copiesBusy} onClick={()=>setCopies(null)}>Fechar lista de cópias</button></section>}
+    {copyError&&<p role="alert">{copyError}</p>}{recoveryNotice&&<p role="status">{recoveryNotice}</p>}
     {!readOnly&&scope!=='shared'&&<button type="button" className="note-new" disabled={!ready||windows.length>=10} onClick={event=>open({id:crypto.randomUUID(),title:'Nova nota',body:'',board:emptyNoteBoard(),isNew:true},event.currentTarget)}><Plus size={16} aria-hidden="true"/>Nova nota</button>}
     {notes.length>0&&<label className="note-search">Buscar em {title.toLowerCase()}<input type="search" name={`note-search-${scope}`} autoComplete="off" value={search} onChange={event=>setSearch(event.target.value)} maxLength={100} placeholder="Título, texto ou ideia…"/></label>}
     {search.trim()&&<p role="status">{matches.length} {matches.length===1?'nota encontrada':'notas encontradas'}</p>}
@@ -230,5 +251,8 @@ export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=fa
     {!!windows.length&&<button onClick={()=>setWindows(previous=>previous.map((windowNote,index)=>({...windowNote,position:{...windowNote.position,...clampPosition(24+index*24,80+index*24),docked:false,expanded:false}})))}><LocateFixed size={16} aria-hidden="true"/>Reunir janelas ({windows.length})</button>}
     {windows.length>=10&&<p>Feche uma janela para abrir outra nota.</p>}
     {draftStorageError&&<p role="alert">{draftStorageError}</p>}
-  </div></details>{createPortal(ready?visibleWindows.map((note,index)=>{const id=noteKey(note),latest=notes.find(item=>noteKey({...item,scope:item.scope||scope})===id);return <NoteWindow key={id} note={note} latest={latest} position={note.position} readOnly={readOnly} onSave={onSave} onShare={onShare} members={members} username={username} canShare={canShare} draftStorageError={draftStorageError} points={points} onOpenPoint={onOpenPoint} openRequest={openRequest} roomId={roomId} onClose={()=>{setWindows(previous=>previous.filter(windowNote=>noteKey(windowNote)!==id));const opener=openers.current.get(id);if(opener?.isConnected)opener.focus();else library.current?.querySelector('summary')?.focus();openers.current.delete(id);}} onPosition={position=>place(id,position)} onDraft={draft=>update(id,draft)} onFocus={()=>focus(id)} zIndex={70+index}/>;}):[],document.body)}</>;
+  </div></details>{createPortal(ready?visibleWindows.map((note,index)=>{const id=noteKey(note),latest=notes.find(item=>noteKey({...item,scope:item.scope||scope})===id);return <NoteWindow key={`${id}:${recoveryEpoch}`} note={note} latest={latest} position={note.position} readOnly={readOnly||copiesBusy} onSave={onSave} onShare={onShare} members={members} username={username} canShare={canShare} draftStorageError={draftStorageError} points={points} onOpenPoint={onOpenPoint} openRequest={openRequest} roomId={roomId} onClose={()=>{setWindows(previous=>previous.filter(windowNote=>noteKey(windowNote)!==id));const opener=openers.current.get(id);if(opener?.isConnected)opener.focus();else library.current?.querySelector('summary')?.focus();openers.current.delete(id);}} onPosition={position=>place(id,position)} onDraft={draft=>update(id,draft)} onFocus={()=>focus(id)} zIndex={70+index}/>;}):[],document.body)}</>;
 }
+
+
+

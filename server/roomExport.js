@@ -12,24 +12,28 @@ import {isMapPointRevealed,isMapStrokeRevealed} from '../src/shared/mapFog.js';
 import {visibleMapPositions} from '../src/shared/mapPositions.js';
 import {visibleMapRoutes} from '../src/shared/mapExploration.js';
 import {visibleCampaignScenes} from '../src/shared/campaignScenes.js';
+import {projectTabletopReferences} from './tabletopReferences.js';
 import {createExportWorkspace,defaultExportRoot} from './exportWorkspace.js';
+import {projectDiceEntry} from './diceHistory.js';
+import {projectCombat} from './combat.js';
 
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value,key)).map(key=>[key,value[key]]));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const MAX_BYTES=1024*1024*1024,TTL=5*60*1000;
 
-function projection(db,{roomId,user,viewMode,normalizeTurns}){
+function projection(db,{roomId,user,viewMode}){
   const room=db.prepare('SELECT * FROM rooms WHERE id=?').get(roomId);
   const members=db.prepare('SELECT u.id,u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE room_id=? ORDER BY u.username').all(roomId);
   const role=members.find(member=>member.id===user.id)?.role,master=canManageMap(role,viewMode);
-  const raw=normalizeTurns(JSON.parse(room.state),members);
+  const raw=JSON.parse(room.state);
   const state=pick(raw,Object.keys(createRoomState())),names=new Set(members.map(member=>member.username));
+  state.combat=projectCombat(raw.combat,master);
   state.points=raw.points.filter(point=>master||isMapPointRevealed(raw.mapFog,point)).map(point=>pick(point,['id','name','description','type','x','y']));
   state.mapStrokes=raw.mapStrokes.filter(stroke=>canReadMapStroke(role,viewMode,stroke)&&(master||isMapStrokeRevealed(raw.mapFog,stroke)));
   state.mapPositions={enabled:raw.mapPositions.enabled,markers:visibleMapPositions(raw.mapPositions,members,master,raw.mapFog)};
   state.mapRoutes=visibleMapRoutes(raw.mapRoutes,master,raw.mapFog);
-  state.campaignScenes=visibleCampaignScenes(raw.campaignScenes,state.points,master);
+  state.campaignScenes=visibleCampaignScenes(raw.campaignScenes,state.points,master,raw.scenePresentation);
   state.statusBarsData=Object.fromEntries(Object.entries(raw.statusBarsData).filter(([name])=>names.has(name)));
   const groupBars=Object.fromEntries(members.map(member=>[member.username,{
     ...raw.statusBarsData[member.username],
@@ -63,6 +67,7 @@ function projection(db,{roomId,user,viewMode,normalizeTurns}){
     }
   }
   const assetIds=new Set(),histories=[];
+  state.mapObjects=projectTabletopReferences(raw,{username:user.username,role,viewMode,members},{includeUnavailable:false});
   const addAssets=board=>board.nodes.forEach(node=>{if(node.assetId)assetIds.add(node.assetId);});
   for(const {scope,note,manager} of notes){
     addAssets(note.board);
@@ -73,13 +78,16 @@ function projection(db,{roomId,user,viewMode,normalizeTurns}){
   }
   const noteAssets=db.prepare('SELECT id,owner_id,name,mime,bytes,created_at FROM note_assets WHERE room_id=? ORDER BY id').all(roomId).filter(asset=>asset.owner_id===user.id||assetIds.has(asset.id));
   const models=db.prepare('SELECT id FROM map_assets WHERE room_id=? ORDER BY id').all(roomId);
+  const mediaIds=new Set(state.campaignScenes.map(scene=>scene.mediaId).filter(Boolean));
+  const sceneMedia=db.prepare('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? ORDER BY id').all(roomId).filter(asset=>master||mediaIds.has(asset.id));
   const structures=db.prepare('SELECT id FROM dice_structures WHERE room_id=? ORDER BY id').all(roomId);
   const audit=master?db.prepare('SELECT * FROM room_audit WHERE room_id=? ORDER BY sequence DESC').all(roomId).map(row=>({sequence:row.sequence,actor:{id:row.actor_id,username:row.actor_username},action:row.action,details:JSON.parse(row.details),createdAt:row.created_at,revision:row.revision})):[];
-  return {room:pick(room,['id','name','revision']),members,state,groupBars,raw,master,histories,noteAssets,models,structures,audit,role,
-    counts:{points:state.points.length,notes:notes.length,versions:histories.reduce((n,h)=>n+h.versions.length,0),noteImages:noteAssets.length,models:models.length,scenes:state.campaignScenes.length,participants:members.length,audit:audit.length}};
+  const diceHistory=db.prepare('SELECT entry FROM dice_rolls WHERE room_id=? ORDER BY created_at DESC,id DESC').all(roomId).map(row=>projectDiceEntry(JSON.parse(row.entry),state.campaignScenes));
+  return {room:pick(room,['id','name','revision']),members,state,groupBars,raw,master,histories,noteAssets,models,sceneMedia,structures,audit,diceHistory,role,
+    counts:{points:state.points.length,notes:notes.length,versions:histories.reduce((n,h)=>n+h.versions.length,0),noteImages:noteAssets.length,models:models.length,scenes:state.campaignScenes.length,participants:members.length,audit:audit.length,diceRolls:diceHistory.length}};
 }
 
-export function createRoomExports({db,renderMapFog,normalizeTurns,exportRoot=defaultExportRoot()}){
+export function createRoomExports({db,renderMapFog,exportRoot=defaultExportRoot()}){
   const jobs=new Map();let workspace,closed=false;
   const guard=roomId=>{
     const room=db.prepare('SELECT revision FROM rooms WHERE id=?').get(roomId);
@@ -116,7 +124,7 @@ export function createRoomExports({db,renderMapFog,normalizeTurns,exportRoot=def
       for(const job of jobs.values())if(job.expiresAt<=Date.now())remove(job);
       if([...jobs.values()].some(job=>job.userId===user.id))fail(429,'Você já tem uma exportação em preparo ou disponível. Cancele-a antes de preparar outra.');
       if(jobs.size>=4)fail(503,'O servidor já está preparando outras cópias. Aguarde um momento e tente novamente.');
-      const expectedGuard=guard(roomId),plan=projection(db,{roomId,user,viewMode,normalizeTurns});
+      const expectedGuard=guard(roomId),plan=projection(db,{roomId,user,viewMode});
       if(expectedGuard!==guard(roomId))fail(409,'A mesa mudou durante a leitura. Prepare a cópia novamente.');
       const job={id:randomUUID(),roomId,userId:user.id,tokenHash:user.token_hash,viewMode:plan.master?'master':'player',guard:expectedGuard,expiresAt:Date.now()+TTL,controller:new AbortController(),bytes:0,revision:plan.room.revision,counts:plan.counts};
       jobs.set(job.id,job);
@@ -158,12 +166,17 @@ export function createRoomExports({db,renderMapFog,normalizeTurns,exportRoot=def
           const bundle=JSON.parse(row.bundle);
           await w((i?',':'')+JSON.stringify({id:asset.id,...pick(bundle,['main','files','kind','bytes'])}));
         }
+        await w('],"sceneMedia":[');
+        for(let i=0;i<plan.sceneMedia.length;i++){
+          check(job,checkAccess);const asset=plan.sceneMedia[i],row=db.prepare('SELECT data FROM scene_media WHERE room_id=? AND id=?').get(roomId,asset.id);
+          await w((i?',':'')+JSON.stringify({...asset,data:`data:${asset.mime};base64,${Buffer.from(row.data).toString('base64')}`}));
+        }
         await w('],"diceStructures":[');
         for(let i=0;i<plan.structures.length;i++){
           check(job,checkAccess);const row=db.prepare('SELECT id,name,mesh FROM dice_structures WHERE room_id=? AND id=?').get(roomId,plan.structures[i].id);
           await w((i?',':'')+JSON.stringify({...row,mesh:JSON.parse(row.mesh)}));
         }
-        await w(']},"audit":'+JSON.stringify(plan.audit)+'}');
+        await w(']},"audit":'+JSON.stringify(plan.audit)+',"diceHistory":'+JSON.stringify(plan.diceHistory)+'}');
         const finished=once(job.stream,'finish',{signal:job.controller.signal});job.stream.end();await finished;
         job.stream=null;job.bytes=(await stat(job.path)).size;check(job,checkAccess);job.ready=true;
         return metadata(job);

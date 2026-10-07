@@ -5,7 +5,7 @@ import { Dices, RotateCw, ArrowUp, ArrowDown, Hash, ListChecks, ShoppingBag, X, 
 
 const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
 
-const DiceRoller = ({onTrayRoll,sharedOnly=false}) => {
+const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
   const [trayEnabled,setUseTray]=useState(false),[trayBusy,setTrayBusy]=useState(false),[trayError,setTrayError]=useState('');
   const useTray=sharedOnly||trayEnabled;
   const [terms, setTerms] = useState([{ id: 'init', sign: 1, qty: 1, sides: 20 }]);
@@ -17,6 +17,8 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false}) => {
   const [skinId, setSkinId] = useState(DICE_SKINS[0].id);
   const [pouchOpen, setPouchOpen] = useState(false);
   const pendingRoll = useRef(null);
+  const [sceneChoice,setSceneChoice]=useState('');
+  const availableScenes=scenes.filter(scene=>!scene.archived),sceneId=availableScenes.some(scene=>scene.id===sceneChoice)?sceneChoice:'';
 
   const addTerm = (sides) => {
     if (rolling) return;
@@ -52,7 +54,7 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false}) => {
       if(terms.reduce((n,t)=>n+t.qty*(t.sides===100?2:1),0)>20){setTrayError('A mão comporta até 20 dados físicos (d100 usa dois).');return;}
       if(trayBusy||terms.length===0)return;
       setTrayBusy(true);setTrayError('');
-      try{const result=await onTrayRoll(terms,skinId);if(result===false)setTrayError('Não foi possível rolar. Confira a mensagem da mesa e tente novamente.');}finally{setTrayBusy(false);}
+      try{const result=await onTrayRoll(terms,skinId,{sceneId:sceneId||null});if(result===false)setTrayError('Não foi possível rolar. Confira a mensagem da mesa e tente novamente.');}finally{setTrayBusy(false);}
       return;
     }
     if (rolling || terms.length === 0) return;
@@ -172,6 +174,7 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false}) => {
       </div>}
 
       {trayError&&<p className="tray-send-error" role="alert">{trayError}</p>}
+      {useTray&&availableScenes.length>0&&<label className="dice-scene-label">Cena da rolagem (opcional)<select name="rollScene" autoComplete="off" value={sceneId} disabled={trayBusy} onChange={event=>setSceneChoice(event.target.value)}><option value="">Sem cena</option>{availableScenes.map(scene=><option key={scene.id} value={scene.id}>{scene.title}</option>)}</select></label>}
       <button className="roll-btn" onClick={rollDice} disabled={rolling || trayBusy || terms.length === 0}>
         <RotateCw size={18} className={rolling ? 'spin' : ''} />
         {trayBusy?'Enviando…':rolling ? 'Rolando...' : useTray?'Pegar dados na mão':'Rolar'}

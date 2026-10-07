@@ -48,7 +48,8 @@ test('exportação portátil conserva estado, histórico, imagens e modelos auto
   await f.call('owner',f.root+'/members','POST',{username:'alice'});
   const image=await f.call('owner',f.root+'/note-assets','POST',{name:'Selo',src:testMapImage});
   assert.equal(image.status,201);
-  const model=await f.call('owner',f.root+'/map-assets','POST',{main:'cabana.obj',files:[{name:'cabana.obj',data:'data:text/plain;base64,diAwIDAgMFxu'},{name:'cabana.mtl',data:'data:text/plain;base64,bmV3bXRsIGNhYmFuYQ=='}]});
+  const modelSource='data:text/plain;base64,'+Buffer.from('mtllib cabana.mtl\nusemtl cabana\nv 0 0 0\nv 1 0 0\nv 0 0 1\nf 1 2 3\n').toString('base64');
+  const model=await f.call('owner',f.root+'/map-assets','POST',{main:'cabana.obj',files:[{name:'cabana.obj',data:modelSource},{name:'cabana.mtl',data:'data:text/plain;base64,bmV3bXRsIGNhYmFuYQ=='}]});
   assert.equal(model.status,201);
   // Existing valid bundles may have whitespace (for example a reviewed legacy record).
   const asset=model.data.state.mapObjects[0].assetId;
@@ -67,7 +68,7 @@ test('exportação portátil conserva estado, histórico, imagens e modelos auto
   assert.deepEqual(file.noteHistory.find(h=>h.scope==='@master').versions.map(v=>v.body),['Texto atual','Primeiro texto']);
   assert.equal(file.assets.notes[0].data,testMapImage);assert.equal(file.assets.notes[0].id,image.data.id);
   assert.deepEqual(file.assets.models[0].files.map(v=>v.name),['cabana.obj','cabana.mtl']);
-  assert.equal(file.assets.models[0].files[0].data,'data:text/plain;base64,diAwIDAgMFxu');
+  assert.equal(file.assets.models[0].files[0].data,modelSource);
   assert.equal(file.state.playerSheets.owner.notebooks[0].body,'Meu texto');
   assert.deepEqual(file.audit,auditBefore.entries);
   assert.equal(prepared.counts.notes,2);assert.equal(prepared.counts.noteImages,1);assert.equal(prepared.counts.models,1);
@@ -161,7 +162,7 @@ test('arquivos preparados expiram, podem ser cancelados e perdem acesso com alte
   assert.equal((await f.call('alice',f.root+'/exports/'+player.id)).status,409);
   assert.equal((await f.call('alice',f.root+'/exports','POST',{viewMode:'player'})).status,201);
   // Cancel a real HTTP preparation while the large asset is being written to disk.
-  const model=Buffer.alloc(6*1024*1024,0x61).toString('base64');
+  const model=Buffer.concat([Buffer.from('# '),Buffer.alloc(6*1024*1024,0x61),Buffer.from('\nv 0 0 0\nv 1 0 0\nv 0 0 1\nf 1 2 3\n')]).toString('base64');
   assert.equal((await f.call('owner',f.root+'/map-assets','POST',{main:'large.obj',files:[{name:'large.obj',data:'data:text/plain;base64,'+model}]})).status,201);
   const controller=new AbortController();
   const aborted=fetch(f.base+f.root+'/exports',{method:'POST',headers:{Cookie:f.cookies.owner,'Content-Type':'application/json'},body:JSON.stringify({viewMode:'master'}),signal:controller.signal});

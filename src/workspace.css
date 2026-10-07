@@ -52,8 +52,8 @@
 .mist-theme .turn-heading{gap:8px}
 .mist-theme .turn-heading p{margin:0;font-size:14px}
 .mist-theme .turn-heading .eyebrow{font-size:8px;margin:0 0 2px}
-.mist-theme .turn-actions button{font:12px var(--workspace-font);min-height:36px;min-width:36px;padding:6px 10px}
-.mist-theme .turn-tracker summary{font-size:12px;min-height:32px;padding:8px 0 0}
+.mist-theme .turn-actions button{font:12px var(--workspace-font);min-height:44px;min-width:44px;padding:6px 10px}
+.mist-theme .turn-tracker summary{font-size:12px;min-height:44px;padding:6px 10px}
 .mist-theme .turn-order li{padding:8px 0}
 .mist-theme .turn-order{margin-top:8px;max-height:280px;overflow:auto}
 .mist-theme .notebook{border:1px solid var(--workspace-edge);background:#211e17;border-radius:3px;min-width:0;margin-top:18px}

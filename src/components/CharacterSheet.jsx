@@ -1,4 +1,3 @@
-import Notebook from './Notebook.jsx';
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
 import { DICE_SKINS } from './Dice3D.jsx';
@@ -327,7 +326,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
               <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
             </section>)}</div>
-            <Notebook key={notebookKey+':'+activePlayer} storageKey={notebookKey+':'+activePlayer} title="Observações do jogador" hint="Notas salvas · abrir janelas" scope={activePlayer} username={notebookUsername} members={notebookMembers} canShare={!readOnly} notes={activeEntry.notebooks||[]} readOnly={readOnly} points={mapPoints} onOpenPoint={onOpenPoint} openRequest={openNoteRequest} roomId={roomId} onSave={(_,id,note)=>onSaveNote(activePlayer,id,note)} onShare={(_,id,data)=>onShareNote(activePlayer,id,data)}/>
+            <p className="sheet-notes-help">{activePlayer===notebookUsername?'Crie e abra suas anotações em Minhas notas, na faixa acima.':'As notas pessoais são privadas. Notas compartilhadas com você aparecem na faixa acima.'}</p>
           </>}
         </div>
       </div>

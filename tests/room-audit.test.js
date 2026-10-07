@@ -44,8 +44,8 @@ test('registro administrativo identifica autores, conserva ordem e páginas e ex
     assert.equal((await f.call('master',f.root+'/invites/'+invite.data.id,'DELETE')).status,200);
     assert.equal((await f.call('owner',f.root+'/members/'+f.users.alice,'PATCH',{role:'master',actor:'outsider'})).status,200);
     const all=await f.call('master',audit);assert.equal(all.status,200);
-    assert.deepEqual(all.data.entries.map(e=>e.action),['member.role','invite.revoked','member.joined','invite.created','member.added','member.added','room.created']);
-    assert.deepEqual(all.data.entries.map(e=>e.actor.username),['owner','master','bob','master','master','owner','owner']);
+    assert.deepEqual(all.data.entries.map(e=>e.action),['member.role','turns.changed','invite.revoked','member.joined','invite.created','member.added','member.added','room.created']);
+    assert.deepEqual(all.data.entries.map(e=>e.actor.username),['owner','owner','master','bob','master','master','owner','owner']);
     assert.equal(all.data.entries[0].details.target,'alice');assert.equal(all.data.entries[0].details.fromRole,'player');assert.equal(all.data.entries[0].details.role,'master');
     assert.equal(JSON.stringify(all.data).includes(invite.data.code),false);assert.equal(JSON.stringify(all.data).includes('password'),false);
     for(const entry of all.data.entries){assert.ok(Number.isSafeInteger(entry.sequence));assert.ok(entry.createdAt>0);assert.ok(Number.isSafeInteger(entry.revision));}
@@ -70,7 +70,7 @@ test('ação e registro são atômicos; migração, retenção, reinício e rest
     const audit=f.root+'/audit',before=(await f.call('owner',f.root)).data;
     await f.stop();
     // A real version-1 database: preserve its original tables, state and sessions.
-    const old=new DatabaseSync(f.dbPath);old.exec('DROP INDEX idx_sessions_expires; DROP INDEX idx_invites_expires; DROP TABLE room_audit; DELETE FROM schema_migrations WHERE version>=2; PRAGMA user_version=1;');old.close();
+    const old=new DatabaseSync(f.dbPath);old.exec('DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DROP INDEX idx_sessions_expires; DROP INDEX idx_invites_expires; DROP TABLE room_audit; DELETE FROM schema_migrations WHERE version>=2; PRAGMA user_version=1;');old.close();
     const oldBackup=join(f.directory,'version1.sqlite');await createBackup(f.dbPath,oldBackup);const oldBytes=readFileSync(oldBackup);
     assert.equal((await verifyBackup(oldBackup)).database.userVersion,1);
     const migrated=join(f.directory,'migrated.sqlite');await restoreBackup(oldBackup,migrated);await f.start(migrated);
@@ -123,7 +123,7 @@ test('alterações importantes registram somente tipos e autores; conteúdo priv
     room=await view();await write('owner','/map-fog',{operation:'enable',version:room.fogVersion});
     room=await view();await write('owner','/map-position-settings',{enabled:true,version:room.mapPositionSettingsVersion});
     await write('owner','/campaign-scenes',{id:'scene',title:'Cena reservada',body:'Texto da cena',pointIds:['secret']},'POST');
-    await write('owner','/turns',{action:'next'},'POST');
+    await write('owner','/turns',{action:'next',version:(await f.call('owner',f.root)).data.state.combat.version},'POST');
     const bundle={main:'private-name.obj',kind:'terrain',files:[{name:'private-name.obj',data:'data:text/plain;base64,'+Buffer.from('v 0 0 0\nv 1 0 0\nv 0 0 1\nf 1 2 3').toString('base64')}]};
     const imported=await write('owner','/map-assets',bundle,'POST');await write('owner','/map-objects/'+imported.state.mapObjects[0].id,{position:[4,5,6]});
     list=(await f.call('owner',audit)).data;

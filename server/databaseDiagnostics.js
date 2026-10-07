@@ -30,11 +30,14 @@ export function inspectDatabaseUsage(path,{full=false}={}){
       const models=tables.has('map_assets')?sum(db,'map_assets','length(CAST(bundle AS BLOB))',room.id):{count:0,bytes:0};
       const modelSource=tables.has('map_assets')?db.prepare('SELECT COALESCE(sum(bytes),0) AS bytes FROM map_assets WHERE room_id=?').get(room.id).bytes:0;
       const images=tables.has('note_assets')?sum(db,'note_assets','length(data)',room.id):{count:0,bytes:0};
+      const sceneMedia=tables.has('scene_media')?sum(db,'scene_media','length(data)',room.id):{count:0,bytes:0};
       const histories=tables.has('note_versions')?sum(db,'note_versions','length(CAST(content AS BLOB))+length(CAST(shared_with AS BLOB))+length(CAST(asset_ids AS BLOB))+length(CAST(summary AS BLOB))',room.id):{count:0,bytes:0};
       const records=tables.has('room_audit')?sum(db,'room_audit','length(CAST(details AS BLOB))',room.id):{count:0,bytes:0};
       const structures=tables.has('dice_structures')?sum(db,'dice_structures','length(CAST(mesh AS BLOB))',room.id):{count:0,bytes:0};
+      const diceRolls=tables.has('dice_rolls')?sum(db,'dice_rolls','length(CAST(entry AS BLOB))',room.id):{count:0,bytes:0};
+      const diceLive=tables.has('dice_live')?sum(db,'dice_live','length(CAST(roll AS BLOB))',room.id):{count:0,bytes:0};
       const stateBytes=Buffer.byteLength(room.state||'');
-      return {roomId:room.id,stateBytes,models:{count:models.count,payloadBytes:models.bytes,sourceBytes:modelSource},images:{count:images.count,payloadBytes:images.bytes},histories:{count:histories.count,payloadBytes:histories.bytes},records:{count:records.count,payloadBytes:records.bytes},structures:{count:structures.count,payloadBytes:structures.bytes},estimatedPayloadBytes:stateBytes+models.bytes+images.bytes+histories.bytes+records.bytes+structures.bytes};
+      return {roomId:room.id,stateBytes,models:{count:models.count,payloadBytes:models.bytes,sourceBytes:modelSource},images:{count:images.count,payloadBytes:images.bytes},histories:{count:histories.count,payloadBytes:histories.bytes},records:{count:records.count,payloadBytes:records.bytes},structures:{count:structures.count,payloadBytes:structures.bytes},diceRolls:{count:diceRolls.count,payloadBytes:diceRolls.bytes},diceLive:{count:diceLive.count,payloadBytes:diceLive.bytes},sceneMedia:{count:sceneMedia.count,payloadBytes:sceneMedia.bytes},estimatedPayloadBytes:sceneMedia.bytes+stateBytes+models.bytes+images.bytes+histories.bytes+records.bytes+structures.bytes+diceRolls.bytes+diceLive.bytes};
     });
     const counts=Object.fromEntries(Object.keys(DATABASE_TABLES).filter(table=>tables.has(table)).map(table=>[table,db.prepare(`SELECT count(*) AS count FROM ${table}`).get().count]));
     const pageSize=db.prepare('PRAGMA page_size').get().page_size,pageCount=db.prepare('PRAGMA page_count').get().page_count,freePages=db.prepare('PRAGMA freelist_count').get().freelist_count;

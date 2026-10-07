@@ -28,7 +28,8 @@ test('shared notes permit invited editors, stream changes, protect drafts and ke
     assert.equal((await call('alice',root+'/notes/alice/invalid-category','PATCH',{title:'Inválido',body:'',board:{...expandedBoard,nodes:[{...expandedBoard.nodes[0],category:'monster'}]}})).status,400);
     assert.equal((await call('alice',root+'/notes/alice/invalid-tags','PATCH',{title:'Inválido',body:'',board:{...expandedBoard,nodes:[{...expandedBoard.nodes[0],tags:['Pista','pista']}]}})).status,400);
     assert.equal((await call('alice',root+'/notes/alice/expanded','PATCH',{title:'Quadro amplo',body:'',board:expandedBoard})).status,200);
-    assert.deepEqual((await call('alice',root)).data.state.playerSheets.alice.notebooks.find(note=>note.id==='expanded').board,expandedBoard);
+    const {pointId:missingPoint,...visibleNode}=expandedBoard.nodes[0];
+    assert.deepEqual((await call('alice',root)).data.state.playerSheets.alice.notebooks.find(note=>note.id==='expanded').board,{...expandedBoard,nodes:[visibleNode]});
     assert.equal((await call('alice',root+'/notes/alice/private-point','PATCH',{title:'Segredo privado do portão',body:'Só Alice vê',board:expandedBoard})).status,200);
     assert.equal((await call('alice',root+'/notes/alice/invalid','PATCH',{title:'Inválido',body:'',board:{...board,edges:[{id:'e1',from:'n1',to:'ausente'}]}})).status,400);
     assert.equal((await call('alice',root+'/notes/alice/invalid-label','PATCH',{title:'Inválido',body:'',board:{...board,edges:[{...board.edges[0],label:'A'.repeat(81)}]}})).status,400);

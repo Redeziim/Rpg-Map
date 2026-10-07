@@ -38,7 +38,7 @@ O papel é por mesa: a mesma conta pode ser ADM de uma campanha e jogador em out
 | Consultar mapa, pontos e traços fora das áreas reveladas | Não | Sim | No modo mestre |
 | Ler cenas compartilhadas da campanha | Com ponto revelado, ou cena sem pontos | Sim | Nos dois modos, conforme a visão |
 | Criar, editar, compartilhar, arquivar e restaurar cenas | Não | Sim | No modo mestre |
-| Alterar modelo de ficha e notas do mestre | Não | Sim | Sim |
+| Definir a iluminação da Mesa 3D para todos | Não | Sim | No modo mestre | Não | Sim | Sim |
 | Adicionar/convidar jogadores | Não | Sim | Sim |
 | Atribuir papéis e remover participantes | Não | Não | Sim |
 | Consultar registro de alterações da mesa | Não | Sim | No modo mestre |
@@ -66,6 +66,14 @@ O navegador envia `mapImageVersion` capturada ao abrir a prévia. Uma versão an
 Se a API ou a rede cair, a mesa tenta reconectar e consulta o acesso atual. Sessão expirada ou encerrada leva à entrada com um aviso; entrar na mesma conta retoma a mesa anterior enquanto a página continua aberta. Outra conta abre a lista de mesas. Se você foi removido de uma mesa, o aviso aparece nessa lista e sua conta continua conectada.
 
 Rascunhos de notas continuam locais e versões antigas exigem comparação antes de salvar. Uma resposta perdida pode acontecer depois de a alteração ter sido salva: confira a versão da mesa antes de repetir. A aplicação não reenvia automaticamente. Consulte [comportamento, testes e limites da recuperação](docs/RECONNECTION.md).
+
+Notas pessoais são privadas por autoria/compartilhamento explícito também diante de mestre/ADM. Minhas notas está disponível a todos os papéis em todas as abas. O caderno da campanha @master continua gerenciado por mestres/ADM. HTTP e SSE aceitam mapViewMode=master|player mantendo o papel real; a visão de jogador do ADM não envia dados de mestre. Vínculos dos objetos resolvem seus destinos pela autorização atual e não mudam o compartilhamento. Contrato, endpoints e migração do estado para 3 em [TABLETOP_REFERENCES.md](docs/TABLETOP_REFERENCES.md).
+
+## Importar modelos 3D
+
+Em Mesa 3D → Ferramentas, a importação mostra preparação, bytes enviados quando mensuráveis e conferência/salvamento. Cancelar conserva os arquivos selecionados e confere se o servidor já tinha adicionado o objeto. Se o resultado não puder ser consultado, Verificar resultado bloqueia outro envio até esclarecer a operação, inclusive após recarga na mesma conta/mesa. Não há reenvio automático.
+
+O protocolo usa `POST /api/rooms/:roomId/map-imports`, `GET/DELETE /api/rooms/:roomId/map-imports/:id` e `POST /api/rooms/:roomId/map-assets?importId=:id`; publicação exige modo mestre e permissão atual. A confirmação é privada do autor. O banco 4 acrescenta somente a tabela/índice desses metadados; operações pendentes têm três minutos e confirmações vencem em sete dias. Clientes antigos continuam compatíveis sem identificador. Consulte [protocolo, recuperação e limites](docs/MODEL_IMPORT_PROGRESS.md) e [migrações](docs/MIGRATIONS.md).
 
 ## Reutilizar imagens
 
@@ -106,7 +114,7 @@ Coloque esse contêiner atrás de um proxy HTTPS. `PUBLIC_ORIGIN` deve correspon
 
 - SQLite em `data/grimorio.sqlite` por padrão. Contas, sessões e conteúdo salvo das mesas ficam no servidor e sobrevivem a reinícios. Rascunhos de notas usam as cópias locais autorizadas em `localStorage` e IndexedDB; imagens recebidas também podem permanecer no cache privado do navegador.
 - Use uma instância de servidor com esse banco e mantenha o volume entre deploys. Para várias réplicas, é necessária outra estratégia de banco e distribuição de eventos.
-- O início executa migrações numeradas antes de abrir a API. Banco atual: `user_version=2`, identificador `GRIM`, mesas com `stateVersion: 1`. A migração 002 acrescenta o registro da mesa e conserva o estado/revisão existentes; banco e backups conhecidos da versão 1 continuam reconhecidos. SQL, marcadores, histórico de migrações e conversão dos estados são transacionais; erro em qualquer mesa reverte o conjunto. Campos atuais não são reconstruídos somente no snapshot. Faça backup e teste a cópia antes do deploy; consulte [MIGRATIONS.md](docs/MIGRATIONS.md).
+- O início executa migrações numeradas antes de abrir a API. Banco atual: `user_version=6`, identificador `GRIM`, mesas com `stateVersion: 6`. SQL 004 acrescenta confirmações de importação, SQL 005 acrescenta histórico/confirmações de rolagens, SQL 006 acrescenta confirmações de combate; JSON 004 acrescenta iluminação da Mesa 3D e JSON 005 reúne o combate confirmado e JSON 006 acrescenta condições/efeitos. Suas versões são independentes. SQL, marcadores, histórico de migrações e conversão dos estados são transacionais; erro em qualquer mesa reverte o conjunto. Bancos e manifestos conhecidos anteriores conservam suas identidades/contagens; a atualização ocorre ao abrir a cópia restaurada. Faça backup e teste a cópia antes do deploy; consulte [MIGRATIONS.md](docs/MIGRATIONS.md).
 - Execute `npm run backup` regularmente. O comando cria uma cópia SQLite consistente em `data/backups/` mesmo com o servidor em funcionamento e verifica integridade, referências e formato da cópia. Use `npm run backup -- /caminho/backup.sqlite` para escolher o destino. Guarde também o manifesto `backup.sqlite.json`, com versão, esquema, contagens e checksum. Mantenha cópias fora do servidor. Use `npm run restore -- --verify /caminho/backup.sqlite` para conferir e `npm run restore -- /caminho/backup.sqlite /caminho/novo.sqlite` para restaurar sem sobrescrever. Siga o [procedimento de restauração e ensaio isolado](docs/RESTORE.md).
 - Os dados locais antigos no navegador são preservados, mas não são importados automaticamente para mesas online.
 - Escritas relacionadas de modelos/objetos, notas/histórico, cadastro/sessão e mudanças de participantes usam transações. Alterações de acesso confirmam papel, turnos, posição, convites e uma revisão juntos; uma falha conserva os dados anteriores. Pacotes 3D só são removidos após a última referência da mesa. A coleção de imagens permanece independente do salvamento posterior da nota. Consulte [a revisão dos salvamentos](docs/TRANSACTIONS.md).
@@ -159,7 +167,11 @@ Nas outras abas do site, lançamentos aparecem em uma bandeja ampliada no canto,
 
 ## Mesa 3D compartilhada
 
-Em **Mapa → Mesa 3D**, Mestre e ADM podem importar terreno e estruturas. Jogadores exploram com sua própria câmera e veem as alterações nos objetos ao vivo, sem poder editá-los.
+Em **Mapa → Mesa 3D**, Mestre e ADM em modo mestre podem importar terreno e estruturas. Jogador e ADM em modo jogador exploram com sua própria câmera e veem as alterações nos objetos ao vivo, sem poder editá-los.
+
+Selecionar os arquivos oferece **Ver prévia**. O modelo aparece na própria cena com contorno dourado e **Prévia — só você**; não é gravado ou sincronizado. Use Mover/Girar/Tamanho ou abra Ajustar por números. Cancelar conserva os arquivos e a mesa. Somente Adicionar à mesa inicia o envio e confirma a transformação mostrada. O tamanho inicial mantém a normalização de 30 unidades para terreno e 5 para estrutura; 1 unidade corresponde a um quadrado da grade. Consulte [prévia, testes e limites](docs/MODEL_PREVIEW.md).
+
+**Ferramentas → Objetos da mesa** permite marcar vários objetos, agrupar, duplicar e bloquear. Grupos têm identidade estável e mantêm as poses ao desagrupar; duplicações reutilizam os arquivos. Bloqueio impede mover/girar/mudar tamanho também pela API. Lotes antigos exigem revisão e preservam o ajuste nesta janela. O primeiro início migra estados antigos em transação, mantendo arquivos e acesso; o esquema SQLite atual é 7, com histórico de rolagens e confirmações de combate. Faça backup e ensaio em cópia antes de atualizar o serviço, conforme [migrações](docs/MIGRATIONS.md). Consulte [contrato e validação dos grupos](docs/TABLETOP_OBJECTS.md).
 
 - Formatos: GLB/GLTF, OBJ com MTL, FBX e PNG/JPG/WebP como planos horizontais.
 - Selecione o arquivo principal junto com BIN, materiais e texturas. Os nomes devem ser únicos. Texturas externas precisam acompanhar a importação; não são buscadas na internet.
@@ -169,6 +181,10 @@ Em **Mapa → Mesa 3D**, Mestre e ADM podem importar terreno e estruturas. Jogad
 - Selecione um objeto na lista ou na cena. Use **Mover**, **Girar**, **Escala** e arraste os eixos, ou edite os valores numéricos. As mudanças intermediárias são transmitidas durante o arrasto; a última alteração recebida prevalece quando dois editores alteram o mesmo objeto.
 - Arraste para orbitar, use botão direito para deslocar e roda/pinça para zoom. **Enquadrar**, **Focar objeto** e **Vista superior** ajudam na navegação.
 - Objetos, arquivos e transformações ficam no mesmo SQLite persistente da mesa; inclua-os nos backups. Arquivos 3D não são enviados novamente em cada evento de movimento.
+- Arquivos locais e downloads usam transporte binário/Blob na versão atual; pacotes e clientes antigos mantêm compatibilidade. Contrato, cache, limites e medições em [docs/MODEL_TRANSFER.md](docs/MODEL_TRANSFER.md).
+- A importação confere malhas, referências e texturas antes de salvar; falhas mantêm os arquivos selecionados. Limites de geometria/imagens em [docs/MODEL_VALIDATION.md](docs/MODEL_VALIDATION.md).
+- Em **Ferramentas → Qualidade neste aparelho**, escolha Automática, Original ou Leve. A escolha é pessoal e o original fica preservado. Leve reduz malhas/texturas compatíveis depois da leitura inicial.
+- **Movimento suave** interpola as alterações recebidas; seu arraste permanece imediato. Respeita movimento reduzido do aparelho por padrão, com escolha nesta sessão. Detalhes em [docs/TABLETOP_QUALITY_AND_MOTION.md](docs/TABLETOP_QUALITY_AND_MOTION.md).
 - O mapa 2D e seus pontos continuam disponíveis em **Mapa 2D e pontos**.
 
 ## Estrutura de rolagem disponível
@@ -179,3 +195,7 @@ As rolagens compartilhadas em **Status do Grupo** usam apenas a bandeja hexagona
 ## Cópia portátil da mesa
 
 Em **Mesa → Salvar uma cópia da mesa**, prepare e baixe um JSON com dados e arquivos permitidos, incluindo imagens e pacotes 3D incorporados. Notas privadas de outros jogadores não entram; modo jogador conserva a cobertura do mapa. A cópia fica disponível por até cinco minutos e é descartada após o download. Ainda não há importação deste formato pela interface. Formato, permissões, API e limites em [docs/ROOM_EXPORT.md](docs/ROOM_EXPORT.md).
+
+## Cenas de vídeo e animação
+
+Mestre/ADM no modo mestre prepara MP4/WebM/GIF e exibe para os participantes conectados. A liberação ao vivo e a visualização posterior são independentes. Ao bloquear/arquivar/encerrar uma cena reservada, a API e SSE aplicam o acesso atual. Vídeo tenta autoplay silencioso quando o som é bloqueado; movimento reduzido exige entrada explícita. Biblioteca de até 500 MB/mesa, arquivos de até 50 MB, incluída em backup SQLite e exportações autorizadas. SQL/JSON atuais: 7. Veja docs/SCENE_MEDIA.md.

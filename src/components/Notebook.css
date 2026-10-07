@@ -81,3 +81,10 @@
 .note-window :focus-visible,.notebook-library-list :focus-visible{outline:2px solid var(--note-gold,#dbba75);outline-offset:2px}
 @media(max-width:600px){.note-window input:not([type=checkbox]):not([type=radio]),.note-window textarea{font-size:16px}.note-window .note-dock-toggle span{display:none}.note-window-content{padding:10px}.note-window footer{padding:7px 54px 7px 10px}.note-window.is-docked footer{padding-right:10px}.note-conflict{padding:10px}.note-conflict-columns,.note-conflict-choices{grid-template-columns:minmax(0,1fr)}.mist-theme .session-strip .notebook-library-list{right:auto;left:0}}
 @media(forced-colors:active){.note-window,.note-board-node{border:2px solid CanvasText}.note-window:focus-within{border-color:Highlight}.note-window .note-resize{border:1px solid CanvasText}}
+.note-recovery{--recovery-edge:#756747;--recovery-ink:#eee6d8;padding:10px;border-left:3px solid var(--recovery-edge);background:#20231e;color:var(--recovery-ink);font:14px/1.4 'Source Sans 3',sans-serif;overflow-wrap:anywhere}
+.note-recovery h3{margin:0 0 8px;font:600 15px Cinzel,Georgia,serif}
+.note-recovery p{margin:8px 0}
+.note-recovery button{width:100%;margin-top:6px;justify-content:space-between;flex-wrap:wrap}
+.note-recovery button span{min-width:0;overflow-wrap:anywhere}
+.note-recovery small{display:block;color:#d1c6ae}
+.note-recovery button:focus-visible{outline:2px solid #e6c987;outline-offset:2px}

@@ -21,6 +21,7 @@
 .scene-notice{padding:10px 12px;border-left:3px solid #b6ccb3;color:#d4e5ca}
 .scene-editor-dialog{--scene-ink:#f2eadb;--scene-rule:#76613f;--scene-accent:#e2c786;width:min(720px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:0;border:1px solid #a78954;background:#1c1b17;color:var(--scene-ink);overscroll-behavior:contain}
 .scene-editor-dialog::backdrop{background:#080a08d9}
+.scene-editor-dialog{margin:auto;scroll-padding:16px}
 .scene-editor-sheet{font:16px/1.5 'Source Sans 3',sans-serif}
 .scene-editor-sheet header{position:relative;padding:18px 74px 18px 22px;border-bottom:1px solid var(--scene-rule)}
 .scene-editor-sheet header h2{margin:4px 0;font:600 25px Cinzel,Georgia,serif;color:#f1dcaf}
@@ -29,6 +30,8 @@
 .scene-editor-content>label{display:grid;gap:5px;color:#d9c5a2}
 .scene-editor-sheet input:not([type=checkbox]):not([type=radio]),.scene-editor-sheet textarea,.scene-editor-sheet select{box-sizing:border-box;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--scene-rule);background:#151713;color:#f2eadb;font:16px/1.45 'Source Sans 3',sans-serif;color-scheme:dark}
 .scene-editor-sheet textarea{resize:vertical}
+.scene-media-choice{display:grid;gap:12px}.scene-media-choice label{display:grid;gap:6px}.scene-media-choice input[type=file]{min-width:0;max-width:100%;overflow-wrap:anywhere}.scene-release-controls{border-left:3px solid var(--scene-accent);padding:12px 16px;margin:16px 0;background:#252b21}.scene-release-controls p{font:16px/1.5 'Source Sans 3',sans-serif;margin:0;overflow-wrap:anywhere}
+.scene-file-library{margin-top:24px;border-top:1px solid var(--scene-rule);padding-top:8px;font:16px/1.5 'Source Sans 3',sans-serif}.scene-file-library summary{min-height:44px;cursor:pointer;align-content:center}.scene-library-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--scene-rule);padding:10px 0}.scene-library-row span{overflow-wrap:anywhere;min-width:0;flex:1}.scene-library-row small{color:#cbb58a}
 .scene-editor-content p{margin:0;overflow-wrap:anywhere}
 .scene-editor-sheet fieldset{min-width:0;border:1px solid var(--scene-rule);padding:10px 12px}
 .scene-editor-sheet legend{color:#e2c786;padding:0 5px}

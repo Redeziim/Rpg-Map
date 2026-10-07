@@ -1,17 +1,24 @@
-import {DATABASE_SCHEMA_V1_SQL,DATABASE_TABLES,DATABASE_EXPIRY_INDEXES,DATABASE_USER_VERSION,DATABASE_APPLICATION_ID,databaseSchemaIdentity} from './databaseSchema.js';
+import {DATABASE_SCHEMA_V1_SQL,DATABASE_TABLES,DATABASE_EXPIRY_INDEXES,DATABASE_IMPORT_INDEX,DATABASE_DICE_INDEXES,DATABASE_COMBAT_INDEX,DATABASE_USER_VERSION,DATABASE_APPLICATION_ID,databaseSchemaIdentity} from './databaseSchema.js';
 import {ROOM_STATE_VERSION,migrateRoomState} from './roomState.js';
 import {assertRoomAudit} from './roomAudit.js';
+import {assertSavedDiceHistory} from './diceHistory.js';
+import {assertCombatOperations} from './combatOperations.js';
+import {assertSavedSceneMedia} from './sceneMedia.js';
 
-export const SCHEMA_MIGRATIONS=Object.freeze([{version:1,name:'001-versioned-database',sql:DATABASE_SCHEMA_V1_SQL},{version:2,name:'002-room-audit',sql:DATABASE_TABLES.room_audit+';'},{version:3,name:'003-expiry-indexes',sql:Object.values(DATABASE_EXPIRY_INDEXES).join(';\n')+';'}]);
+export const SCHEMA_MIGRATIONS=Object.freeze([{version:1,name:'001-versioned-database',sql:DATABASE_SCHEMA_V1_SQL},{version:2,name:'002-room-audit',sql:DATABASE_TABLES.room_audit+';'},{version:3,name:'003-expiry-indexes',sql:Object.values(DATABASE_EXPIRY_INDEXES).join(';\n')+';'},{version:4,name:'004-model-import-receipts',sql:DATABASE_TABLES.map_imports+';'+DATABASE_IMPORT_INDEX+';'},{version:5,name:'005-dice-history',sql:['dice_rolls','dice_receipts','dice_live'].map(key=>DATABASE_TABLES[key]+';').join('\n')+Object.values(DATABASE_DICE_INDEXES).join(';\n')+';'},{version:6,name:'006-combat-confirmations',sql:DATABASE_TABLES.combat_operations+';'+DATABASE_COMBAT_INDEX+';'},{version:7,name:'007-scene-media',sql:DATABASE_TABLES.scene_media+';'}]);
 export function assertMigrationLedger(db,{throughVersion=DATABASE_USER_VERSION}={}){
   const rows=db.prepare('SELECT version,name,applied_at FROM schema_migrations ORDER BY version').all();
   const expected=SCHEMA_MIGRATIONS.filter(item=>item.version<=throughVersion);
   if(rows.length!==expected.length||rows.some((row,index)=>row.version!==expected[index].version||row.name!==expected[index].name||!Number.isSafeInteger(row.applied_at)||row.applied_at<=0))throw Error('Histórico de migrações do banco incompleto ou incompatível.');
 }
 export function assertRoomMigrationLedger(db){
-  for(const row of db.prepare('SELECT m.*,r.revision AS current_revision FROM room_state_migrations m LEFT JOIN rooms r ON r.id=m.room_id').iterate()){
-    if(row.version!==ROOM_STATE_VERSION||row.from_version!==0||!Number.isSafeInteger(row.from_revision)||row.from_revision<0||row.to_revision!==row.from_revision+1||!Number.isSafeInteger(row.applied_at)||row.applied_at<=0||row.current_revision<row.to_revision||row.current_revision===null)throw Error('Histórico de migrações de mesa incompleto ou incompatível.');
+  let previous=null;const last=new Map();
+  for(const row of db.prepare('SELECT m.*,r.revision AS current_revision,r.state AS current_state FROM room_state_migrations m LEFT JOIN rooms r ON r.id=m.room_id ORDER BY m.room_id,m.version').iterate()){
+    if(!Number.isInteger(row.version)||row.version<1||row.version>ROOM_STATE_VERSION||!Number.isInteger(row.from_version)||row.from_version<0||row.from_version>=row.version||!Number.isSafeInteger(row.from_revision)||row.from_revision<0||row.to_revision!==row.from_revision+1||!Number.isSafeInteger(row.applied_at)||row.applied_at<=0||row.current_revision<row.to_revision||row.current_revision===null)throw Error('Histórico de migrações de mesa incompleto ou incompatível.');
+    if(previous?.room_id===row.room_id&&(row.from_version!==previous.version||row.from_revision<previous.to_revision))throw Error('Histórico de migrações de mesa incompleto ou incompatível.');
+    previous=row;last.set(row.room_id,row);
   }
+  for(const row of last.values()){let state;try{state=JSON.parse(row.current_state);}catch{throw Error('JSON inválido no estado de uma mesa.');}if(state?.stateVersion!==row.version)throw Error('Histórico de migrações de mesa incompleto ou incompatível.');}
 }
 export function initializeDatabase(db){
   db.exec('PRAGMA foreign_keys=ON; PRAGMA trusted_schema=OFF;');
@@ -38,8 +45,8 @@ export function initializeDatabase(db){
     for(const room of db.prepare('SELECT id,state,revision FROM rooms ORDER BY rowid').iterate()){
       let state;try{state=JSON.parse(room.state);}catch{throw Error('JSON inválido no estado de uma mesa. A migração não foi aplicada.');}
       if(!Number.isSafeInteger(room.revision)||room.revision<0)throw Error('Revisão de mesa inválida. A migração não foi aplicada.');
-      const usernames=db.prepare('SELECT u.username FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=?').all(room.id).map(row=>row.username);
-      const fromVersion=state?.stateVersion??0,next=migrateRoomState(state,{usernames});
+      const members=db.prepare('SELECT u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=? ORDER BY u.username').all(room.id),usernames=members.map(row=>row.username);
+      const fromVersion=state?.stateVersion??0,next=migrateRoomState(state,{usernames,members});
       if(fromVersion<ROOM_STATE_VERSION){
         if(!Number.isSafeInteger(room.revision+1))throw Error('Limite de revisão de mesa atingido.');
         update.run(JSON.stringify(next),room.revision+1,room.id);
@@ -47,7 +54,7 @@ export function initializeDatabase(db){
         result.roomsMigrated++;
       }
     }
-    assertRoomMigrationLedger(db);assertRoomAudit(db);
+    assertRoomMigrationLedger(db);assertRoomAudit(db);assertSavedDiceHistory(db);assertCombatOperations(db);assertSavedSceneMedia(db);
     if(db.prepare('PRAGMA user_version').get().user_version!==DATABASE_USER_VERSION)throw Error('Migração do banco incompleta.');
     db.exec('COMMIT');
   }catch(error){db.exec('ROLLBACK');throw error;}

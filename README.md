@@ -4,7 +4,9 @@ Aplicação web para condução e acompanhamento de campanhas de RPG. Reúne map
 
 ## Resumo e próximos passos
 
-As entregas concluídas e as features que ainda faltam estão em [docs/RESUMO_DA_ENTREGA.md](docs/RESUMO_DA_ENTREGA.md). Os diagnósticos seguros da API e do banco SQLite estão concluídos; a próxima etapa do plano trata a importação de modelos 3D grandes.
+As entregas e pendências estão em [docs/RESUMO_DA_ENTREGA.md](docs/RESUMO_DA_ENTREGA.md). A Mesa 3D possui [transferência binária](docs/MODEL_TRANSFER.md), [conferência de conteúdo](docs/MODEL_VALIDATION.md), [qualidade Automática/Original/Leve e movimento suave](docs/TABLETOP_QUALITY_AND_MOTION.md), [liberação dos recursos](docs/TABLETOP_RESOURCE_LIFECYCLE.md), [recuperação de WebGL](docs/WEBGL_RECOVERY.md), [progresso/cancelamento com confirmação da importação](docs/MODEL_IMPORT_PROGRESS.md), [prévia local antes de adicionar](docs/MODEL_PREVIEW.md), [seleção, grupos, duplicação e bloqueios](docs/TABLETOP_OBJECTS.md), [carga gradual com detalhe por distância](docs/TABLETOP_STREAMING.md), [vínculos com pontos, cenas e notas](docs/TABLETOP_REFERENCES.md) e [iluminação compartilhada com câmera pessoal](docs/TABLETOP_LIGHTING_AND_CAMERA.md). [Modelos detalhados, tamanho proporcional e Leve relativo automático](docs/MODEL_DETAIL_AND_SCALE.md) também estão entregues. O [combate confirmado](docs/COMBAT_STATE.md) reúne ordem, rodada, iniciativa e controles do mestre (52). O [histórico público da bandeja](docs/DICE_HISTORY.md) está implementado; o item 53 aguarda a escolha sobre rolagens privadas do mestre. O [prompt de continuidade](docs/PROMPT_PROXIMAS_ETAPAS.md) detalha pendências, skills e APIs.
+
+Em **Cenas**, mestre/ADM pode enviar MP4, WebM ou GIF, salvar a cena e usar **Liberar e tocar para todos**. A apresentação abre para participantes conectados; o mestre pausa, continua, recomeça ou encerra. **Permitir assistir depois** libera a cena para reprodução individual; **Bloquear visualização posterior** retira essa disponibilidade. Volume e tela cheia são pessoais. Limites, autoplay e formatos em [Cenas de vídeo](docs/SCENE_MEDIA.md).
 
 ## Requisitos
 
@@ -48,6 +50,12 @@ npm test
 ```
 
 O resultado de produção é gerado em `dist/` e não deve ser versionado.
+
+## Recuperação de combate
+
+Em **Condições e efeitos**, o mestre escolhe o alvo, quem vê e a duração: rodadas, até receber o próximo turno ou remoção manual. Efeitos automáticos terminados ficam **Encerrados** até serem removidos; avisos aparecem no turno. A contagem usa as transições confirmadas e não repete ao reconectar. Consulte [COMBAT_EFFECTS.md](docs/COMBAT_EFFECTS.md).
+
+Se um comando perder a resposta, **Verificar resultado** confere o estado antes de liberar outra ação. Reabrir a mesa ou reconectar não avança o turno novamente. **Reenviar a mesma ação** só aparece quando a consulta não encontra confirmação e conserva a intenção original. Nomes e iniciativas digitados permanecem diante de falhas. Contrato, prazos e compatibilidade em [COMBAT_RECOVERY.md](docs/COMBAT_RECOVERY.md).
 
 ## Estrutura
 
@@ -106,7 +114,11 @@ O servidor Node.js armazena contas e mesas em SQLite. Salas online têm permiss�
 
 As janelas de notas guardam rascunhos automaticamente no navegador em `localStorage` e IndexedDB, inclusive texto, imagens e mapa mental. Ao voltar à mesa na mesma aba, os rascunhos são reabertos; para publicar mudanças na mesa, clique em **Salvar**. Se os dois armazenamentos locais falharem, a nota oferece **Baixar cópia** em JSON. O arquivo contém o conteúdo da nota e deve ser guardado como informação privada.
 
-Clique em **Nova nota** para abrir uma nota em branco. Dê um nome, escreva o texto ou monte o mapa mental e clique em **Salvar** para guardar na mesa.
+Abra **Minhas notas → Nova nota** em qualquer aba para criar uma nota em branco, inclusive como jogador. Dê um nome, escreva o texto ou monte o mapa mental e clique em **Salvar** para guardar na mesa. Suas notas pessoais são privadas também para mestre/ADM; **Compartilhar** libera acesso apenas às pessoas escolhidas. **Notas do mestre** é o caderno da campanha gerenciado por mestres/ADM.
+
+Em **Mapa → Mesa 3D → Ferramentas**, marque um objeto e use **Vínculos** para relacioná-lo a vários pontos, cenas ou notas salvas. O nome abre o conteúdo atual; **Retirar** remove somente a relação. Vincular uma nota não muda seu compartilhamento. Jogadores abrem apenas destinos permitidos. Consulte [uso e permissões](docs/TABLETOP_REFERENCES.md).
+
+Em **Iluminação e câmera**, o mestre escolhe a luz para todos. Cada pessoa escolhe sua vista e conserva a câmera no próprio navegador. **Restaurar câmera** enquadra a mesa inteira. Para mudar o tamanho de um objeto, use **Multiplicar tamanho → Aplicar tamanho**; na prévia, use **Tamanho proporcional**. 2 dobra e 0,5 reduz à metade mantendo as proporções, inclusive ao arrastar os eixos. O limite de geometria foi ampliado para 2 milhões de triângulos/6 milhões de vértices desenhados. **Leve** reduz automaticamente em relação ao original e mostra a porcentagem real; **Original** conserva os detalhes enviados. Consulte [iluminação/câmera](docs/TABLETOP_LIGHTING_AND_CAMERA.md) e [detalhe/tamanho/qualidade](docs/MODEL_DETAIL_AND_SCALE.md).
 
 Cada caderno permite buscar títulos, texto e ideias do mapa mental. A busca mostra apenas as notas visíveis naquele caderno.
 

@@ -19,6 +19,7 @@ function fixture(){
   const app=createApplication({dbPath:source});
   app.db.prepare('INSERT INTO users VALUES(?,?,?,?)').run('owner','owner','hash','salt');
   const state={...createRoomState(),masterNotes:'Texto reservado: não pode aparecer nos logs',playerSheets:{owner:newPlayerSheet()},statusBarsData:{owner:newStatusProfile()}};
+  state.combat.order=['owner'];
   app.db.prepare('INSERT INTO rooms VALUES(?,?,?,?,?)').run('room','Mesa privada','owner',JSON.stringify(state),2);
   app.db.prepare('INSERT INTO members VALUES(?,?,?)').run('room','owner','admin');
   const env={...process.env,DB_PATH:source,BACKUP_DIR:backups,BACKUP_INTERVAL_MINUTES:'2',BACKUP_KEEP:'2',BACKUP_RETRY_MINUTES:'1'};

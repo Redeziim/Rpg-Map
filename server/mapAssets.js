@@ -4,7 +4,7 @@ const fail=message=>{throw Object.assign(new Error(message),{status:400});};
 export function validateMapAsset(data){
   if(!data||!Array.isArray(data.files)||!data.files.length||data.files.length>100)fail('Selecione o modelo e até 100 arquivos de apoio.');
   const files=data.files.map(file=>{
-    if(!file||typeof file.name!=='string'||file.name.length>240||file.name.includes('..')||/[\\?#\x00-\x1f]/.test(file.name)||file.name.startsWith('/'))fail('Nome de arquivo inválido.');
+    if(!file||!validMapFileName(file.name))fail('Nome de arquivo inválido.');
     const extension=file.name.split('.').pop().toLowerCase();
     if(!extensions.has(extension))fail('Formato não suportado. Use GLB, GLTF, OBJ, FBX, PNG, JPG ou WebP.');
     if(typeof file.data!=='string'||!/^data:[^;,]*;base64,[A-Za-z0-9+/=]+$/.test(file.data))fail('Arquivo inválido.');
@@ -13,7 +13,7 @@ export function validateMapAsset(data){
   if(new Set(files.map(f=>f.name.toLowerCase())).size!==files.length)fail('Há arquivos com nomes repetidos.');
   const main=files.find(f=>f.name===data.main);
   if(!main||!formats.has(main.name.split('.').pop().toLowerCase()))fail('Selecione o arquivo principal do modelo.');
-  const size=files.reduce((n,f)=>n+Buffer.from(f.data.split(',')[1],'base64').length,0);
+  const size=files.reduce((n,f)=>n+mapAssetDataInfo(f.data).size,0);
   if(size>50*1024*1024)throw Object.assign(new Error('Limite de 50 MB por importação.'),{status:413});
   return {main:main.name,files,kind:data.kind==='terrain'?'terrain':'structure',bytes:size};
 }
@@ -28,3 +28,4 @@ export function validateMapTransform(data){
   }
   return patch;
 }
+import {mapAssetDataInfo,validMapFileName} from '../src/shared/mapAssetTransfer.js';

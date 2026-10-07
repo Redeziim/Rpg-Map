@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
 import {createRoomMediaCache} from './roomMediaCache.js';
 
-export function useRoom(initialRoom,onRevoked){
+export function useRoom(initialRoom,onRevoked,viewMode='master'){
+  const withView=path=>path.includes('mapViewMode=')?path:`${path}${path.includes('?')?'&':'?'}mapViewMode=${viewMode}`;
   const [room,setRoom]=useState(initialRoom),[error,setError]=useState(''),[connection,setConnection]=useState('connecting'),[saving,setSaving]=useState(false);
   const current=useRef(initialRoom),latest=useRef(initialRoom),queue=useRef(Promise.resolve()),pending=useRef(0),alive=useRef(true),lifecycle=useRef(null);
   const media=useRef(null);if(!media.current)media.current=createRoomMediaCache();
@@ -18,6 +19,7 @@ export function useRoom(initialRoom,onRevoked){
   };
   useEffect(()=>{
     alive.current=true;
+    setConnection('connecting');
     const controller=new AbortController();lifecycle.current=controller;
     let stream,timer,checking=false,revoked=false,online=false,retryMs=3000;
     const signal=()=>AbortSignal.any([controller.signal,AbortSignal.timeout(20000)]);
@@ -38,7 +40,7 @@ export function useRoom(initialRoom,onRevoked){
     function connect(){
       if(controller.signal.aborted||revoked)return;
       stream?.close();
-      const events=new EventSource(`/api/rooms/${initialRoom.id}/events?media=1`);stream=events;
+      const events=new EventSource(`/api/rooms/${initialRoom.id}/events?media=1&mapViewMode=${viewMode}`);stream=events;
       events.addEventListener('room',event=>{
         if(stream!==events||controller.signal.aborted)return;
         try{receive(media.current.decode(JSON.parse(event.data)));}
@@ -56,7 +58,7 @@ export function useRoom(initialRoom,onRevoked){
       if(controller.signal.aborted||revoked||checking||online)return;
       clearTimeout(timer);checking=true;
       try{
-        receive(await api(`/rooms/${initialRoom.id}`,{signal:signal(),mediaCache:media.current}));
+        receive(await api(withView(`/rooms/${initialRoom.id}`),{signal:signal(),mediaCache:media.current}));
         if(!controller.signal.aborted)connect();
       }catch(cause){
         if(controller.signal.aborted)return;
@@ -67,8 +69,8 @@ export function useRoom(initialRoom,onRevoked){
     const visible=()=>{if(document.visibilityState==='visible')void check();};
     connect();window.addEventListener('online',check);document.addEventListener('visibilitychange',visible);
     return()=>{alive.current=false;controller.abort();clearTimeout(timer);stream?.close();window.removeEventListener('online',check);document.removeEventListener('visibilitychange',visible);};
-  },[initialRoom.id]);
-  const mutate=(path,data,method='PATCH',optimistic)=>{
+  },[initialRoom.id,viewMode]);
+  const mutate=(path,data,method='PATCH',optimistic,onFailure)=>{
     if(!alive.current)return Promise.resolve(false);
     pending.current++;setSaving(true);setError('');
     if(optimistic)apply(optimistic(current.current));
@@ -77,15 +79,16 @@ export function useRoom(initialRoom,onRevoked){
       const signal=()=>AbortSignal.any([controller.signal,AbortSignal.timeout(20000)]);
       try{
         if(!alive.current||controller.signal.aborted)return false;
-        const result=await api(`/rooms/${initialRoom.id}${path}`,{method,data,signal:signal(),mediaCache:media.current});
-        if(result.state)receive(result);
+        const result=await api(withView(`/rooms/${initialRoom.id}${path}`),{method,data,signal:signal(),mediaCache:media.current});
+        if(!controller.signal.aborted&&result.state)receive(result);
         return controller.signal.aborted?false:result;
       }catch(cause){
+        onFailure?.(cause);
         if(controller.signal.aborted)return false;
         if(cause.status===401){revokeAccess.current(401);return false;}
         setError(cause.status?cause.message:'A conexão caiu durante o envio. Ele pode ter sido salvo. Confira a versão da mesa antes de tentar novamente.');
         // A failed response does not prove that the write failed. Refresh; never replay it automatically.
-        try{receive(await api(`/rooms/${initialRoom.id}`,{signal:signal(),mediaCache:media.current}));}
+        try{receive(await api(withView(`/rooms/${initialRoom.id}`),{signal:signal(),mediaCache:media.current}));}
         catch(freshError){if(!controller.signal.aborted&&(freshError.status===401||freshError.status===403))revokeAccess.current(freshError.status);}
         return false;
       }finally{

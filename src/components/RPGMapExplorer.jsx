@@ -23,6 +23,8 @@ import {canReadMapStroke,strokeVisibility,visibleMapStrokes} from '../shared/map
 import {mapCoordinates,markerScreenScale,strokeNear} from './mapStrokeGeometry.js';
 import {canEraseMapStroke,canManageMap} from '../shared/mapPermissions.js';
 import RoomManagement from './RoomManagement.jsx';
+import DiceHistory from './DiceHistory.jsx';
+import ScenePresentation from './SceneMediaPlayer.jsx';
 import { ROLE_LABELS } from '../api.js';
 import StatusBars from './StatusBars.jsx';
 import { SHEET_FONTS, FIELD_TYPES, evaluateFormula } from './sheetHelpers.jsx';
@@ -35,13 +37,13 @@ const DiceRoller=lazy(()=>import('./DiceRoller.jsx'));
 const CharacterSheet=lazy(()=>import('./CharacterSheet.jsx'));
 const GroupStatus=lazy(()=>import('./GroupStatus.jsx'));
 
-const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,error}) => {
+const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,error,adminMode,setAdminMode}) => {
   const [heldDice,setHeldDice]=useState(null);
   const [diceStructure,setDiceStructure]=useState('tray');
-  const onTrayRoll=(terms,skinId)=>{setHeldDice({terms,skinId,structureId:'tray'});return true;};
-  const throwHeldDice=async (gesture,physics)=>{if(!heldDice)return false;const result=await mutate('/tray-rolls',{...heldDice,gesture,physics},'POST');if(result)setHeldDice(null);return result;};
+  const diceLaunch=useRef(null);
+  const onTrayRoll=(terms,skinId,options={})=>{diceLaunch.current=null;setHeldDice({terms,skinId,structureId:'tray',origin:activeTab==='grupo'?'group':'sheet',sceneId:options.sceneId||null,operationId:crypto.randomUUID()});return true;};
+  const throwHeldDice=async (gesture,physics)=>{if(!heldDice)return false;diceLaunch.current||={...heldDice,gesture,physics,requestedAt:Date.now()};const launch=diceLaunch.current,result=await mutate('/tray-rolls',launch,'POST');if(result&&diceLaunch.current===launch){diceLaunch.current=null;setHeldDice(null);}return result;};
   const [selectedPlayer,setSelectedPlayer]=useState('');
-  const [adminMode,setAdminMode]=useState('master');
   const viewMode=room.role==='admin'?adminMode:room.role==='master'?'master':'player';
   const canManageMap2D=canManageMap(room.role,viewMode);
   const canSharePosition=canShareMapPosition(room.role,viewMode),positionsEnabled=room.state.mapPositions?.enabled===true;
@@ -50,6 +52,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [activeTab,setActiveTab]=useState('mesa');
   const [sceneRequest,setSceneRequest]=useState(null);
   const [mapMode,setMapMode]=useState('3d');
+  const [tabletopSelection,setTabletopSelection]=useState([]);
   const [mapFocus,setMapFocus]=useState(false);
   const [map2dToolsOpen,setMap2dToolsOpen]=useState(false);
   const [mapCanvasSize,setMapCanvasSize]=useState({width:0,height:0});
@@ -129,11 +132,18 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const selectPoint=(point,snapshot=room)=>setSelectedPoint({point,version:snapshot.pointVersions?.[point.id]});
   const openLinkedPoint=id=>{const point=points.find(point=>point.id===id);if(!point)return;setMapMode('2d');setActiveTab('mapa');selectPoint(point);};
   const visibleLinkedNotes=[...(viewMode==='master'?(room.state.masterNotebooks||[]).map(note=>({...note,scope:'@master'})):[]),...(room.state.playerSheets?.[user.username]?.notebooks||[]).map(note=>({...note,scope:user.username})),...(room.state.sharedNotebooks||[])];
-  const visibleScenes=visibleCampaignScenes(room.state.campaignScenes,points,canManageScenes);
+  const visibleScenes=visibleCampaignScenes(room.state.campaignScenes,points,canManageScenes,room.state.scenePresentation);
+  const presentScene=(action,scene,position)=>mutate(mapRequestPath('/scene-presentation'),{action,version:room.state.scenePresentation.version,...(action==='stop'?{}:{sceneId:scene.id,sceneVersion:scene.version,position})},'POST');
   const pointLinks=indexPointLinks(visibleLinkedNotes,visibleScenes);
   const openLinkedScene=scene=>{setSelectedPoint(null);setSceneRequest({id:scene.id,token:crypto.randomUUID()});setActiveTab('cenas');};
   const createPointScene=point=>{setSelectedPoint(null);setSceneRequest({pointId:point.id,create:true,token:crypto.randomUUID()});setActiveTab('cenas');};
-  const openLinkedNote=note=>{setSelectedPoint(null);if(note.scope===user.username){setSelectedPlayer(user.username);setActiveTab('ficha');}setOpenNoteRequest({scope:note.scope,id:note.id,token:crypto.randomUUID()});};
+  const openLinkedNote=note=>{setSelectedPoint(null);setOpenNoteRequest({scope:note.scope,id:note.id,token:crypto.randomUUID()});};
+  const openObjectReference=({referenceTarget,...snapshot})=>{
+    const {kind,target}=referenceTarget;
+    if(kind==='point'){setMapMode('2d');setActiveTab('mapa');selectPoint(target,snapshot);}
+    else if(kind==='scene')openLinkedScene(target);
+    else {setSelectedPoint(null);setOpenNoteRequest({scope:target.scope,id:target.id,view:'preserve',token:crypto.randomUUID()});}
+  };
   const savePointDetails=(id,fields,version)=>canManageMap2D?mutate(mapRequestPath(`/points/${encodeURIComponent(id)}`),{...fields,version},'PATCH'):Promise.resolve(false);
   const canEraseStroke=stroke=>canReadMapStroke(room.role,viewMode,stroke)&&(canManageMap2D||isMapStrokeRevealed(mapFog,stroke))&&canEraseMapStroke(room.role,user.username,stroke.author,viewMode);
   const canApplyStrokeHistory=direction=>{const entry=strokeHistory.current[direction].at(-1);return !!entry&&(entry.kind==='visibility'?canManageMap2D:canEraseStroke(entry.stroke));};
@@ -536,6 +546,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   return (
     <div className={`rpg-container mist-theme ${activeTab==='mapa'&&mapFocus?'map-focus':''}`}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
+      <ScenePresentation roomId={room.id} scenes={visibleScenes} viewMode={viewMode} presentation={room.state.scenePresentation} serverTime={room.serverTime} editable={canManageScenes} saving={saving} connection={connection} onCommand={presentScene}/>
       
       {/* Header */}
       <header className="header">
@@ -586,7 +597,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         <div className="nav-footer"><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-pressed={activeTab==='sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button></div>
       </header>
 
-      <div className="room-content"><div className="session-strip"><TurnTracker room={room} username={user.username} editable={viewMode==='master'} saving={saving} mutate={mutate}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
+      <div className="room-content"><div className="session-strip"><TurnTracker key={`${room.id}:${user.id}`} room={room} username={user.username} userId={user.id} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
       <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1} onKeyDown={handleMapShortcut}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate} viewMode={viewMode}/>:activeTab === 'mapa' ? (
           <>
@@ -607,7 +618,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             {drawError&&<p className={drawError.startsWith('Não foi possível')?'map-draw-error':'map-draw-notice'} role="status">{drawError}</p>}
             {mapMode==='2d'&&mapTool==='position'&&<div className="map-position-actions" role="group" aria-label="Sua posição no mapa">{positionConflict&&<p role="alert">{positionConflict}</p>}{positionCovered&&<p role="alert">A escolha está em uma área oculta. Mova para uma área revelada.</p>}{positionDraft&&<button type="button" disabled={mapBusy||saving||!!positionConflict||positionCovered} onClick={()=>saveOwnPosition()}>Compartilhar posição</button>}{positionConflict&&<button type="button" onClick={()=>setMap2dToolsOpen(true)}>Abrir revisão da posição</button>}<button type="button" disabled={mapBusy||saving} onClick={cancelPositionChoice}>Cancelar escolha</button></div>}
             {mapMode==='2d'&&mapImageError&&<p className="map-draw-error" role="alert">{mapImageError} <button type="button" onClick={()=>setMapImageRetry(value=>value+1)}>Tentar novamente</button></p>}
-            {mapMode==='3d'?<Suspense fallback={<p role="status">Preparando a mesa 3D…</p>}><TabletopMap room={room} mutate={mutate} editable={room.role==='admin'||room.role==='master'}/></Suspense>:<div className="legacy-map-layout">
+            {mapMode==='3d'?<Suspense fallback={<p role="status">Preparando a mesa 3D…</p>}><TabletopMap key={`${room.id}:${user.id}`} room={room} userId={user.id} mutate={mutate} editable={canManageMap2D} viewMode={viewMode} selected={tabletopSelection} setSelected={setTabletopSelection} destinations={{points,scenes:visibleScenes,notes:visibleLinkedNotes}} onOpenReference={openObjectReference}/></Suspense>:<div className="legacy-map-layout">
             {/* Sidebar */}
             <aside id="map-2d-tools" className="sidebar" hidden={!map2dToolsOpen}>
               <div className="sidebar-section">
@@ -788,19 +799,20 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
             {/* Painel lateral com o Dado */}
             <aside className="sheet-sidebar">
-              <Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll}/></Suspense>
+              <Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll} scenes={room.state.campaignScenes}/></Suspense>
+              <DiceHistory key={`${room.id}:${room.role}:${viewMode}`} room={room} viewMode={viewMode}/>
             </aside>
           </>
-        ) : activeTab==='cenas' ? <ScenesPanel roomId={room.id} userId={user.id} scenes={visibleScenes} points={points} editable={canManageScenes} request={sceneRequest} onRequestHandled={()=>setSceneRequest(null)} onOpenPoint={openLinkedPoint} saving={saving} error={error} onSave={(id,fields,version)=>mutate(mapRequestPath(version?`/campaign-scenes/${id}`:'/campaign-scenes'),version?{...fields,version}:{...fields,id},version?'PATCH':'POST')} onArchive={(scene,archived)=>mutate(mapRequestPath(`/campaign-scenes/${scene.id}`),{archived,version:scene.version},'PATCH')}/> : activeTab==='sobre' ? <AboutPanel roomId={room.id} username={user.username} role={room.role}/> : (
+        ) : activeTab==='cenas' ? <ScenesPanel roomId={room.id} userId={user.id} scenes={visibleScenes} points={points} editable={canManageScenes} viewMode={viewMode} presentation={room.state.scenePresentation} connection={connection} onPresent={presentScene} request={sceneRequest} onRequestHandled={()=>setSceneRequest(null)} onOpenPoint={openLinkedPoint} saving={saving} error={error} onSave={(id,fields,version)=>mutate(mapRequestPath(version?`/campaign-scenes/${id}`:'/campaign-scenes'),version?{...fields,version}:{...fields,id},version?'PATCH':'POST')} onArchive={(scene,archived)=>mutate(mapRequestPath(`/campaign-scenes/${scene.id}`),{archived,version:scene.version},'PATCH')}/> : activeTab==='sobre' ? <AboutPanel roomId={room.id} username={user.username} role={room.role}/> : (
           <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>Status do grupo</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} {playerNames.length===1?'jogador':'jogadores'}</span></div>
             <div className="group-workspace"><section className="party-roster" aria-label="Personagens da mesa"><Suspense fallback={<p role="status">Preparando o grupo…</p>}><GroupStatus
               viewMode={viewMode}
-              activePlayer={room.state.activePlayer}
+              activePlayer={room.state.combat.activeId}
               allPlayersBars={groupEntries}
               onOpenSheet={name => {setSelectedPlayer(name);setActiveTab('ficha');}}
               onUpdatePlayerBars={updatePlayerBars}
             /></Suspense>
-            </section><aside className="group-roll-station" aria-label="Bandeja e dados"><Suspense fallback={<p role="status">Preparando a bandeja…</p>}><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/></Suspense><div className="group-dice-controls"><Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll} sharedOnly/></Suspense></div></aside></div>
+            </section><aside className="group-roll-station" aria-label="Bandeja e dados"><Suspense fallback={<p role="status">Preparando a bandeja…</p>}><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/></Suspense><div className="group-dice-controls"><Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll} scenes={room.state.campaignScenes} sharedOnly/></Suspense></div><DiceHistory key={`${room.id}:${room.role}:${viewMode}`} room={room} viewMode={viewMode}/></aside></div>
           </main>
         )}
       </div>

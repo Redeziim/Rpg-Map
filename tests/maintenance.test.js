@@ -53,7 +53,7 @@ test('manutenção remove sessões e convites vencidos em lotes sem tocar nos v�
       app.db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(`expired-${i}`,user.id,now-1000);
       app.db.prepare('INSERT INTO invites VALUES(?,?,?,?,?,?)').run(`expired-${i}`,room.id,`expired-hash-${i}`,'player',now-1000,user.id);
     }
-    assert.deepEqual(app.maintenance.runOnce().database,{sessions:2,invites:2});
+    assert.deepEqual(app.maintenance.runOnce().database,{sessions:2,invites:2,imports:0,diceReceipts:0,combatOperations:0});
     assert.equal(app.db.prepare('SELECT count(*) AS n FROM sessions WHERE expires<=?').get(now).n,3);
     assert.equal(app.db.prepare('SELECT count(*) AS n FROM invites WHERE expires<=?').get(now).n,3);
     app.maintenance.runOnce();app.maintenance.runOnce();

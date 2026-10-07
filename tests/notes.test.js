@@ -32,7 +32,7 @@ test('named notes preserve legacy content, enforce privacy, broadcast and surviv
     assert.equal((await call('alice',root+'/notes/alice/one','PATCH',{title:'Nota',body:'x'.repeat(50001)})).status,400);
     assert.equal((await call('alice',root+'/notes/alice/one','PATCH',{title:'Diário',body:'Texto pessoal'})).status,200);
     assert.equal((await call('bob',root)).data.state.playerSheets.alice,undefined);
-    assert.equal((await call('master',root)).data.state.playerSheets.alice.notebooks.length,2);
+    assert.deepEqual((await call('master',root)).data.state.playerSheets.alice.notebooks,[]);
     abort=new AbortController();const response=await fetch(base+root+'/events',{headers:{Cookie:cookies.owner},signal:abort.signal});
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
     async function event(){while(!buffer.includes('\n\n')){const chunk=await reader.read();buffer+=decoder.decode(chunk.value,{stream:true});}const end=buffer.indexOf('\n\n'),value=buffer.slice(0,end);buffer=buffer.slice(end+2);return value;}
@@ -45,6 +45,6 @@ test('named notes preserve legacy content, enforce privacy, broadcast and surviv
     assert.equal(restored.masterNotebooks.length,3);
     assert.equal(restored.masterNotebooks.find(n=>n.id==='one').title,'Encontro revisado');
     assert.equal(restored.masterNotebooks.find(n=>n.id==='legacy').body,'Segredo antigo');
-    assert.equal(restored.playerSheets.alice.notebooks.find(n=>n.id==='one').body,'Texto pessoal');
+    assert.deepEqual(restored.playerSheets.alice.notebooks,[]); assert.equal((await call('alice',root)).data.state.playerSheets.alice.notebooks.find(n=>n.id==='one').body,'Texto pessoal');
   }finally{abort?.abort();app?.close();rmSync(dir,{recursive:true,force:true});}
 });

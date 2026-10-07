@@ -3,10 +3,13 @@ import {createHash} from 'node:crypto';
 import {createReadStream,lstatSync,realpathSync,mkdirSync,mkdtempSync,copyFileSync,constants,readFileSync,writeFileSync,openSync,fsyncSync,closeSync,chmodSync,linkSync,unlinkSync,rmdirSync,statSync} from 'node:fs';
 import {dirname,basename,join,resolve} from 'node:path';
 import {isDeepStrictEqual} from 'node:util';
-import {DATABASE_TABLES,DATABASE_V1_TABLES,LEGACY_DATABASE_TABLES,databaseSchemaIdentity} from '../server/databaseSchema.js';
+import {DATABASE_TABLES,DATABASE_V1_TABLES,DATABASE_V2_TABLES,DATABASE_V4_TABLES,DATABASE_V5_TABLES,DATABASE_V6_TABLES,LEGACY_DATABASE_TABLES,databaseSchemaIdentity} from '../server/databaseSchema.js';
+import {assertSavedSceneMedia} from '../server/sceneMedia.js';
 import {assertMigrationLedger,assertRoomMigrationLedger} from '../server/databaseMigrations.js';
-import {assertRoomState,assertRoomMembers,ROOM_STATE_VERSION} from '../server/roomState.js';
+import {assertRoomState,assertRoomMembers,migrateRoomState,ROOM_STATE_VERSION} from '../server/roomState.js';
 import {assertRoomAudit} from '../server/roomAudit.js';
+import {assertSavedDiceHistory} from '../server/diceHistory.js';
+import {assertCombatOperations} from '../server/combatOperations.js';
 
 export const RECOVERY_FORMAT_VERSION = 1;
 const applicationVersion = JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;
@@ -31,7 +34,7 @@ function checkSavedData(db,tables,userVersion){
   const roomStateVersions={};
   for(const row of db.prepare('SELECT id,state,revision FROM rooms').iterate()){
     const state=parseJSON(row.state,object,'estado de mesa');
-    if(userVersion>0){assertRoomState(state);assertRoomMembers(state,db.prepare('SELECT u.username FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=?').all(row.id).map(member=>member.username));}
+    if(userVersion>0){const members=db.prepare('SELECT u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=? ORDER BY u.username').all(row.id),usernames=members.map(member=>member.username);migrateRoomState(state,{usernames,members});}
     const version=state.stateVersion??0;
     if(!Number.isInteger(version)||version<0||version>ROOM_STATE_VERSION)throw Error('Versão do estado de mesa não suportada por esta aplicação.');
     roomStateVersions[version]=(roomStateVersions[version]||0)+1;
@@ -40,6 +43,10 @@ function checkSavedData(db,tables,userVersion){
     for(const key of ['masterNotebooks','mapStrokes','mapObjects','campaignScenes','mapRoutes'])if(state[key]!==undefined&&!Array.isArray(state[key]))throw Error('Lista persistida da mesa inválida.');
   }
   for(const row of db.prepare('SELECT bundle FROM map_assets').iterate())parseJSON(row.bundle,value=>object(value)&&Array.isArray(value.files),'arquivos da mesa 3D');
+  if(tables.has('map_imports'))for(const row of db.prepare('SELECT phase,result FROM map_imports').iterate()){
+    parseJSON(row.result,value=>object(value)&&!['id','phase','createdAt','expiresAt'].some(key=>Object.hasOwn(value,key))&&
+      (row.phase!=='confirmed'||typeof value.objectId==='string'&&Array.isArray(value.warnings)&&value.warnings.every(warning=>typeof warning==='string')),'confirmação de importação 3D');
+  }
   for(const row of db.prepare('SELECT mesh FROM dice_structures').iterate())parseJSON(row.mesh,object,'estrutura de rolagem');
   if(tables.has('note_versions'))for(const row of db.prepare('SELECT content,shared_with,asset_ids,summary FROM note_versions').iterate()){
     parseJSON(row.content,object,'histórico de nota');
@@ -51,6 +58,9 @@ function checkSavedData(db,tables,userVersion){
     if(row.bytes!==row.data?.byteLength||createHash('sha256').update(row.data).digest('hex')!==row.hash)throw Error('Uma imagem de nota não corresponde ao tamanho ou checksum registrado.');
   }
   if(tables.has('room_audit'))assertRoomAudit(db);
+  if(tables.has('dice_rolls'))assertSavedDiceHistory(db);
+  if(tables.has('combat_operations'))assertCombatOperations(db);
+  if(tables.has('scene_media'))assertSavedSceneMedia(db);
   return roomStateVersions;
 }
 function openReadOnly(path){
@@ -66,7 +76,7 @@ export function inspectDatabase(path){
     const tables=new Set(schemaRows(db).map(row=>row.name));
     if(identity.userVersion>0){assertMigrationLedger(db,{throughVersion:identity.userVersion});assertRoomMigrationLedger(db);}
     const roomStateVersions=checkSavedData(db,tables,identity.userVersion);
-    const definitions=identity.userVersion===0?LEGACY_DATABASE_TABLES:identity.userVersion===1?DATABASE_V1_TABLES:DATABASE_TABLES;
+    const definitions=identity.userVersion===0?LEGACY_DATABASE_TABLES:identity.userVersion===1?DATABASE_V1_TABLES:identity.userVersion<4?DATABASE_V2_TABLES:identity.userVersion===4?DATABASE_V4_TABLES:identity.userVersion===5?DATABASE_V5_TABLES:identity.userVersion===6?DATABASE_V6_TABLES:DATABASE_TABLES;
     const counts=Object.fromEntries(Object.keys(definitions).sort().map(name=>[name,tables.has(name)?db.prepare(`SELECT count(*) AS count FROM ${name}`).get().count:0]));
     const sqliteVersion=db.prepare('SELECT sqlite_version() AS version').get().version;
     return {...identity,counts,sqliteVersion,roomStateVersions};

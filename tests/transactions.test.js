@@ -121,14 +121,14 @@ test('conta e sessão, entrada na mesa e mudanças de acesso são completas ou r
     assert.equal((await f.call('owner',f.root+'/map-position-settings','PATCH',{enabled:true,version:alice.mapPositionSettingsVersion})).status,200);
     alice=await f.view('alice');
     assert.equal((await f.call('alice',f.root+'/map-position','PATCH',{position:{x:0,y:0},version:alice.ownMapPositionVersion,settingsVersion:alice.mapPositionSettingsVersion})).status,200);
-    assert.equal((await f.call('owner',f.root+'/turns','POST',{action:'select',player:'alice'})).status,200);
+    assert.equal((await f.call('owner',f.root+'/turns','POST',{action:'select',player:'alice',version:alice.state.combat.version})).status,200);
     assert.equal((await f.call('alice',f.root+'/notes/alice/remember','PATCH',{title:'Lembrança',body:'Manter para um retorno à mesa'})).status,200);
     const beforeRemove=await f.view();await until(()=>events.frames.at(-1).revision===beforeRemove.revision);const removeCount=events.frames.length;
     f.fault('reject_member_state','rooms','UPDATE');
     assert.equal((await f.call('owner',f.root+'/members/'+f.users.alice,'DELETE')).status,500);
     assert.equal((await f.call('alice',f.root)).status,200,'falha no salvamento não pode retirar o acesso');sameRoom(beforeRemove,await f.view());await events.quiet(removeCount);f.clear('reject_member_state');
     const removed=await f.call('owner',f.root+'/members/'+f.users.alice,'DELETE');assert.equal(removed.status,200);assert.equal(removed.data.revision,beforeRemove.revision+1);
-    assert.equal(removed.data.state.mapPositions.markers[f.users.alice],undefined);assert.equal(removed.data.state.activePlayer,null);assert.equal(removed.data.state.turnOrder.includes('alice'),false);assert.equal((await f.call('alice',f.root)).status,403);
+    assert.equal(removed.data.state.mapPositions.markers[f.users.alice],undefined);assert.equal(removed.data.state.combat.activeId,'owner');assert.equal(removed.data.state.combat.order.includes('alice'),false);assert.equal((await f.call('alice',f.root)).status,403);
     await until(()=>events.frames.length===removeCount+1);
     assert.equal((await f.call('owner',f.root+'/members','POST',{username:'alice',role:'player'})).status,200);alice=await f.view('alice');assert.equal(alice.state.playerSheets.alice.notebooks[0].body,'Manter para um retorno à mesa');assert.equal(alice.hasOwnMapPosition,false);
     const invite=(await f.call('master',f.root+'/invites','POST',{role:'player'})).data;

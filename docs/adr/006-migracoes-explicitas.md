@@ -19,6 +19,8 @@ O servidor criava tabelas por `CREATE TABLE IF NOT EXISTS` e preenchia cadernos/
 
 ## Consequências
 
+Atualização em 2026-10-03: a [ADR 028](028-combate-confirmado-e-versionado.md) substitui a composição dos turnos na leitura prevista no item 5 por um combate persistido e confirmado. A migração 005 materializa a ordem anterior; alterações de participantes reconciliam o combate na transação de escrita. Filtros de acesso e as demais decisões desta ADR continuam vigentes.
+
 - O primeiro início pode demorar enquanto percorre as mesas. O processamento usa uma mesa por vez; não decodifica arquivos grandes durante a migração.
 - Migração de estado ausente para 1 aumenta a revisão uma vez. Versões por ponto e o conteúdo dos pontos são preservados; dados cujo formato foi completado podem exigir nova leitura de um editor antigo.
 - Um campo existente com tipo inválido não é corrigido descartando conteúdo: a aplicação não abre até que a cópia seja investigada. Formatos futuros não são reduzidos silenciosamente.

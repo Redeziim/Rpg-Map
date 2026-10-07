@@ -1,13 +1,13 @@
-export const SCENE_FIELDS=['title','body','pointIds','visibility'];
-export const sceneFields=scene=>({title:scene?.title||'',body:scene?.body||'',pointIds:scene?.pointIds||[],visibility:scene?.visibility||'master'});
+export const SCENE_FIELDS=['title','body','pointIds','visibility','mediaId'];
+export const sceneFields=scene=>({title:scene?.title||'',body:scene?.body||'',pointIds:scene?.pointIds||[],visibility:scene?.visibility||'master',mediaId:scene?.mediaId??null});
 export const sameSceneField=(field,a,b)=>field==='pointIds'?JSON.stringify([...a].sort())===JSON.stringify([...b].sort()):a===b;
 export function mergeSceneFields(base,draft,latest,choices){
   return Object.fromEntries(SCENE_FIELDS.map(field=>[field,sameSceneField(field,base[field],draft[field])||choices[field]==='latest'?latest[field]:draft[field]]));
 }
-export function visibleCampaignScenes(scenes,points,master=false){
+export function visibleCampaignScenes(scenes,points,master=false,presentation=null){
   if(master)return scenes||[];
   const ids=new Set(points.map(point=>point.id));
-  return (scenes||[]).filter(scene=>!scene.archived&&scene.visibility==='table'&&(!scene.pointIds.length||scene.pointIds.some(id=>ids.has(id))))
+  return (scenes||[]).filter(scene=>!scene.archived&&(scene.mediaId?scene.visibility==='table'||presentation?.sceneId===scene.id:scene.visibility==='table'&&(!scene.pointIds.length||scene.pointIds.some(id=>ids.has(id)))))
     .map(scene=>({...scene,pointIds:scene.pointIds.filter(id=>ids.has(id))}));
 }
 export function indexPointLinks(notes,scenes){
