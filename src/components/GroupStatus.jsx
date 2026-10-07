@@ -79,7 +79,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet
             {isMaster && <button className="sheet-tool-btn" onClick={() => onOpenSheet(name)}><Eye size={15} />Consultar ficha</button>}
             <div className="group-status-bars">
               {entry.bars.length === 0 && (
-                <p className="status-bars-hint">Sem barras configuradas.</p>
+                <p className="status-bars-hint status-bars-empty">Nenhuma barra de status ainda. Elas aparecem aqui quando forem configuradas na ficha.</p>
               )}
               {entry.bars.map(bar => {
                 const effect = effects[`${name}::${bar.id}`];
