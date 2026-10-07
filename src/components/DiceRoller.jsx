@@ -7,6 +7,7 @@ const DICE_OPTIONS = [4, 6, 8, 10, 12, 20, 100];
 
 const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
   const [trayEnabled,setUseTray]=useState(false),[trayBusy,setTrayBusy]=useState(false),[trayError,setTrayError]=useState('');
+  const [privateRoll,setPrivateRoll]=useState(false);
   const useTray=sharedOnly||trayEnabled;
   const [terms, setTerms] = useState([{ id: 'init', sign: 1, qty: 1, sides: 20 }]);
   const [nextSign, setNextSign] = useState(1);
@@ -54,7 +55,7 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
       if(terms.reduce((n,t)=>n+t.qty*(t.sides===100?2:1),0)>20){setTrayError('A mão comporta até 20 dados físicos (d100 usa dois).');return;}
       if(trayBusy||terms.length===0)return;
       setTrayBusy(true);setTrayError('');
-      try{const result=await onTrayRoll(terms,skinId,{sceneId:sceneId||null});if(result===false)setTrayError('Não foi possível rolar. Confira a mensagem da mesa e tente novamente.');}finally{setTrayBusy(false);}
+      try{const result=await onTrayRoll(terms,skinId,{sceneId:sceneId||null,private:privateRoll});if(result===false)setTrayError('Não foi possível rolar. Confira a mensagem da mesa e tente novamente.');}finally{setTrayBusy(false);}
       return;
     }
     if (rolling || terms.length === 0) return;
@@ -142,6 +143,7 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
       </div>
 
       {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja · visível para a mesa</label>}
+      {onTrayRoll&&useTray&&<label className="tray-option tray-private-option"><input type="checkbox" checked={privateRoll} disabled={rolling||trayBusy} onChange={e=>setPrivateRoll(e.target.checked)}/>Rolagem privada · só você e o ADM veem o resultado</label>}
       {!useTray&&<div className="dice-display-area">
         {terms.length === 0 ? (
           <div className="dice-face-3d dice-face-3d-empty">

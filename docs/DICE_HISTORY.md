@@ -1,6 +1,6 @@
 # Histórico de rolagens — base pública do item 53
 
-Estado em 2026-10-03: implementado e validado localmente para a bandeja pública. A decisão sobre rolagens privadas do mestre continua pendente. O item 53 ainda não está concluído.
+Estado em 2026-10-07: histórico público e rolagens privadas implementados. O item 53 está concluído.
 
 ## Uso
 
@@ -38,8 +38,15 @@ Um teste integrado na API HTTP real verifica autor/horário/expressão/valores/c
 
 Navegador com `npm run dev`, SQLite descartável e larguras 1440/390 px: estado vazio, lançamento por arraste, face/total 19, cena e rodada 2, reabertura, páginas 20→24, Enter/Tab, foco de 2 px, controles novos de 44 px e ausência de overflow/erros de console. HTTP manual confirmou que uma cena escondida fica fora do histórico/exportação do jogador, enquanto seu contexto permanece disponível ao mestre autorizado. A cena foi restaurada ao estado anterior após o teste.
 
-## O que falta neste item
+## Rolagens privadas (decisão de 2026-10-07)
 
-A pergunta já enviada oferece: privadas lidas apenas por quem rolou; privadas lidas por mestres/ADM; ou todas públicas. Aplicar a resposta antes de criar controles/permissões de rolagem privada. Não inferir a escolha pelo tempo de espera. A base atual preserva o comportamento público existente.
+Decisão do usuário: cada pessoa vê o próprio histórico de rolagens privadas e o ADM vê o de todos.
 
-Skills: tdd, frontend-design, vercel-react-best-practices e web-design-guidelines. Sem API externa, pacote novo, publicação ou alteração da estratégia de persistência. Evidências em `quality/53-*`.
+- Quem lança marca **Rolagem privada · só você e o ADM veem o resultado** antes de pegar os dados. O corpo de `POST /tray-rolls` aceita `private: true|false` (outro tipo devolve `400`). A opção faz parte da identidade da operação: repetir o mesmo corpo devolve o mesmo recibo; repetir com outra visibilidade devolve `409`.
+- O registro guarda `visibility: "private"` no mesmo JSON do SQLite, sem nova migração (`user_version` continua 7, `stateVersion` 5).
+- Leitores permitidos: o **autor** e o **ADM da mesa**, em qualquer modo de visão. Outros mestres e jogadores não recebem a rolagem em `dice-history`, no snapshot/SSE (`diceHistory`), na exportação e, para a animação da bandeja, em `trayRoll` (que chega como `null`). A paginação filtra no SQL, então `hasMore` e o cursor `before` seguem consistentes.
+- A trava interna "aguarde os dados pararem" continua usando a última rolagem de verdade, privada ou não, para que ninguém lance por cima.
+- Entradas privadas aparecem com a etiqueta **Privada** no histórico de quem pode lê-las.
+- Teste: `tests/diceHistoryPrivate.test.js` cobre autor, ADM, jogador, outro mestre, repetição, conflito, paginação e exportação.
+
+Skills: tdd, frontend-design e web-design-guidelines. Sem API externa, pacote novo ou migração.

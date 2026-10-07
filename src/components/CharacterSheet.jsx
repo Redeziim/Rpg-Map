@@ -317,7 +317,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
       </section>}
       {isMaster && <label className="player-select">Consultar personagem<select value={selectedPlayer} onChange={e => onSelectPlayer(e.target.value)}><option value="">Selecione um jogador…</option>{playerNames.map(n => <option key={n}>{n}</option>)}</select><span><Eye size={14} /> {readOnly?'Somente leitura':'Acesso de ADM'}</span></label>}
       <div className="dossier-layout">
-        <aside className="dossier-profile">{profile}<div className="profile-footnote"><span>✦</span><p>Cada marca, uma escolha.<br />Cada escolha, um caminho.</p></div></aside>
+        <aside className="dossier-profile" aria-label="Perfil do personagem">{profile}<div className="profile-footnote"><span>✦</span><p>Cada marca, uma escolha.<br />Cada escolha, um caminho.</p></div></aside>
         <div className="dossier-content">
           {!activePlayer ? <div className="empty-state sheet-empty"><ScrollText size={42} /><h3>{isMaster ? 'Um olhar sobre a mesa' : 'Sua ficha começa aqui'}</h3><p>{isMaster ? 'Selecione um jogador para consultar seus atributos, recursos e observações.' : 'Informe seu nome ao lado para acessar a ficha da campanha.'}</p></div> : <>
             <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : saveStatus==='error' ? 'Falha ao salvar' : 'Sua ficha'}</span></div>

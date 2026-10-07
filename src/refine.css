@@ -129,3 +129,24 @@ body .note-window .note-text-editor textarea{height:100%;min-height:0}
 
 /* Mapa mental: "Mais opções" aberto não pode consumir o quadro; o painel rola por dentro. */
 body .note-board-options-content{max-height:170px;overflow:auto}
+
+/* Alvos de toque de 44 px no seletor de modo do ADM. */
+.mist-theme .mode-btn{min-height:44px}
+
+/* Aviso de conexão perdida visível em todas as abas. */
+.mist-theme .connection-banner{margin:20px 20px 0;padding:10px 14px;border:1px solid #c57861;border-left-width:4px;background:#39231d;color:#ffe2d5;font-size:var(--fs-small);line-height:1.5}
+@media(max-width:760px){.mist-theme .connection-banner{margin:14px 14px 0}}
+
+/* Alvos de toque: 44 px nos controles principais e no mínimo 28 px nos controles densos dos dados (item 62). */
+.mist-theme .mode-btn,.mist-theme .mode-btn.active{min-height:44px}
+@media(max-width:760px),(pointer:coarse){
+  .mist-theme select{min-height:44px}
+  .mist-theme .pouch-btn{min-width:44px;min-height:44px}
+  .mist-theme .dice-term-chip button,.mist-theme .dice-op-toggle button{min-width:28px;min-height:28px}
+  .mist-theme .dice-tray button,.mist-theme .tabletop-camera button{min-width:44px;min-height:44px}
+  .mist-theme input[type=checkbox],.mist-theme input[type=radio]{width:20px;height:20px;accent-color:var(--gold)}
+}
+
+/* Rolagem privada: etiqueta no histórico e opção do lançador. */
+.mist-theme .roll-private-tag{margin-left:8px;padding:1px 7px;border:1px solid #a65358;color:#f0d7ce;background:#351c1f;font-style:normal;font-size:var(--fs-label);letter-spacing:.06em;text-transform:uppercase}
+.mist-theme .tray-private-option{margin-top:4px}

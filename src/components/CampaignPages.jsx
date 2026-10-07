@@ -40,7 +40,7 @@ export function AboutPanel({roomId,username,role}){
     }catch(cause){setError(cause.message);}
     finally{setSending(false);}
   }
-  return <main className="campaign-page about-page">
+  return <section className="campaign-page about-page">
     <header className="campaign-page-heading"><span className="campaign-kicker">Guia da mesa · Sobre</span><h2>Sobre o Grimório</h2><p>Um lugar para acompanhar as ferramentas da mesa e contar o que pode melhorar.</p></header>
     <div className="about-columns">
       <div className="about-reading">
@@ -62,5 +62,5 @@ export function AboutPanel({roomId,username,role}){
         <div className="feedback-log"><h4>{['master','admin'].includes(role)?'Feedbacks da mesa':'Seus feedbacks'}</h4>{loading?<p role="status">Carregando feedbacks…</p>:entries.length?<ol>{entries.map(entry=><li key={entry.id}><div><strong>{TYPES[entry.category]||'Feedback'}</strong><time dateTime={new Date(entry.createdAt).toISOString()}>{dateFormatter.format(entry.createdAt)}</time></div>{['master','admin'].includes(role)&&entry.username!==username&&<small>De @{entry.username}</small>}<p>{entry.message}</p></li>)}</ol>:<p>Nenhum feedback registrado ainda.</p>}</div>
       </section>
     </div>
-  </main>;
+  </section>;
 }

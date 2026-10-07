@@ -82,7 +82,7 @@ function projection(db,{roomId,user,viewMode}){
   const sceneMedia=db.prepare('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? ORDER BY id').all(roomId).filter(asset=>master||mediaIds.has(asset.id));
   const structures=db.prepare('SELECT id FROM dice_structures WHERE room_id=? ORDER BY id').all(roomId);
   const audit=master?db.prepare('SELECT * FROM room_audit WHERE room_id=? ORDER BY sequence DESC').all(roomId).map(row=>({sequence:row.sequence,actor:{id:row.actor_id,username:row.actor_username},action:row.action,details:JSON.parse(row.details),createdAt:row.created_at,revision:row.revision})):[];
-  const diceHistory=db.prepare('SELECT entry FROM dice_rolls WHERE room_id=? ORDER BY created_at DESC,id DESC').all(roomId).map(row=>projectDiceEntry(JSON.parse(row.entry),state.campaignScenes));
+  const diceHistory=db.prepare("SELECT entry FROM dice_rolls WHERE room_id=? AND (json_extract(entry,'$.visibility')='public' OR ?=1 OR user_id=?) ORDER BY created_at DESC,id DESC").all(roomId,role==='admin'?1:0,user.id).map(row=>projectDiceEntry(JSON.parse(row.entry),state.campaignScenes));
   return {room:pick(room,['id','name','revision']),members,state,groupBars,raw,master,histories,noteAssets,models,sceneMedia,structures,audit,diceHistory,role,
     counts:{points:state.points.length,notes:notes.length,versions:histories.reduce((n,h)=>n+h.versions.length,0),noteImages:noteAssets.length,models:models.length,scenes:state.campaignScenes.length,participants:members.length,audit:audit.length,diceRolls:diceHistory.length}};
 }

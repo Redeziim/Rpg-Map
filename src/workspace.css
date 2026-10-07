@@ -91,8 +91,8 @@
 .mist-theme .group-status-card{padding:16px;border-radius:3px;transition:none;animation:none;transform:none;background:#1b1a16;border:1px solid var(--workspace-edge);box-shadow:none}
 .mist-theme .group-status-card:hover,.mist-theme .group-status-card:focus-within{transform:none;animation:none;transition:none;box-shadow:none;border-color:var(--workspace-gold);background:var(--workspace-hover)}
 .mist-theme .group-status-card-header{gap:12px;margin-bottom:10px}
-.mist-theme .group-status-card-header h4{font:600 16px var(--workspace-font);color:var(--workspace-gold);overflow-wrap:anywhere}
-.mist-theme .group-status-card:hover h4{color:#e5c37d}
+.mist-theme .group-status-card-header h3{font:600 16px var(--workspace-font);color:var(--workspace-gold);overflow-wrap:anywhere}
+.mist-theme .group-status-card:hover h3{color:#e5c37d}
 .mist-theme .group-status-avatar{width:42px;height:42px;border-radius:3px;border-color:#78603a}
 .mist-theme .group-status-bars{margin-top:14px}
 .mist-theme .group-status-card .status-bar-row{margin-bottom:10px}

@@ -73,7 +73,7 @@ const GroupStatus = ({ viewMode, allPlayersBars, onUpdatePlayerBars, onOpenSheet
                   <ImageIcon size={22} />
                 </div>
               )}
-              <h4>{name}{activePlayer===name&&<span className="turn-badge">Em turno</span>}</h4>
+              <h3>{name}{activePlayer===name&&<span className="turn-badge">Em turno</span>}</h3>
             </div>
 
             {isMaster && <button className="sheet-tool-btn" onClick={() => onOpenSheet(name)}><Eye size={15} />Consultar ficha</button>}

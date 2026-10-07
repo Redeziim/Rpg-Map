@@ -43,7 +43,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [heldDice,setHeldDice]=useState(null);
   const [diceStructure,setDiceStructure]=useState('tray');
   const diceLaunch=useRef(null);
-  const onTrayRoll=(terms,skinId,options={})=>{diceLaunch.current=null;setHeldDice({terms,skinId,structureId:'tray',origin:activeTab==='grupo'?'group':'sheet',sceneId:options.sceneId||null,operationId:crypto.randomUUID()});return true;};
+  const onTrayRoll=(terms,skinId,options={})=>{diceLaunch.current=null;setHeldDice({terms,skinId,structureId:'tray',origin:activeTab==='grupo'?'group':'sheet',sceneId:options.sceneId||null,private:options.private===true,operationId:crypto.randomUUID()});return true;};
   const throwHeldDice=async (gesture,physics)=>{if(!heldDice)return false;diceLaunch.current||={...heldDice,gesture,physics,requestedAt:Date.now()};const launch=diceLaunch.current,result=await mutate('/tray-rolls',launch,'POST');if(result&&diceLaunch.current===launch){diceLaunch.current=null;setHeldDice(null);}return result;};
   const [selectedPlayer,setSelectedPlayer]=useState('');
   const viewMode=room.role==='admin'?adminMode:room.role==='master'?'master':'player';
@@ -579,31 +579,30 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           </button>
           <button
             className={`tab-btn ${activeTab === 'ficha' ? 'active' : ''}`}
-            aria-label={viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}
             aria-pressed={activeTab === 'ficha'}
             onClick={() => setActiveTab('ficha')}
           >
             <ScrollText size={18} />
-            <span className="tab-label-full">{viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}</span><span className="tab-label-short" aria-hidden="true">Ficha</span>
+            <span className="tab-label-full">{viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}</span><span className="tab-label-short">Ficha</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'grupo' ? 'active' : ''}`}
-            aria-label="Status do Grupo"
             aria-pressed={activeTab === 'grupo'}
             onClick={() => setActiveTab('grupo')}
           >
             <Heart size={18} />
-            <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short" aria-hidden="true">Grupo</span>
+            <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short">Grupo</span>
           </button>
           <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-pressed={activeTab==='cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
         </nav>
         <div className="nav-footer"><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-pressed={activeTab==='sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button></div>
       </header>
 
-      <div className="room-content"><div className="session-strip"><TurnTracker key={`${room.id}:${user.id}`} room={room} username={user.username} userId={user.id} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
-      <div id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1} onKeyDown={handleMapShortcut}>
+      <div className="room-content">{connection!=='online'&&connection!=='connecting'&&<p className="connection-banner" role="status">Sem conexão com o servidor. Suas alterações só serão enviadas quando a conexão voltar; o que você está vendo pode estar desatualizado.</p>}<div className="session-strip"><TurnTracker key={`${room.id}:${user.id}`} room={room} username={user.username} userId={user.id} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
+      <main id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1} onKeyDown={handleMapShortcut}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate} viewMode={viewMode}/>:activeTab === 'mapa' ? (
           <>
+            <h2 className="sr-only">Mapa da mesa</h2>
             <div className="map-mode-tabs" role="group" aria-label="Visualização do mapa"><button aria-pressed={mapMode==='3d'} onClick={()=>setMapMode('3d')}>Mesa 3D</button><button aria-pressed={mapMode==='2d'} onClick={()=>setMapMode('2d')}>Mapa 2D e pontos</button>{mapMode==='2d'&&<button aria-expanded={map2dToolsOpen} aria-controls="map-2d-tools" onClick={()=>setMap2dToolsOpen(open=>!open)}>{map2dToolsOpen?'Fechar ferramentas':'Ferramentas 2D'}</button>}<button className="map-focus-button" aria-pressed={mapFocus} onClick={()=>setMapFocus(focus=>!focus)}>{mapFocus?'Sair do foco':'Ampliar mapa'}</button></div>
             {mapMode==='2d'&&mapImage&&<div className="map-draw-tools" role="toolbar" aria-label="Ferramentas de anotação do mapa">
               <button type="button" aria-pressed={mapTool==='pan'} onClick={()=>selectMapTool('pan')}><Hand size={16} aria-hidden="true"/>Mover</button>
@@ -709,7 +708,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             </aside>
 
             {/* Canvas principal */}
-            <main className="canvas-area">
+            <section className="canvas-area">
               {!mapImage ? (
                 <div className="empty-state">
                   <Map size={40} aria-hidden="true" />
@@ -758,13 +757,13 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                   {mapScale&&<div className="map-scale-caption">{measurementPrefs.grid?`${formatDistance(mapScale.cellDistance*gridStride(mapScale,mapFit*scale),mapScale.unit)} por quadrado`:`Régua em ${mapScale.unit} · linha reta`}</div>}
                 </div>
               )}
-            </main>
+            </section>
             </div>}
           </>
         ) : activeTab === 'ficha' ? (
           <>
             {/* Área principal da Ficha de Personagem */}
-            <main className="sheet-area">
+            <section className="sheet-area">
               <Suspense fallback={<p role="status">Preparando a ficha…</p>}>
               <CharacterSheet
                 notebookKey={`${room.id}:${user.id}`}
@@ -800,7 +799,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                 onUpdatePlayerSheet={updatePlayerSheet}
               />
               </Suspense>
-            </main>
+            </section>
 
             {/* Painel lateral com o Dado */}
             <aside className="sheet-sidebar">
@@ -809,7 +808,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             </aside>
           </>
         ) : activeTab==='cenas' ? <ScenesPanel roomId={room.id} userId={user.id} scenes={visibleScenes} points={points} editable={canManageScenes} viewMode={viewMode} presentation={room.state.scenePresentation} connection={connection} onPresent={presentScene} request={sceneRequest} onRequestHandled={()=>setSceneRequest(null)} onOpenPoint={openLinkedPoint} saving={saving} error={error} onSave={(id,fields,version)=>mutate(mapRequestPath(version?`/campaign-scenes/${id}`:'/campaign-scenes'),version?{...fields,version}:{...fields,id},version?'PATCH':'POST')} onArchive={(scene,archived)=>mutate(mapRequestPath(`/campaign-scenes/${scene.id}`),{archived,version:scene.version},'PATCH')}/> : activeTab==='sobre' ? <AboutPanel roomId={room.id} username={user.username} role={room.role}/> : (
-          <main className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>Status do grupo</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} {playerNames.length===1?'jogador':'jogadores'}</span></div>
+          <section className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>Status do grupo</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} {playerNames.length===1?'jogador':'jogadores'}</span></div>
             <div className="group-workspace"><section className="party-roster" aria-label="Personagens da mesa"><Suspense fallback={<p role="status">Preparando o grupo…</p>}><GroupStatus
               viewMode={viewMode}
               activePlayer={room.state.combat.activeId}
@@ -818,9 +817,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
               onUpdatePlayerBars={updatePlayerBars}
             /></Suspense>
             </section><aside className="group-roll-station" aria-label="Bandeja e dados"><Suspense fallback={<p role="status">Preparando a bandeja…</p>}><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)}/></Suspense><div className="group-dice-controls"><Suspense fallback={<p role="status">Preparando os dados…</p>}><DiceRoller onTrayRoll={onTrayRoll} scenes={room.state.campaignScenes} sharedOnly/></Suspense></div><DiceHistory key={`${room.id}:${room.role}:${viewMode}`} room={room} viewMode={viewMode}/></aside></div>
-          </main>
+          </section>
         )}
-      </div>
+      </main>
 
       </div>
       {activeTab!=='grupo'&&<Suspense fallback={<p role="status">Preparando a bandeja…</p>}><DiceTray roll={room.trayRoll} serverTime={room.serverTime} held={heldDice} onThrow={throwHeldDice} onCancel={()=>setHeldDice(null)} compact/></Suspense>}

@@ -220,8 +220,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     if(state.masterNotebooks)state.masterNotebooks=state.masterNotebooks.map(cleanNote);
     state.sharedNotebooks=state.sharedNotebooks.map(cleanNote);
     for(const sheet of Object.values(state.playerSheets))sheet.notebooks=sheet.notebooks.map(cleanNote);
-    const history=diceHistory.page(roomId,state.campaignScenes);
-    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,serverTime:Date.now()};
+    const diceViewer={userId,username:viewer,admin:m.role==='admin'};const history=diceHistory.page(roomId,state.campaignScenes,null,diceViewer);
+    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId,diceViewer),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,serverTime:Date.now()};
   }
   function revoke(client,status){
     client.res.write(`event: revoked\ndata: ${JSON.stringify({status})}\n\n`);client.res.end();clients.delete(client);
@@ -690,7 +690,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     }
     if(path[3]==='dice-history'&&method==='GET'&&path.length===4){
       const view=snapshot(roomId,user.id,mapView());
-      return json(res,200,{...diceHistory.page(roomId,view.state.campaignScenes,url.searchParams.get('before')),revision:view.revision});
+      return json(res,200,{...diceHistory.page(roomId,view.state.campaignScenes,url.searchParams.get('before'),{userId:user.id,username:user.username,admin:view.role==='admin'}),revision:view.revision});
     }
     if(path[3]==='tray-rolls'&&method==='POST'&&path.length===4){
       const result=transaction(()=>{
@@ -703,6 +703,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(requestBody.sceneId&&!view.state.campaignScenes.some(scene=>scene.id===requestBody.sceneId))fail(403,'Esta cena não está disponível para sua rolagem.');
         const roll=createTrayRoll(user.username,requestBody.terms,requestBody.skinId,requestBody.gesture,requestBody.physics);
         roll.structureId='tray';
+        if(requestBody.private===true)roll.private=true;
         return {receipt:diceHistory.record(view,user,requestBody,operation,roll,view.state.campaignScenes)};
       });
       if(!result.repeated)broadcast(roomId);

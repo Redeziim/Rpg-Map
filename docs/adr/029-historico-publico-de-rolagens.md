@@ -1,6 +1,6 @@
 # 029 — Histórico público e confirmação das rolagens
 
-Data: 2026-10-03. Estado: base pública aplicada localmente; decisão de privacidade pendente.
+Data: 2026-10-03. Estado: aplicado, incluindo a decisão de privacidade de 2026-10-07.
 
 ## Contexto
 
@@ -16,6 +16,6 @@ Projetar o contexto das cenas pelas permissões atuais também em consultas e ex
 
 ## Limites
 
-Esta decisão mantém as rolagens públicas existentes. Não define quem pode ler futuras rolagens privadas do mestre: a pergunta ao usuário está pendente. Rolagens locais fora da bandeja não passam a ser confirmadas pelo servidor. Os dados anteriores em memória não são reconstruídos.
+Rolagens públicas permanecem como antes. Rolagens privadas, decididas em 2026-10-07: lidas apenas por quem rolou e pelo ADM (histórico, snapshot, SSE, animação da bandeja e exportação). Rolagens locais fora da bandeja não passam a ser confirmadas pelo servidor. Os dados anteriores em memória não são reconstruídos.
 
 Contrato, evidências e continuidade em [DICE_HISTORY.md](../DICE_HISTORY.md). Um teste HTTP integrado, suíte 131/131, build e navegador desktop/celular aprovados.

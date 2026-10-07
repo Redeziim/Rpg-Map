@@ -99,7 +99,7 @@ export default function CampaignScenes({roomId,userId,scenes,points,editable,vie
   function openEditor(scene){if(!editor)setEditor(makeDraft(scene));else if(scene?.id!==editor.id)setNotice('Retome ou feche o rascunho existente antes de editar outra cena.');setEditorOpen(true);}
   async function save(id,fields,version){const result=await onSave(id,fields,version);if(result){setEditor(null);setSelectedId(id);setNotice('Cena salva na mesa.');}return result;}
   async function archive(scene,value){const result=await onArchive(scene,value);if(result){setNotice(value?'Cena arquivada. Ela não aparece mais nos pontos.':'Cena restaurada.');if(value)setUndoId(scene.id);else{setUndoId(null);setArchived(false);setSelectedId(scene.id);}}}
-  return <main className="campaign-page scenes-page">
+  return <section className="campaign-page scenes-page">
     <header className="campaign-page-heading"><span className="campaign-kicker">Sala de projeção</span><h2>Cenas</h2><p>{editable?'Prepare vídeos e animações, exiba para a mesa e escolha o que os jogadores podem rever.':'Assista às cenas que o mestre liberou para você rever.'}</p></header>
     {mediaError&&<p className="scene-warning" role="alert">{mediaError}<button type="button" onClick={()=>setLibraryVersion(value=>value+1)}>Atualizar arquivos</button></p>}
     {notice&&<p className="scene-notice" role="status">{notice}</p>}{undoScene&&editable&&<button type="button" className="scene-undo" disabled={saving} onClick={()=>archive(undoScene,false)}>Restaurar cena arquivada: {undoScene.title}</button>}
@@ -118,7 +118,7 @@ export default function CampaignScenes({roomId,userId,scenes,points,editable,vie
     </>:<div className="scene-reader-empty"><Clapperboard size={28} aria-hidden="true"/><p>{selectedId?'Esta cena não está disponível nesta visão do arquivo.':editable?'Escolha uma cena na lista ao lado para ler ou exibir, ou crie uma nova.':'Escolha uma cena na lista ao lado para assistir.'}</p></div>}</section></div>
     {editable&&<details className="scene-file-library"><summary>Arquivos da mesa · {assets.length}</summary><p>Arquivos sem uso podem ser excluídos. Cenas arquivadas também contam como uso.</p>{assets.map(asset=><div key={asset.id} className="scene-library-row"><span>{asset.name} · {fileSize(asset.bytes)}</span>{scenes.some(scene=>scene.mediaId===asset.id)||editor?.fields.mediaId===asset.id?<small>Em uso</small>:<button type="button" onClick={()=>setDeleteId(asset.id)} aria-label={`Excluir arquivo sem uso: ${asset.name}`}>Excluir arquivo sem uso</button>}</div>)}{deleteId&&<section className="scene-warning" aria-label="Confirmar exclusão do arquivo"><p>Excluir {assets.find(asset=>asset.id===deleteId)?.name} da biblioteca? O arquivo não poderá ser recuperado.</p><div className="scene-actions"><button type="button" onClick={()=>setDeleteId(null)}>Cancelar exclusão</button><button type="button" onClick={()=>deleteMedia(deleteId)}>Confirmar exclusão</button></div></section>}</details>}
     {ready&&editor&&editorOpen&&<SceneEditor key={editor.id} record={editor} onChange={setEditor} latest={latest} points={points} assets={assets} mediaLoading={mediaLoading} editable={editable} saving={saving} error={error} storageProblem={storageProblem} onSave={save} onClose={()=>{setEditor(null);setEditorOpen(true);}} onKeep={()=>setEditorOpen(false)} onUpload={upload}/>}
-  </main>;
+  </section>;
 }
 
 

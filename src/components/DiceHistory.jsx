@@ -26,9 +26,9 @@ export default function DiceHistory({room,viewMode}){
   }
   return <details className="roll-ledger">
     <summary>Histórico da bandeja</summary>
-    <p className="roll-ledger-hint">Rolagens públicas salvas · até 500 registros.</p>
+    <p className="roll-ledger-hint">Rolagens salvas · as privadas só aparecem para quem rolou e para o ADM · até 500 registros.</p>
     {entries.length?<ol aria-label="Rolagens salvas">{entries.map(entry=><li key={entry.id}>
-      <div className="roll-ledger-meta"><span>@{entry.author}</span><time dateTime={new Date(entry.createdAt).toISOString()}>{dateFormatter.format(entry.createdAt)}</time></div>
+      <div className="roll-ledger-meta"><span>@{entry.author}{entry.visibility==='private'&&<em className="roll-private-tag">Privada</em>}</span><time dateTime={new Date(entry.createdAt).toISOString()}>{dateFormatter.format(entry.createdAt)}</time></div>
       <div className="roll-ledger-result"><span>{entry.expression}</span><strong aria-label={entry.cocked?'Sem resultado válido':`Total ${entry.total}`}>{entry.cocked?'Sem resultado':entry.total}</strong></div>
       <details className="roll-ledger-entry"><summary>Ver dados e contexto</summary><p>{entry.parts.map(part=>`${part.sign<0?'− ':''}${part.qty}d${part.sides}: [${part.rolls.join(', ')}]`).join(' · ')}</p><p>{ORIGINS[entry.origin]} · {entry.context.roomName}{entry.context.combat.round>0?` · Rodada ${entry.context.combat.round}`:' · Fora de combate'}{entry.context.scene?` · Cena: ${entry.context.scene.title}`:''}</p>{entry.cocked&&<p>Dado preso, inclinado ou fora da área. Esta jogada não tem total válido.</p>}</details>
     </li>)}</ol>:<p className="roll-ledger-empty">As próximas rolagens da bandeja ficam guardadas aqui.</p>}
