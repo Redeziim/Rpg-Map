@@ -2,10 +2,10 @@
 .point-details-overlay::backdrop{background:#080a08d9}
 .point-details{width:min(100%,520px);max-height:calc(100dvh - 40px);overflow:auto;background:#1c1b17;border:1px solid #a78954;box-shadow:0 24px 64px #000b;font-family:'Crimson Pro',Georgia,serif}
 .point-details-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #655135;color:#d9b777}
-.point-details-kicker{display:flex;align-items:center;gap:8px;text-transform:uppercase;font:600 11px Cinzel,Georgia,serif;letter-spacing:.12em}
+.point-details-kicker{display:flex;align-items:center;gap:8px;text-transform:uppercase;font:600 var(--fs-small) Cinzel,Georgia,serif;letter-spacing:.12em}
 .point-details-header button{display:grid;place-items:center;width:44px;height:44px;border:1px solid transparent;background:transparent;color:inherit;cursor:pointer}
 .point-details-body{display:grid;gap:9px;padding:24px 26px 28px}
-.point-details-type{width:max-content;border-left:3px solid var(--point-color);padding:3px 9px;color:#d9c5a2;font:600 12px Cinzel,Georgia,serif;text-transform:uppercase;letter-spacing:.08em}
+.point-details-type{width:max-content;border-left:3px solid var(--point-color);padding:3px 9px;color:#d9c5a2;font:600 var(--fs-small) Cinzel,Georgia,serif;text-transform:uppercase;letter-spacing:.08em}
 .point-details-body h2{font:600 clamp(25px,4vw,37px) Cinzel,Georgia,serif;line-height:1.2;color:#f1dcaf;overflow-wrap:anywhere}
 .point-details-body .point-details-edit-title{font-size:20px;margin:0 0 6px}
 .point-details-description{font:18px/1.55 'Crimson Pro',Georgia,serif;white-space:pre-wrap;overflow-wrap:anywhere;color:#e4dccd}
@@ -13,7 +13,7 @@
 .point-details-notes h3{font:600 13px Cinzel,Georgia,serif;color:#d9c5a2}
 .point-details-notes button{min-height:44px;padding:8px 10px;border:1px solid #655135;background:#28261f;color:#f2e5cb;text-align:left;overflow-wrap:anywhere;cursor:pointer}
 .point-details-notes button:hover{border-color:#d1aa67;background:#3a3123}
-.point-details-body label{font:600 12px Cinzel,Georgia,serif;color:#cbb58a;margin-top:9px}
+.point-details-body label{font:600 var(--fs-small) Cinzel,Georgia,serif;color:#cbb58a;margin-top:9px}
 .point-details-body input,.point-details-body textarea,.point-details-body select{width:100%;padding:11px 12px;background:#24221c;border:1px solid #76613f;color:#f2eadb;font:17px/1.4 'Crimson Pro',Georgia,serif;resize:vertical}
 .point-details-footer{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:14px 26px;border-top:1px solid #655135}
 .point-details-footer p{margin-right:auto;color:#ffc1a9}

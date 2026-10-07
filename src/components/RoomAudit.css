@@ -16,7 +16,7 @@
 .room-audit-list>li{display:grid;grid-template-columns:135px minmax(0,1fr) minmax(100px,180px);align-items:start;gap:12px;padding:16px 0 16px 16px;border-top:1px solid #77633e80;content-visibility:auto;contain-intrinsic-size:auto 90px}
 .room-audit-list time{color:var(--audit-muted);font-variant-numeric:tabular-nums}
 .room-audit-action{display:grid;gap:3px;overflow-wrap:anywhere}
-.room-audit-category{font:11px/1.5 'Cinzel',Georgia,serif;color:var(--audit-accent)}
+.room-audit-category{font:var(--fs-small)/1.5 'Cinzel',Georgia,serif;color:var(--audit-accent)}
 .room-audit-action>strong{font-weight:400;font-size:17px}
 .room-audit-action>span:last-child:not(.room-audit-category){color:var(--audit-muted)}
 .room-audit-author{overflow-wrap:anywhere;color:var(--audit-muted)}

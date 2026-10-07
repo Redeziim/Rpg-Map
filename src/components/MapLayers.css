@@ -9,7 +9,7 @@
 .mist-theme .map-stroke-audience select,.mist-theme .map-markings .map-marking-audience select{box-sizing:border-box;min-height:44px;max-width:100%;padding:7px;border:1px solid #80663d;color:#f1dfb8;background:#211f19;font:14px 'Source Sans 3',sans-serif}
 .mist-theme .view-mapa .map-markings li{flex-wrap:wrap;padding:6px 0}
 .mist-theme .view-mapa .map-markings li>span{flex:1 1 140px}
-.map-marking-audience{flex:1 1 100%;display:flex;align-items:center;gap:8px;font:12px 'Source Sans 3',sans-serif}
+.map-marking-audience{flex:1 1 100%;display:flex;align-items:center;gap:8px;font:var(--fs-small) 'Source Sans 3',sans-serif}
 .map-marking-audience select{flex:1}
 .map-layers :focus-visible,.map-stroke-audience :focus-visible,.map-marking-audience :focus-visible{outline:2px solid #f0d391;outline-offset:2px}
 @media(forced-colors:active){.mist-theme .map-layers{border-color:CanvasText}.mist-theme .map-layers input{accent-color:auto}}

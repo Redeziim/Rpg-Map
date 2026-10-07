@@ -1238,7 +1238,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           right: 4px;
           top: 50%;
           transform: translateY(-50%);
-          font-size: 0.7rem;
+          font-size: var(--fs-small);
           filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
           z-index: 2;
         }
@@ -1384,7 +1384,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         .status-bar-quick {
           width: auto !important;
           padding: 0 0.5rem;
-          font-size: 0.7rem;
+          font-size: var(--fs-small);
         }
 
         .status-bar-remove {
@@ -1457,7 +1457,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           padding: 0.3rem 0.75rem;
           border-radius: 20px;
           font-family: 'Crimson Pro', serif;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           transition: opacity 0.3s ease;
           min-height: 1.6rem;
         }
@@ -1537,7 +1537,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
         .font-swatch-btn small {
           font-family: 'Crimson Pro', serif;
-          font-size: 0.7rem;
+          font-size: var(--fs-small);
           color: #b9b09f;
         }
 
@@ -1574,7 +1574,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           border: 2px solid rgba(199, 171, 118, 0.3);
           border-radius: 6px;
           color: #e9dfcd;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           cursor: pointer;
           transition: background-color 0.25s ease;
         }
@@ -1633,7 +1633,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         /* Dica de auto-categorização enquanto o nome é digitado */
         .auto-cat-hint {
           font-family: 'Crimson Pro', serif;
-          font-size: 0.78rem;
+          font-size: var(--fs-small);
           color: #c7ab76;
           white-space: nowrap;
           font-style: italic;
@@ -1683,7 +1683,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         }
 
         .field-list-type {
-          font-size: 0.72rem;
+          font-size: var(--fs-small);
           color: #a39988;
           white-space: nowrap;
         }
@@ -1734,7 +1734,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           border: 1px solid rgba(199, 171, 118, 0.25);
           border-radius: 4px;
           color: #b9b09f;
-          font-size: 0.75rem;
+          font-size: var(--fs-small);
           flex-shrink: 0;
         }
 
@@ -1904,7 +1904,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         }
 
         .sheet-image-upload-btn {
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           padding: 0.5rem 1rem;
         }
 
@@ -1956,7 +1956,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           border: 1px dashed rgba(199, 171, 118, 0.4);
           border-radius: 6px;
           color: #c7ab76;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           cursor: pointer;
         }
 
@@ -1986,7 +1986,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         }
 
         .formula-expr {
-          font-size: 0.75rem;
+          font-size: var(--fs-small);
           color: #a39988;
           font-family: 'Crimson Pro', serif;
         }
@@ -2006,7 +2006,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           display: flex;
           flex-direction: column;
           gap: 0.25rem;
-          font-size: 0.72rem;
+          font-size: var(--fs-small);
           color: #b9b09f;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -2037,7 +2037,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           border-radius: 6px;
           color: #191c1a;
           font-weight: 700;
-          font-size: 0.78rem;
+          font-size: var(--fs-small);
           cursor: pointer;
         }
 
@@ -2056,7 +2056,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           display: flex;
           flex-direction: column;
           gap: 0.25rem;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           color: #e9dfcd;
           padding-top: 0.4rem;
           border-top: 1px dashed rgba(199, 171, 118, 0.25);
@@ -2195,7 +2195,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         }
 
         .pouch-skin-btn span {
-          font-size: 0.68rem;
+          font-size: var(--fs-small);
           color: #b3a8d6;
           text-align: center;
         }
@@ -2252,7 +2252,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           border-radius: 50%;
           color: #e9dfcd;
           font-weight: 700;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           line-height: 1;
           cursor: pointer;
           padding: 0;
@@ -2292,7 +2292,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           align-items: center;
           gap: 0.5rem;
           margin-bottom: 0.75rem;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           color: #b9b09f;
         }
 
@@ -2409,7 +2409,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           color: #191c1a;
           border-radius: 50%;
           font-weight: 700;
-          font-size: 0.75rem;
+          font-size: var(--fs-small);
         }
 
         .dice-3d-canvas {
@@ -2429,7 +2429,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           left: 50%;
           transform: translateX(-50%);
           font-family: 'Cinzel', serif;
-          font-size: 0.75rem;
+          font-size: var(--fs-small);
           color: #b9b09f;
           text-transform: uppercase;
           letter-spacing: 1px;
@@ -2439,7 +2439,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
         .dice-face-3d-mini .dice-face-label {
           top: 4px;
-          font-size: 0.55rem;
+          font-size: var(--fs-label);
         }
 
         .dice-face-value {
@@ -2461,7 +2461,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
         .dice-face-value-mini {
           bottom: 3px;
-          font-size: 0.75rem;
+          font-size: var(--fs-small);
           padding: 0.05rem 0.4rem;
         }
 
@@ -2485,7 +2485,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           flex-wrap: wrap;
           justify-content: center;
           gap: 0.4rem;
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           color: #b9b09f;
           text-align: center;
         }
@@ -2672,7 +2672,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
         }
 
         .point-info small {
-          font-size: 0.8rem;
+          font-size: var(--fs-small);
           color: #b9b09f;
           text-transform: capitalize;
         }

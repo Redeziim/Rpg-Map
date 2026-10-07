@@ -9,7 +9,7 @@
 .room-export-included li{padding:3px 0}
 .room-export-privacy,.room-export-notice{padding:12px;border-left:2px solid var(--export-accent);background:#24291e}
 .room-export-ready{margin:20px 0;border-top:1px solid var(--export-rule);border-bottom:1px solid var(--export-rule);padding:16px 0}
-.room-export-stamp{font:12px/1.5 'Cinzel',Georgia,serif;text-transform:uppercase;letter-spacing:.08em;color:var(--export-accent)}
+.room-export-stamp{font:var(--fs-small)/1.5 'Cinzel',Georgia,serif;text-transform:uppercase;letter-spacing:.08em;color:var(--export-accent)}
 .room-export-ready dl{margin:12px 0;max-width:440px}
 .room-export-ready dl>div{display:flex;align-items:baseline;gap:16px;justify-content:space-between;padding:4px 0;border-bottom:1px dotted #77633e80}
 .room-export-ready dd{margin:0;color:var(--export-accent);font-variant-numeric:tabular-nums}

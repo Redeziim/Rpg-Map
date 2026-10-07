@@ -2,7 +2,7 @@
 .note-find-controls{display:flex;align-items:center;gap:4px;margin-top:5px}
 .note-find-controls input{flex:1;min-width:0}
 .note-window .note-find-controls button{flex:none;width:44px;padding:0}
-.note-find-bar output{display:block;margin-top:5px;font-size:12px;color:#d4c7ad;font-variant-numeric:tabular-nums}
+.note-find-bar output{display:block;margin-top:5px;font-size:var(--fs-small);color:#d4c7ad;font-variant-numeric:tabular-nums}
 .note-window .note-view-switch .note-find-toggle{margin-left:auto;flex:none}
 .note-text-editor{position:relative;min-width:0;flex:1;display:flex;flex-direction:column;background:#141815;border-radius:2px}
 .note-window .note-text-editor textarea{position:relative;display:block;margin:0;background:transparent;min-height:220px;color:#f0e8d5;tab-size:8}

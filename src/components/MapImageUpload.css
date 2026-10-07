@@ -2,7 +2,7 @@
 .map-upload-dialog::backdrop{background:#080a08d9}
 .map-upload-sheet{font:16px/1.5 'Source Sans 3',sans-serif}
 .map-upload-sheet header{position:relative;padding:20px 76px 18px 24px;border-bottom:1px solid var(--upload-rule)}
-.map-upload-kicker{color:var(--upload-accent);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.map-upload-kicker{color:var(--upload-accent);font-size:var(--fs-small);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 .map-upload-sheet h2{font:600 clamp(23px,3vw,30px)/1.2 Cinzel,Georgia,serif;margin:5px 0;color:#f1dcaf;text-wrap:balance}
 .map-upload-sheet header p{margin:0;overflow-wrap:anywhere;color:#cbb58a}
 .map-upload-sheet header button{position:absolute;right:16px;top:16px;width:44px;padding:0}
