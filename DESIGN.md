@@ -22,3 +22,18 @@ Manter a navegação, o retrato, as categorias da ficha e os dados nas posiçõe
 ## Skills
 
 `frontend-design` orienta a direção estética. `web-design-guidelines` apoia a revisão de contraste, foco visível e telas estreitas.
+
+## Direção por tela (item 64)
+
+Proposta de 2026-10-07, dentro da identidade acima. Cada tela tem uma referência dominante e um detalhe memorável; o resto fica quieto. Tokens em `docs/DESIGN_TOKENS.md`. Nada abaixo foi aplicado além do que já existe nas telas; a tela-piloto depende de decisão.
+
+| Tela | Referência dominante | Detalhe memorável | Estado |
+| --- | --- | --- | --- |
+| Linha do tempo (leitor) | Marginalia de diário: data na margem, texto corrido | Filete dourado na margem que marca o tipo do registro | Aplicado |
+| Ficha | Ficha física em papel carvão | Atributos centrados, nome em Cinzel | Aplicado (ver acima) |
+| Mapa 2D | Cartografia impressa: legenda, escala, rosa dos ventos | Legenda e escala como parte da imagem exportada, não como painel flutuante | Proposto |
+| Ferramentas de mestre | Painel tático de instrumentos: seções recolhíveis, numeração só onde há sequência | Cada ferramenta ativa acende uma marca dourada na régua lateral | Proposto |
+| Mesa 3D | Mesa de madeira escura sob luz baixa | Anel dourado fino em volta do objeto selecionado | Proposto |
+| Bandeja de dados | Bandeja de feltro | Sombra projetada curta sob cada dado parado | Proposto |
+
+Regras que valem para todas: uma referência por tela; ouro só para ação e seleção; nenhum cartão arredondado como estrutura; contorno de foco sempre `--focus-ring`; nada que anime sem função.

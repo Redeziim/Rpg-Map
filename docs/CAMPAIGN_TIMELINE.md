@@ -46,7 +46,7 @@ Migração SQL 008: `timeline_entries`, `timeline_versions` e `idx_timeline_entr
 
 ## Validação
 
-`tests/campaignTimeline.test.js` cobre pela API HTTP: permissões, autoria, validações, idempotência, privacidade e filtro de vínculos, ordem e páginas, revisão antiga, conflito, histórico e restauração, arquivamento, auditoria, exportação por papel, reinício, backup e restauração e recusa de dado inválido. Navegador: criação pelo editor, leitura como jogador, 1440 e 390 px sem rolagem horizontal.
+`tests/campaignTimeline.test.js` cobre pela API HTTP: permissões, autoria, validações, idempotência, privacidade e filtro de vínculos, ordem e páginas, revisão antiga, conflito, histórico e restauração, arquivamento, auditoria, exportação por papel, reinício, backup e restauração e recusa de dado inválido. Navegador: criação pelo editor, leitura como jogador, 1440 e 390 px sem rolagem horizontal. Acessibilidade em 2026-10-07: axe-core 4.14 (WCAG 2.0 a 2.2 A/AA e melhores práticas) sem violações na lista, no editor, na confirmação de descarte e no histórico, em desktop e celular; todos os controles com pelo menos 44 px de altura e largura em 390 px (exceto caixas de seleção); diálogos prendem o foco, fecham com Escape e devolvem o foco a quem os abriu. Falta teste com leitor de tela real.
 
 ## Limites conhecidos
 
