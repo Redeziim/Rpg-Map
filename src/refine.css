@@ -89,7 +89,6 @@
 /* Mapa: abas e ferramentas em linhas próprias, sem cobrir a imagem. */
 .mist-theme .view-mapa{flex-wrap:wrap;align-content:flex-start}
 .mist-theme .view-mapa .map-mode-tabs,.mist-theme .view-mapa .map-draw-tools{position:relative;inset:auto;top:auto;right:auto;flex:1 1 100%;width:100%;max-width:none;justify-content:flex-start;margin:0 0 8px}
-.mist-theme .view-mapa .map-draw-help,.mist-theme .view-mapa .map-draw-error,.mist-theme .view-mapa .map-draw-notice{position:relative;inset:auto;top:auto;right:auto;flex:1 1 100%;max-width:none;margin:0 0 8px}
 .mist-theme .view-mapa .tabletop-camera{padding-right:8px}
 .mist-theme .view-mapa>.canvas-area,.mist-theme .view-mapa>.tabletop-map,.mist-theme .view-mapa>.tabletop-stage{flex:1 1 100%}
 @media(min-width:901px){.mist-theme .view-mapa .canvas-area{min-height:480px;height:calc(100dvh - 240px)}}
@@ -104,3 +103,29 @@ body .note-window .note-text-editor textarea{height:100%;min-height:0}
 .mist-theme .view-mapa .map-fog-controls button{background:#25221c;color:#e7d6b1;border-color:var(--fog-edge)}
 .mist-theme .view-mapa .map-fog-controls button:hover:not(:disabled){background:#363023}
 .mist-theme .view-mapa .map-fog-controls button[aria-pressed=true]{background:#735e32;border-color:#d9b777;color:#fff1cf}
+
+/* Painel Ferramentas 2D: seções recolhíveis com o mesmo cabeçalho. */
+.mist-theme .tool-section{border-bottom:1px solid var(--line)}
+.mist-theme .tool-section>summary{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 2px;list-style:none;cursor:pointer;color:var(--gold);font:600 14px 'Cinzel',Georgia,serif;letter-spacing:.04em}
+.mist-theme .tool-section>summary::-webkit-details-marker{display:none}
+.mist-theme .tool-section>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:none}
+.mist-theme .tool-section[open]>summary::after{transform:rotate(45deg)}
+.mist-theme .tool-section>summary:hover{color:#e5c787}
+.mist-theme .tool-section-body{padding:2px 0 14px}
+.mist-theme .tool-section-body:empty{display:none}
+.mist-theme .tool-section:has(>.tool-section-body:empty){display:none}
+/* Os fieldsets internos já têm título no resumo: a legenda fica só para leitores de tela e a moldura some. */
+.mist-theme .tool-section-body>fieldset{border:0;margin:0;padding:0;background:none;min-width:0}
+.mist-theme .tool-section-body>fieldset>legend{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.mist-theme .tool-section-body .controls-info{margin-top:0}
+
+/* Avisos e ajuda do mapa 2D: bloco flutuante no rodapé do mapa, sem empurrar a imagem. */
+.mist-theme .main-content.view-mapa{position:relative}
+.mist-theme .view-mapa .map-messages{position:absolute;right:14px;bottom:14px;z-index:6;display:grid;gap:6px;width:min(560px,calc(100% - 28px));pointer-events:none}
+.mist-theme .view-mapa .map-messages:empty{display:none}
+.mist-theme .view-mapa .map-messages>*{pointer-events:auto;position:relative;inset:auto;top:auto;right:auto;max-width:none;margin:0;background:#1a1915f2;border:1px solid #80663d;border-left-width:3px;box-shadow:0 8px 24px #000a}
+.mist-theme .view-mapa .map-messages>.map-draw-error{background:#39231df2;border-color:#c57861}
+.mist-theme .view-mapa .map-messages .map-route-choice-bar{padding:8px 10px}
+
+/* Mapa mental: "Mais opções" aberto não pode consumir o quadro; o painel rola por dentro. */
+body .note-board-options-content{max-height:170px;overflow:auto}

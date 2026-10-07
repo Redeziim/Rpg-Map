@@ -115,6 +115,16 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
   }
   function movePan(event){const current=pan.current;if(!current||current.pointerId!==event.pointerId)return;const viewport=scrollRef.current;viewport.scrollLeft=current.left+current.x-event.clientX;viewport.scrollTop=current.top+current.y-event.clientY;}
   function endPan(event){if(pan.current?.pointerId===event.pointerId)pan.current=null;}
+  function freeSpot(){
+    const viewport=scrollRef.current,nodes=boardValue.current.nodes;
+    if(!viewport)return {x:24,y:24};
+    const left=Math.round(viewport.scrollLeft/zoom)+24,top=Math.round(viewport.scrollTop/zoom)+24,columns=Math.max(1,Math.floor((viewport.clientWidth/zoom-24)/210));
+    for(let slot=0;slot<80;slot++){
+      const x=bounded(left+(slot%columns)*210,width-220),y=bounded(top+Math.floor(slot/columns)*130,height-150);
+      if(!nodes.some(node=>Math.abs(node.x-x)<200&&Math.abs(node.y-y)<120))return {x,y};
+    }
+    return center();
+  }
   function center(){const viewport=scrollRef.current;return {x:bounded(Math.round((viewport.scrollLeft+viewport.clientWidth/2)/zoom-95),width-220),y:bounded(Math.round((viewport.scrollTop+viewport.clientHeight/2)/zoom-50),height-150)};}
   function changeZoom(next){
     const viewport=scrollRef.current,level=Math.max(MIN_ZOOM,Math.min(2,Math.round(next*20)/20));
@@ -400,7 +410,7 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
   return <section className="note-board" aria-label="Mapa mental da nota">
     <div className="note-board-tools" role="toolbar" aria-label="Ferramentas do mapa mental">
       {!readOnly&&<>
-        <button type="button" className="note-board-new" onClick={()=>{const p=center(),k=boardValue.current.nodes.length%6;addIdeaAt(p.x+k*28,p.y+k*28);}}><Plus size={16} aria-hidden="true"/>Novo cartão</button>
+        <button type="button" className="note-board-new" onClick={()=>{const p=freeSpot();addIdeaAt(p.x,p.y);}}><Plus size={16} aria-hidden="true"/>Novo cartão</button>
         <button type="button" onClick={()=>fileRef.current?.click()}><ImagePlus size={16} aria-hidden="true"/>Imagem</button>
         <button type="button" aria-pressed={drawing} onClick={()=>{setDrawing(previous=>!previous);selectOnly(null);}}><Pencil size={16} aria-hidden="true"/>{drawing?'Terminar desenho':'Desenhar'}</button>
         <button type="button" onClick={undo} disabled={!history.current.past.length}><Undo2 size={16} aria-hidden="true"/>Desfazer</button>
