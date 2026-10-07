@@ -45,15 +45,18 @@ Arquivos instalados e configuração: `Skills/`, `Skills/Configuracao-RPG-Map/`,
 - Mestre apresenta e salva vídeos/animações nas cenas; escolhe separadamente se jogadores podem rever.
 - ADM em modo jogador atua como jogador no mapa: vê seus traços e não edita pontos.
 - Conflitos de edição de mapa devem ser resolvidos por campo para nome, descrição e tipo.
+- Preparação do mestre na linha do tempo é sempre reservada e nunca vai a jogadores (2026-10-07, ADR 034).
+- Cores e fontes novas usam os tokens de src/theme.css; o limite de cores literais só desce (2026-10-07).
+- Commits locais são permitidos sem pedir; push só quando o usuário pedir (2026-10-07).
 - Usuário autorizou IndexedDB para cópias locais; novas APIs externas devem ser identificadas e aprovadas antes do uso no produto. Baixar código/repos de referência foi autorizado.
 
 ## Estado e próximo trabalho
 
 - Itens 42–52 e 54–56, 67, ajuste de detalhe/escala de modelos e item 2 constam como concluídos localmente. Parte dessa implementação permanece em alterações não publicadas no clone do projeto.
 - Item 2: erro de aba duplicada causado por `sessionStorage` clonado corrigido; documentos agora têm identidade de escrita própria e a aba anterior é somente origem de leitura. Caderno lista cópias; recuperação preserva o texto aberto antes da troca e não publica. localStorage, IndexedDB, migração de rascunhos legados e cópia JSON de emergência estão registrados em ADR 033.
-- Item 53: histórico público persistente entregue; decisão sobre visualização futura de rolagens privadas continua pendente. Não presumir nem repetir a pergunta sem motivo.
-- Item 57: leitor de linha do tempo pronto em prévia, mas não integrado à aplicação. Próximo trabalho: armazenamento SQLite/versionado, migração, API autenticada de página e detalhe, projeções privadas no snapshot/SSE/exportação, editor mestre, conflitos, arquivo/restauração e navegação. Nenhuma API externa é necessária.
-- Itens restantes conforme plano: 16–18, 23 (adiado), 53 (decisão em aberto), 57–66. Não reabrir mapa mental ou item 23 sem novo escopo.
+- Item 53: concluído em 2026-10-07 (rolagens privadas por padrão, só a da mesa começa pública).
+- Item 57: entregue em 2026-10-07 (SQL 008, API, aba Linha do tempo, editor, histórico, exportação). Contrato em `docs/CAMPAIGN_TIMELINE.md`, ADR 034. Item 59 entregue como tipo Preparação, sempre reservada.
+- Itens restantes em 2026-10-07: 16–18, 23 (adiado), 58 e a tela-piloto do 64, todos à espera de resposta (`docs/PERGUNTAS_EM_ABERTO.md`). Itens 60–66 tiveram a primeira rodada. Não reabrir mapa mental ou item 23 sem novo escopo.
 
 ## Histórico da conversa (síntese)
 
