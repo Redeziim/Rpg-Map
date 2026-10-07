@@ -45,9 +45,9 @@ Referência de design autorizada para consulta: [Hallmark](https://github.com/Nu
 ### P2 — organização
 
 15. **Retirado a pedido do projeto:** seletor e modelos de sessão, personagem, local e pista. **Nova nota** cria somente uma nota em branco. A busca e o conteúdo de notas existentes permanecem disponíveis. Retomar modelos apenas após nova decisão do projeto.
-16. Arquivar e recuperar notas; lixeira com restauração.
-17. Exportar notas e quadros em formato portátil, com atenção às notas privadas.
-18. Atalhos documentados dentro do quadro e preferências de zoom por pessoa.
+16. Entregue em 2026-10-07: lixeira com restauração; só apaga quando o dono a esvazia (decisão do usuário). Contrato em `docs/NOTES_TRASH_EXPORT.md`, teste `tests/noteTrash.test.js`.
+17. Entregue em 2026-10-07: exportação individual em TXT, PNG do mapa mental e JSON (sem PDF), gerada no navegador e só da nota aberta. Contrato em `docs/NOTES_TRASH_EXPORT.md`.
+18. Entregue em 2026-10-07: lista de atalhos dentro do quadro e zoom guardado por pessoa e por nota. Contrato em `docs/NOTES_TRASH_EXPORT.md`.
 
 ## 2. Mapa 2D e exploração
 

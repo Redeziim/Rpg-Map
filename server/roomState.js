@@ -25,7 +25,7 @@ function assertNotes(notes){
   if(!Array.isArray(notes))invalid('caderno de notas');
   const ids=new Set();
   for(const note of notes){
-    if(!object(note)||typeof note.id!=='string'||!note.id||ids.has(note.id)||typeof note.title!=='string'||typeof note.body!=='string'||!Array.isArray(note.sharedWith)||note.sharedWith.some(name=>typeof name!=='string')||!Number.isSafeInteger(note.version)||note.version<1)invalid('nota');
+    if(!object(note)||typeof note.id!=='string'||!note.id||ids.has(note.id)||typeof note.title!=='string'||typeof note.body!=='string'||!Array.isArray(note.sharedWith)||note.sharedWith.some(name=>typeof name!=='string')||!Number.isSafeInteger(note.version)||note.version<1||note.trashed!==undefined&&note.trashed!==true||note.trashedAt!==undefined&&(note.trashed!==true||!Number.isSafeInteger(note.trashedAt)||note.trashedAt<1))invalid('nota');
     ids.add(note.id);assertBoard(note.board);
   }
 }

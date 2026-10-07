@@ -21,10 +21,13 @@ function segment(from,to){
   return {x1:ax+dx*edge,y1:ay+dy*edge,x2:bx-dx*edge,y2:by-dy*edge};
 }
 
-export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpenPoint,roomId,searchQuery='',activeSearch,searchNavigation=0}){
+const zoomMemory=key=>'grimorio-board-zoom-v1:'+key;
+function readZoom(key){try{const saved=Number(localStorage.getItem(zoomMemory(key)));return saved>=MIN_ZOOM&&saved<=2?saved:1;}catch{return 1;}}
+export const BOARD_SHORTCUTS=[['N','Novo cartão no centro da vista'],['Setas','Mover o cartão selecionado de 10 em 10 pixels'],['Enter ou Espaço','Selecionar o cartão em foco'],['Shift + clique','Selecionar vários cartões'],['Delete ou Backspace','Remover o cartão ou a conexão selecionada'],['Esc','Limpar a seleção ou cancelar o traço'],['Ctrl + Z','Desfazer'],['Ctrl + Y ou Ctrl + Shift + Z','Refazer'],['Ctrl + C e Ctrl + V','Copiar e colar um cartão; colar uma imagem cria um cartão de imagem'],['Ctrl + F','Buscar nesta nota'],['No modo desenho: setas','Mover a caneta (Shift = 25 pixels)'],['No modo desenho: Enter ou Espaço','Começar e terminar o traço']];
+export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpenPoint,roomId,searchQuery='',activeSearch,searchNavigation=0,zoomKey}){
   const board=value||emptyNoteBoard();
   const width=board.width||MIN_WIDTH,height=board.height||MIN_HEIGHT;
-  const [zoom,setZoom]=useState(1);
+  const [zoom,setZoom]=useState(()=>zoomKey?readZoom(zoomKey):1);
   const [drawing,setDrawing]=useState(false),[selected,setSelected]=useState(null),[selectedCards,setSelectedCards]=useState(new Set()),[editingId,setEditingId]=useState(null);
   const [linkFrom,setLinkFrom]=useState(null),[error,setError]=useState(''),[announcement,setAnnouncement]=useState('');
   const [editingEdge,setEditingEdge]=useState(null),[edgeDraft,setEdgeDraft]=useState('');
@@ -131,6 +134,8 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
     if(!viewport||level===zoom)return;
     const x=(viewport.scrollLeft+viewport.clientWidth/2)/zoom,y=(viewport.scrollTop+viewport.clientHeight/2)/zoom;
     setZoom(level);
+    // The zoom you chose is yours: it stays in this browser, per note.
+    if(zoomKey){try{localStorage.setItem(zoomMemory(zoomKey),String(level));}catch{/* private mode: the zoom still works for this session */}}
     requestAnimationFrame(()=>{viewport.scrollLeft=x*level-viewport.clientWidth/2;viewport.scrollTop=y*level-viewport.clientHeight/2;});
   }
   function expand(){
@@ -428,6 +433,7 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
     </section>}
     <details className="note-board-options"><summary>Mais opções <span>{categoryFilter!=='all'||tagFilter!=='all'?`${visibleNodes.length} de ${board.nodes.length} cartões · filtro ativo`:`${board.nodes.length} ${board.nodes.length===1?'cartão':'cartões'}`}</span></summary><div className="note-board-options-content">
       {!readOnly&&<div className="note-board-extra-tools"><button type="button" aria-expanded={libraryOpen} onClick={()=>libraryOpen?setLibraryOpen(false):void loadLibrary()}>Coleção de imagens</button><button type="button" onClick={expand} disabled={width>=MAX_WIDTH&&height>=MAX_HEIGHT}><Expand size={16} aria-hidden="true"/>Aumentar área de desenho</button></div>}
+      <details className="note-board-shortcuts"><summary>Atalhos do teclado</summary><dl>{BOARD_SHORTCUTS.map(([keys,action])=><div key={keys}><dt>{keys}</dt><dd>{action}</dd></div>)}</dl><p>O zoom que você escolher fica guardado neste navegador, para cada nota.</p></details>
     <div className="note-board-index" role="group" aria-label="Filtrar cartões do mapa mental">
       <span className="note-board-index-title">Filtrar cartões</span>
       <label>Tipo<select name="board-category-filter" autoComplete="off" value={categoryFilter} onChange={event=>setCategoryFilter(event.target.value)}><option value="all">Todos</option><option value="none">Sem tipo</option>{Object.entries(CARD_TYPES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>

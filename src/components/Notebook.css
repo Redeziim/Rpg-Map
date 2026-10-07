@@ -88,3 +88,21 @@
 .note-recovery button span{min-width:0;overflow-wrap:anywhere}
 .note-recovery small{display:block;color:#d1c6ae}
 .note-recovery button:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px}
+
+/* Lixeira de notas: uma seção de apoio dentro da biblioteca, sem destaque além da ação de esvaziar. */
+.note-trash{border-top:1px solid var(--rule);margin-top:var(--space-3);padding-top:var(--space-3)}
+.note-trash h3{display:flex;align-items:center;gap:var(--space-2);margin:0 0 var(--space-1);font:600 var(--fs-small) var(--font-body);color:var(--ink-soft)}
+.note-trash p{margin:0 0 var(--space-2);font-size:var(--fs-small);color:var(--muted)}
+.note-trash ul{list-style:none;margin:0 0 var(--space-2);padding:0;display:grid;gap:var(--space-1)}
+.note-trash li{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
+.note-trash li span{min-width:0;overflow-wrap:anywhere;color:var(--ink)}
+.note-trash button,.note-trash-button{min-height:var(--target);min-width:var(--target);display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1)}
+.note-trash-confirm{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;border:1px solid var(--red);padding:var(--space-3)}
+.note-trash-confirm p{flex:1 1 100%}
+/* Menu Exportar no rodapé da nota: abre para cima, sem tirar espaço do texto. */
+.note-export{position:relative}
+.note-export>summary{list-style:none;display:inline-flex;align-items:center;gap:var(--space-1);min-height:var(--target);padding:0 var(--space-3);border:1px solid var(--rule-strong);cursor:pointer;color:var(--ink);font:var(--fs-small) var(--font-body)}
+.note-export>summary::-webkit-details-marker{display:none}
+.note-export>summary:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.note-export>div{position:absolute;right:0;bottom:calc(100% + var(--space-1));z-index:2;display:grid;gap:var(--space-1);min-width:210px;padding:var(--space-2);border:1px solid var(--rule-strong);background:var(--paper-1)}
+.note-export>div button{min-height:var(--target);text-align:left;padding:0 var(--space-3)}

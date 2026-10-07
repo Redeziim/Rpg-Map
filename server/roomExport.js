@@ -53,16 +53,16 @@ function projection(db,{roomId,user,viewMode}){
   state.masterNotebooks=raw.masterNotebooks.filter(note=>master||note.sharedWith.includes(user.username)).map(note=>{notes.push({scope:'@master',note,manager:master});return cleanNote(note);});
   if(!master){delete state.masterNotes;delete state.masterNotebooks;}
   state.sharedNotebooks=[];
-  if(!master)state.sharedNotebooks.push(...raw.masterNotebooks.filter(note=>note.sharedWith.includes(user.username)).map(note=>({...cleanNote(note),scope:'@master',owner:'Mestre'})));
+  if(!master)state.sharedNotebooks.push(...raw.masterNotebooks.filter(note=>note.sharedWith.includes(user.username)&&!note.trashed).map(note=>({...cleanNote(note),scope:'@master',owner:'Mestre'})));
   state.playerSheets=Object.fromEntries(Object.entries(raw.playerSheets).filter(([name])=>names.has(name)&&(master||name===user.username)).map(([name,sheet])=>{
     const own=name===user.username;
-    const notebooks=sheet.notebooks.filter(note=>own||note.sharedWith.includes(user.username)).map(note=>{notes.push({scope:name,note,manager:own});return cleanNote(note);});
+    const notebooks=sheet.notebooks.filter(note=>own||note.sharedWith.includes(user.username)&&!note.trashed).map(note=>{notes.push({scope:name,note,manager:own});return cleanNote(note);});
     return [name,{...pick(sheet,['values','extraFields']),observations:own?sheet.observations:'',notebooks}];
   }));
   // Shared notes from sheets outside the player's projection still belong in the export.
   for(const [name,sheet] of Object.entries(raw.playerSheets)){
     if(!names.has(name)||name===user.username)continue;
-    for(const note of sheet.notebooks.filter(note=>note.sharedWith.includes(user.username))){
+    for(const note of sheet.notebooks.filter(note=>note.sharedWith.includes(user.username)&&!note.trashed)){
       state.sharedNotebooks.push({...cleanNote(note),scope:name,owner:name});
       if(!master)notes.push({scope:name,note,manager:false});
     }

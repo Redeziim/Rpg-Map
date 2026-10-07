@@ -31,7 +31,7 @@ export function roomAuditChanges(before,after){
       const old=previous.get(note.id);
       if(!master&&!old?.sharedWith?.length&&!note.sharedWith?.length)continue;
       if(changed([...(old?.sharedWith||[])].sort(),[...(note.sharedWith||[])].sort()))add('note.access');
-      if(!old||['title','body','board'].some(field=>changed(old[field],note[field])))add('note.changed');
+      if(!old||['title','body','board','trashed'].some(field=>changed(old[field],note[field])))add('note.changed');
     }
   };
   notes(before.masterNotebooks,after.masterNotebooks,true);

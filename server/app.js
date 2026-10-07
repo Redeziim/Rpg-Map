@@ -205,10 +205,10 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     const usernames=new Set(members.map(u=>u.username));
     const groupBars=Object.fromEntries(members.map(u=>[u.username,{...(state.statusBarsData[u.username]||{avatar:null,bars:[]}),bars:[...(state.statusBarsData[u.username]?.bars||[]),...state.sheetFields.filter(f=>f.type==='status').map((f,i)=>({id:f.id,label:f.label,color:['#a84d51','#c8a65e','#ddd0b2'][i%3],...(state.playerSheets[u.username]?.values?.[f.id]||{current:0,max:0})}))]}]));
     state.sharedNotebooks=[
-      ...state.masterNotebooks.filter(note=>note.sharedWith.includes(viewer)&&!master).map(note=>({...note,scope:'@master',owner:'Mestre'})),
-      ...Object.entries(state.playerSheets).flatMap(([scope,sheet])=>scope===viewer||!usernames.has(scope)?[]:sheet.notebooks.filter(note=>note.sharedWith.includes(viewer)).map(note=>({...note,scope,owner:scope})))
+      ...state.masterNotebooks.filter(note=>note.sharedWith.includes(viewer)&&!master&&!note.trashed).map(note=>({...note,scope:'@master',owner:'Mestre'})),
+      ...Object.entries(state.playerSheets).flatMap(([scope,sheet])=>scope===viewer||!usernames.has(scope)?[]:sheet.notebooks.filter(note=>note.sharedWith.includes(viewer)&&!note.trashed).map(note=>({...note,scope,owner:scope})))
     ];
-    state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(master||viewer===name)).map(([name,sheet])=>[name,{...sheet,observations:name===viewer?sheet.observations:'',notebooks:sheet.notebooks.filter(note=>name===viewer||note.sharedWith.includes(viewer))}]));
+    state.playerSheets=Object.fromEntries(Object.entries(state.playerSheets).filter(([name])=>usernames.has(name)&&(master||viewer===name)).map(([name,sheet])=>[name,{...sheet,observations:name===viewer?sheet.observations:'',notebooks:sheet.notebooks.filter(note=>name===viewer||note.sharedWith.includes(viewer)&&!note.trashed)}]));
     state.statusBarsData=Object.fromEntries(Object.entries(state.statusBarsData).filter(([name])=>usernames.has(name)));
     state.combat=projectCombat(state.combat,master);
     if(!master){delete state.masterNotes;delete state.masterNotebooks;}
@@ -802,6 +802,22 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       });
       if(changed)broadcast(roomId);return json(res,200,{...snapshot(roomId,user.id,mapView()),...(operation?{combatOperation:operation}:{})});
     }
+    if(path[3]==='notes'&&path[4]&&path[5]==='trash'&&path.length===6&&method==='DELETE'){
+      // Emptying is the only way a note leaves the table for good; nothing deletes it by age.
+      const scope=path[4],target=scope==='@master'?null:query('SELECT u.id FROM users u JOIN members m ON u.id=m.user_id WHERE m.room_id=? AND u.username=?',roomId,scope);
+      if(scope!=='@master'&&!target)fail(404,'Jogador não encontrado nesta mesa.');
+      if(!(scope==='@master'?canManageMap(m.role,mapView()):target.id===user.id))fail(403,'Somente o dono pode esvaziar esta lixeira.');
+      limit(`note-trash:${user.id}`,30);
+      transaction(()=>{
+        const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state),container=scope==='@master'?state:state.playerSheets[scope],key=scope==='@master'?'masterNotebooks':'notebooks';
+        const removed=container[key].filter(note=>note.trashed);
+        if(!removed.length)return;
+        container[key]=container[key].filter(note=>!note.trashed);
+        for(const note of removed)run('DELETE FROM note_versions WHERE room_id=? AND scope=? AND note_id=?',roomId,scope,note.id);
+        saveState(roomId,state,user);
+      });
+      broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
+    }
     if(path[3]==='notes'&&path[4]&&path[5]&&['GET','PATCH'].includes(method)){
       const scope=path[4],id=string(path[5],100,'Identificador',1);
       if(!/^[a-zA-Z0-9-]+$/.test(id))fail(400,'Identificador de nota inválido.');
@@ -840,6 +856,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(path.length!==7||Object.keys(requestBody).some(field=>!['sharedWith','version'].includes(field)))fail(400,'Compartilhamento inválido.');
         if(!canManage)fail(403,'Somente o dono pode compartilhar esta nota.');
         if(!previous)fail(404,'Salve a nota antes de compartilhar.');
+        if(previous.trashed)fail(409,'Esta nota está na lixeira. Restaure a nota antes de compartilhar.');
         if(requestBody.version!==version)fail(409,'A nota mudou em outra tela. Reabra o compartilhamento.');
         const sharedWith=requestBody.sharedWith;
         const members=all('SELECT u.username FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=?',roomId).map(row=>row.username);
@@ -851,8 +868,27 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         });
         broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
       }
+      if(path[6]==='trash'){
+        if(path.length!==7||Object.keys(requestBody).some(field=>!['trashed','version'].includes(field))||typeof requestBody.trashed!=='boolean')fail(400,'Pedido de lixeira inválido.');
+        if(!canManage)fail(403,'Somente o dono pode mover esta nota para a lixeira ou restaurá-la.');
+        if(!previous)fail(404,'Nota não encontrada.');
+        if(id==='legacy')fail(400,'O caderno original não vai para a lixeira.');
+        if(requestBody.version!==version)fail(409,'A nota mudou em outra tela. Reabra a nota antes de movê-la.');
+        if(!!previous.trashed===requestBody.trashed)return json(res,200,snapshot(roomId,user.id,mapView()));
+        if(!requestBody.trashed&&notes.filter(item=>!item.trashed).length>=30)fail(400,'Limite de 30 notas por bloco. Esvazie a lixeira ou mova outra nota antes de restaurar.');
+        if(!Number.isSafeInteger(version+1))fail(409,'Limite de versão da nota atingido.');
+        limit(`note-trash:${user.id}`,60);
+        transaction(()=>{
+          recordNoteVersion(roomId,scope,previous);
+          const {trashed,trashedAt,...rest}=previous,next=requestBody.trashed?{...rest,trashed:true,trashedAt:Date.now(),version:version+1}:{...rest,version:version+1};
+          notes[index]=next;container[key]=notes;
+          saveState(roomId,state,user);recordNoteVersion(roomId,scope,next,user.username,requestBody.trashed?'trash':'restore');pruneNoteVersions(roomId,scope,id);
+        });
+        broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
+      }
       if(path.length!==6||Object.keys(requestBody).some(field=>!['title','body','board','version'].includes(field)))fail(400,'Alteração de nota inválida.');
-      if(index<0&&notes.length>=30)fail(400,'Limite de 30 notas por bloco.');
+      if(previous?.trashed)fail(409,'Esta nota está na lixeira. Restaure a nota antes de editá-la.');
+      if(index<0&&(notes.filter(item=>!item.trashed).length>=30||notes.length>=60))fail(400,'Limite de 30 notas por bloco. Esvazie a lixeira para liberar espaço.');
       if(previous&&requestBody.version!==version)fail(409,'A nota mudou em outra tela. Seu rascunho foi mantido; revise a versão atual antes de salvar.');
       if(!previous&&requestBody.version!==undefined)fail(409,'A nota foi criada em outra tela. Atualize a lista antes de salvar.');
       const title=string(requestBody.title,100,'Nome da nota',1).trim();

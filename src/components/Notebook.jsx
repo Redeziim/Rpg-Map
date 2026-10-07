@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import {NotebookPen,Plus,X,GripHorizontal,Save,Download,LocateFixed,Share2,Map as MapIcon,FileText,History,Pin,PinOff,Maximize2,Minimize2,MoveDiagonal2,Search} from 'lucide-react';
+import {NotebookPen,Plus,X,GripHorizontal,Save,Download,LocateFixed,Share2,Map as MapIcon,FileText,History,Pin,PinOff,Maximize2,Minimize2,MoveDiagonal2,Search,Trash2,Undo2} from 'lucide-react';
 import NoteBoard from './NoteBoard.jsx';
 import {NoteFindBar,NoteTextEditor} from './NoteFind.jsx';
 import {findNoteMatches} from './noteFind.js';
@@ -9,6 +9,7 @@ import {noteWindowRect,resizeNoteWindow} from './noteWindowGeometry.js';
 import NoteConflictReview from './NoteConflictReview.jsx';
 import NoteVersionHistory from './NoteVersionHistory.jsx';
 import {restoreNoteFields} from './noteHistory.js';
+import {boardToPNG,noteFileName,noteToJSON,noteToText,saveBlob} from './noteExport.js';
 import {editedNoteFields,resolveNoteConflict,sameNoteField,sameRecipients} from './noteConflict.js';
 import {draftTabId,loadDraftWindows,saveDraftWindows,readLocalDraftWindows,saveLocalDraftWindows,listDraftCopies} from './noteDraftStore.js';
 import './Notebook.css';
@@ -25,7 +26,7 @@ function savedFromRoom(room,scope,id){
 function validDraftWindows(items,scope,notes){
   return Array.isArray(items)?items.filter(windowNote=>windowNote&&typeof windowNote.id==='string'&&typeof windowNote.title==='string'&&Number.isFinite(windowNote.position?.x)&&Number.isFinite(windowNote.position?.y)&&(scope!=='shared'||notes.some(item=>noteKey(item)===noteKey(windowNote)))).slice(0,10):[];
 }
-function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosition,onFocus,zIndex,onDraft,members,username,canShare,draftStorageError,points,onOpenPoint,openRequest,roomId}){
+function NoteWindow({note,latest,position,readOnly,onSave,onShare,onTrash,onClose,onPosition,onFocus,zIndex,onDraft,members,username,canShare,draftStorageError,points,onOpenPoint,openRequest,roomId}){
   const [draft,setDraft]=useState(()=>normalized(note));
   const [saved,setSaved]=useState(()=>({...normalized(latest&&latest.version===note.version?latest:note),version:note.version||0}));
   const [editedFields,setEditedFields]=useState(()=>note.editedFields||editedNoteFields(note,latest||note));
@@ -42,7 +43,7 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosi
   const docked=boardOpen&&position.docked!==false;
   const rect=noteWindowRect(position,viewport,{wide,docked});
   const panel=useRef(null),drag=useRef(null),resizing=useRef(null),persisted=useRef(!note.isNew);
-  const findToggle=useRef(null);
+  const findToggle=useRef(null),exportMenu=useRef(null);
   const textHistory=useRef({title:{past:[],future:[]},body:{past:[],future:[]}});
   useEffect(()=>{panel.current?.querySelector('.note-drag')?.focus();},[]);
   useEffect(()=>{if(openRequest?.id!==note.id||openRequest?.scope!==note.scope)return;if(!openRequest.view||openRequest.view==='board')setBoardOpen(true);else if(openRequest.view==='text')setBoardOpen(false);},[openRequest?.token]);
@@ -140,6 +141,26 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosi
     }catch(cause){setError(cause.message);}finally{setBusy(false);}
   }
   function toggleSharing(){setShareOpen(previous=>!previous);if(!accessDirty)setRecipients(saved.sharedWith);}
+  async function exportAs(kind){
+    exportMenu.current?.removeAttribute('open');setError('');
+    const current={title:draft.title,body:draft.body,board:draft.board};
+    try{
+      if(kind==='txt')saveBlob(new Blob([noteToText(current,{points})],{type:'text/plain;charset=utf-8'}),noteFileName(draft.title,'txt'));
+      else if(kind==='json')saveBlob(new Blob([noteToJSON(current)],{type:'application/json'}),noteFileName(draft.title,'json'));
+      else saveBlob(await boardToPNG(draft.board,{title:draft.title,assetUrl:id=>id&&roomId?`/api/rooms/${encodeURIComponent(roomId)}/note-assets/${encodeURIComponent(id)}`:null}),noteFileName(draft.title,'png'));
+      setNotice(`Arquivo ${kind.toUpperCase()} gerado neste navegador${dirty?', com as alterações ainda não salvas':''}.`);
+    }catch(cause){setError(cause.message||'Não foi possível gerar o arquivo. Tente de novo.');}
+  }
+  // The trash keeps the note and its history until the owner empties it.
+  async function moveToTrash(){
+    if(hasPending){setError('Salve ou descarte as alterações desta nota antes de movê-la para a lixeira.');return;}
+    setBusy(true);setError('');
+    try{
+      const room=await onTrash(scope,note.id,true,saved.version);
+      if(!room)throw Error('Não foi possível mover a nota. Confira a conexão e a versão da mesa.');
+      persisted.current=true;onClose();
+    }catch(cause){setError(cause.message);setBusy(false);}
+  }
   function paintRect(next){const style=panel.current.style;style.left=next.x+'px';style.top=next.y+'px';style.width=next.width+'px';style.height=next.height+'px';}
   function commitRect(next,patch={}){onPosition({...position,...next,...patch});}
   function start(event){if(event.button!==0||docked||position.expanded)return;event.currentTarget.setPointerCapture(event.pointerId);drag.current={id:event.pointerId,x:event.clientX,y:event.clientY,origin:rect};}
@@ -175,19 +196,22 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosi
       {!boardOpen&&<label className="note-title-label">Nome da nota<input name="note-title" autoComplete="off" value={draft.title} maxLength={100} readOnly={readOnly} disabled={busy} onChange={event=>editText('title',event)} onKeyDown={event=>textShortcut('title',event)} placeholder="Ex.: Encontro na taverna…"/></label>}
       <div className="note-view-switch" role="group" aria-label="Visualização da nota"><button type="button" aria-pressed={!boardOpen} onClick={()=>switchView(false)}><FileText size={16} aria-hidden="true"/>Texto</button><button type="button" aria-pressed={boardOpen} onClick={()=>switchView(true)}><MapIcon size={16} aria-hidden="true"/>Mapa mental</button><button ref={findToggle} type="button" className="note-find-toggle" aria-expanded={findOpen} onClick={()=>findOpen?closeFind():openFind()} title="Buscar nesta nota · Ctrl+F"><Search size={16} aria-hidden="true"/>Buscar</button></div>
       {findOpen&&<NoteFindBar query={findQuery} onQuery={value=>{setFindQuery(value);setFindCursor(0);setFindNavigation(previous=>previous+1);}} count={findResults.length} index={findIndex} onStep={stepFind} onClose={closeFind} boardOpen={boardOpen}/>}
-      {boardOpen?<NoteBoard key={`${scope}:${note.id}:${saved.version}:${boardEpoch}`} value={draft.board} onChange={update=>{const next=typeof update==='function'?update(draft.board):update;setRestorationUndo(null);setDraft(previous=>({...previous,board:next}));setEditedFields(previous=>({...previous,board:!sameNoteField('board',next,saved.board)}));}} readOnly={readOnly||busy} points={points} onOpenPoint={onOpenPoint} roomId={roomId} searchQuery={findOpen?findQuery:''} activeSearch={activeFind} searchNavigation={findNavigation}/>:<NoteTextEditor value={draft.body} readOnly={readOnly} disabled={busy} onChange={event=>editText('body',event)} onKeyDown={event=>textShortcut('body',event)} matches={findResults} active={activeFind} searchNavigation={findNavigation}/>}
+      {boardOpen?<NoteBoard key={`${scope}:${note.id}:${saved.version}:${boardEpoch}`} value={draft.board} onChange={update=>{const next=typeof update==='function'?update(draft.board):update;setRestorationUndo(null);setDraft(previous=>({...previous,board:next}));setEditedFields(previous=>({...previous,board:!sameNoteField('board',next,saved.board)}));}} readOnly={readOnly||busy} points={points} onOpenPoint={onOpenPoint} roomId={roomId} searchQuery={findOpen?findQuery:''} activeSearch={activeFind} searchNavigation={findNavigation} zoomKey={roomId?[roomId,scope,note.id].join(':'):undefined}/>:<NoteTextEditor value={draft.body} readOnly={readOnly} disabled={busy} onChange={event=>editText('body',event)} onKeyDown={event=>textShortcut('body',event)} matches={findResults} active={activeFind} searchNavigation={findNavigation}/>}
       {canShare&&!readOnly&&(!boardOpen||shareOpen)&&<div className="note-share">{!boardOpen&&<><button type="button" className="note-share-toggle" disabled={!persisted.current||busy} onClick={toggleSharing} aria-expanded={shareOpen}><Share2 size={16} aria-hidden="true"/>Compartilhar {saved.sharedWith.length?`(${saved.sharedWith.length})`:''}</button>{!persisted.current&&<small>Salve a nota antes de compartilhar.</small>}</>}
       {shareOpen&&<div className="note-share-panel"><p>Escolha quem pode abrir e editar esta nota.</p>{candidates.length?candidates.map(member=><label key={member.username}><input type="checkbox" checked={recipients.includes(member.username)} onChange={event=>setRecipients(previous=>event.target.checked?[...previous,member.username]:previous.filter(name=>name!==member.username))}/>{member.username}</label>):<p>Não há outros participantes nesta mesa.</p>}<button type="button" disabled={busy||stale} onClick={share}>Salvar acesso</button></div>}</div>}
       {error&&<p role="alert" className="note-error">{error}</p>}
       {notice&&<p role="status" className="note-notice">{notice}</p>}
       {restorationUndo&&<button type="button" className="note-restoration-undo" disabled={busy} onClick={undoRestoration}>Desfazer restauração</button>}
     </div>
-    <footer><span role="status">{readOnly?'Somente leitura':busy?'Salvando…':stale?'Versão mais recente disponível':dirty?'Rascunho · não salvo':accessDirty?'Acesso · não salvo':'Salvo na mesa'}</span>{draftStorageError&&hasPending&&<button type="button" className="note-download" onClick={downloadDraft}><Download size={15} aria-hidden="true"/>Baixar cópia</button>}{boardOpen&&canShare&&!readOnly&&<button type="button" aria-label="Compartilhar nota" title={persisted.current?'Compartilhar nota':'Salve a nota antes de compartilhar'} aria-expanded={shareOpen} disabled={!persisted.current||busy} onClick={toggleSharing}><Share2 size={16} aria-hidden="true"/></button>}{!readOnly&&<button className="note-save" disabled={busy||!dirty||stale} onClick={save}><Save size={15} aria-hidden="true"/>{busy?'Salvando…':'Salvar'}</button>}</footer>
+    <footer><span role="status">{readOnly?'Somente leitura':busy?'Salvando…':stale?'Versão mais recente disponível':dirty?'Rascunho · não salvo':accessDirty?'Acesso · não salvo':'Salvo na mesa'}</span>{draftStorageError&&hasPending&&<button type="button" className="note-download" onClick={downloadDraft}><Download size={15} aria-hidden="true"/>Baixar cópia</button>}<details ref={exportMenu} className="note-export"><summary aria-label="Exportar nota" title="Exportar esta nota"><Download size={15} aria-hidden="true"/>Exportar</summary><div role="group" aria-label="Formato da exportação"><button type="button" onClick={()=>exportAs('txt')}>Texto (.txt)</button><button type="button" disabled={!draft.board.nodes.length&&!draft.board.strokes.length} title={draft.board.nodes.length||draft.board.strokes.length?undefined:'O mapa mental desta nota está vazio'} onClick={()=>exportAs('png')}>Imagem do mapa (.png)</button><button type="button" onClick={()=>exportAs('json')}>Dados completos (.json)</button></div></details>{onTrash&&!readOnly&&persisted.current&&note.id!=='legacy'&&<button type="button" className="note-trash-button" aria-label="Mover nota para a lixeira" title="Mover para a lixeira · dá para restaurar" disabled={busy} onClick={moveToTrash}><Trash2 size={16} aria-hidden="true"/></button>}{boardOpen&&canShare&&!readOnly&&<button type="button" aria-label="Compartilhar nota" title={persisted.current?'Compartilhar nota':'Salve a nota antes de compartilhar'} aria-expanded={shareOpen} disabled={!persisted.current||busy} onClick={toggleSharing}><Share2 size={16} aria-hidden="true"/></button>}{!readOnly&&<button className="note-save" disabled={busy||!dirty||stale} onClick={save}><Save size={15} aria-hidden="true"/>{busy?'Salvando…':'Salvar'}</button>}</footer>
     <button type="button" className="note-resize" aria-label="Redimensionar janela: arraste o canto ou use as setas; direita alarga, cima aumenta a altura" title="Arraste para redimensionar · setas do teclado ajustam o tamanho" onPointerDown={startResize} onPointerMove={moveResize} onPointerUp={finishResize} onPointerCancel={finishResize} onLostPointerCapture={finishResize} onKeyDown={resizeKeyboard}><MoveDiagonal2 size={18} aria-hidden="true"/></button>
   </section>;
 }
-export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=false,className='',storageKey,scope,members=[],username='',canShare=false,points=[],onOpenPoint,openRequest,roomId}){
+export default function Notebook({title,hint,notes:allNotes=[],onSave,onShare,onTrash,onEmptyTrash,readOnly=false,className='',storageKey,scope,members=[],username='',canShare=false,points=[],onOpenPoint,openRequest,roomId}){
   const key='grimorio-notes-v2:'+storageKey;
+  // Notes in the trash stay out of the list, the search and the draft windows until restored.
+  const notes=useMemo(()=>allNotes.filter(note=>!note.trashed),[allNotes]),trashedNotes=useMemo(()=>allNotes.filter(note=>note.trashed),[allNotes]);
+  const [confirmEmpty,setConfirmEmpty]=useState(false),[trashBusy,setTrashBusy]=useState(false),[trashError,setTrashError]=useState('');
   const library=useRef(null),positions=useRef(null),openers=useRef(new Map()),tabId=useRef(null);
   useEffect(()=>{
     const close=event=>{const el=library.current;if(el?.open&&!el.contains(event.target))el.open=false;};
@@ -222,6 +246,20 @@ export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=fa
   useEffect(()=>{if(!ready)return;const flush=()=>{const items=latestWindows.current,updatedAt=Date.now();try{saveLocalDraftWindows(key,tabId.current,items,updatedAt);}catch{}void saveDraftWindows(key,tabId.current,items,updatedAt).catch(()=>{});};window.addEventListener('pagehide',flush);return()=>{window.removeEventListener('pagehide',flush);flush();};},[key,ready]);
   useEffect(()=>{if(ready&&scope==='shared')setWindows(previous=>previous.filter(windowNote=>notes.some(item=>noteKey(item)===noteKey(windowNote))));},[ready,scope,notes]);
   function update(id,patch){setWindows(previous=>previous.map(windowNote=>noteKey(windowNote)===id?{...windowNote,...patch}:windowNote));}
+  // A note trashed elsewhere closes its window, unless there are unsaved edits to keep.
+  useEffect(()=>{if(!ready||!trashedNotes.length)return;const trashed=new Set(trashedNotes.map(note=>noteKey({...note,scope:note.scope||scope})));setWindows(previous=>{const next=previous.filter(windowNote=>!trashed.has(noteKey(windowNote))||windowNote.dirty||windowNote.contentDirty);return next.length===previous.length?previous:next;});},[ready,trashedNotes,scope]);
+  async function restoreNote(note){
+    setTrashBusy(true);setTrashError('');
+    try{if(!await onTrash(scope,note.id,false,note.version))throw Error('Não foi possível restaurar a nota. Confira a conexão e tente de novo.');}
+    catch(cause){setTrashError(cause.message);}
+    finally{setTrashBusy(false);}
+  }
+  async function emptyTrash(){
+    setTrashBusy(true);setTrashError('');
+    try{if(!await onEmptyTrash(scope))throw Error('Não foi possível esvaziar a lixeira. Confira a conexão e tente de novo.');setConfirmEmpty(false);}
+    catch(cause){setTrashError(cause.message);}
+    finally{setTrashBusy(false);}
+  }
   function place(id,position){positions.current[id]=position;try{localStorage.setItem(key+':positions',JSON.stringify(positions.current));}catch{}update(id,{position});}
   function open(raw,opener){const note={...raw,scope:raw.scope||scope};const id=noteKey(note);if(opener)openers.current.set(id,opener);setWindows(previous=>previous.some(windowNote=>noteKey(windowNote)===id)?[...previous.filter(windowNote=>noteKey(windowNote)!==id),previous.find(windowNote=>noteKey(windowNote)===id)]:previous.length>=10?previous:[...previous,{...note,position:positions.current[id]||clampPosition(110+previous.length*28,80+previous.length*28)}]);requestAnimationFrame(()=>document.getElementById(`note-window-${note.scope}-${note.id}`)?.querySelector('.note-drag')?.focus());}
   useEffect(()=>{if(!ready||!openRequest)return;const target=notes.find(note=>note.id===openRequest.id&&(note.scope||scope)===openRequest.scope);if(target)open(target);},[ready,openRequest?.token]);
@@ -255,9 +293,16 @@ export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=fa
     {notes.length>0&&!matches.length&&<p>Nenhuma nota encontrada neste caderno.</p>}
     {matches.map(note=><button key={noteKey({...note,scope:note.scope||scope})} disabled={!ready} onClick={event=>open(note,event.currentTarget)}><NotebookPen size={15} aria-hidden="true"/><span>{note.title}<small>{note.owner?` · ${note.owner==='@master'?'Mestre':note.owner}`:''}</small></span><small>{windows.some(windowNote=>noteKey(windowNote)===noteKey({...note,scope:note.scope||scope}))?'Aberta':'Abrir'}</small></button>)}
     {!!windows.length&&<button onClick={()=>setWindows(previous=>previous.map((windowNote,index)=>({...windowNote,position:{...windowNote.position,...clampPosition(24+index*24,80+index*24),docked:false,expanded:false}})))}><LocateFixed size={16} aria-hidden="true"/>Reunir janelas ({windows.length})</button>}
+    {onTrash&&onEmptyTrash&&!readOnly&&scope!=='shared'&&trashedNotes.length>0&&<section className="note-trash" aria-label="Lixeira de notas">
+      <h3><Trash2 size={15} aria-hidden="true"/>Lixeira · {trashedNotes.length} {trashedNotes.length===1?'nota':'notas'}</h3>
+      <p>As notas ficam aqui até você esvaziar a lixeira. Nada é apagado sozinho.</p>
+      <ul>{trashedNotes.map(note=><li key={note.id}><span>{note.title}</span><button type="button" disabled={trashBusy} onClick={()=>restoreNote(note)} aria-label={`Restaurar ${note.title}`}><Undo2 size={15} aria-hidden="true"/>Restaurar</button></li>)}</ul>
+      {confirmEmpty?<div className="note-trash-confirm" role="group" aria-label="Confirmar esvaziar lixeira"><p role="alert">Apagar de vez {trashedNotes.length} {trashedNotes.length===1?'nota':'notas'}, com o histórico de versões? Isso não pode ser desfeito.</p><button type="button" disabled={trashBusy} onClick={emptyTrash}>{trashBusy?'Apagando…':'Apagar de vez'}</button><button type="button" disabled={trashBusy} onClick={()=>setConfirmEmpty(false)}>Cancelar</button></div>:<button type="button" disabled={trashBusy} onClick={()=>setConfirmEmpty(true)}>Esvaziar lixeira</button>}
+      {trashError&&<p role="alert">{trashError}</p>}
+    </section>}
     {windows.length>=10&&<p>Feche uma janela para abrir outra nota.</p>}
     {draftStorageError&&<p role="alert">{draftStorageError}</p>}
-  </div></details>{createPortal(ready?visibleWindows.map((note,index)=>{const id=noteKey(note),latest=notes.find(item=>noteKey({...item,scope:item.scope||scope})===id);return <NoteWindow key={`${id}:${recoveryEpoch}`} note={note} latest={latest} position={note.position} readOnly={readOnly||copiesBusy} onSave={onSave} onShare={onShare} members={members} username={username} canShare={canShare} draftStorageError={draftStorageError} points={points} onOpenPoint={onOpenPoint} openRequest={openRequest} roomId={roomId} onClose={()=>{setWindows(previous=>previous.filter(windowNote=>noteKey(windowNote)!==id));const opener=openers.current.get(id);if(opener?.isConnected)opener.focus();else library.current?.querySelector('summary')?.focus();openers.current.delete(id);}} onPosition={position=>place(id,position)} onDraft={draft=>update(id,draft)} onFocus={()=>focus(id)} zIndex={70+index}/>;}):[],document.body)}</>;
+  </div></details>{createPortal(ready?visibleWindows.map((note,index)=>{const id=noteKey(note),latest=notes.find(item=>noteKey({...item,scope:item.scope||scope})===id);return <NoteWindow key={`${id}:${recoveryEpoch}`} note={note} latest={latest} position={note.position} readOnly={readOnly||copiesBusy} onSave={onSave} onShare={onShare} onTrash={scope==='shared'?undefined:onTrash} members={members} username={username} canShare={canShare} draftStorageError={draftStorageError} points={points} onOpenPoint={onOpenPoint} openRequest={openRequest} roomId={roomId} onClose={()=>{setWindows(previous=>previous.filter(windowNote=>noteKey(windowNote)!==id));const opener=openers.current.get(id);if(opener?.isConnected)opener.focus();else library.current?.querySelector('summary')?.focus();openers.current.delete(id);}} onPosition={position=>place(id,position)} onDraft={draft=>update(id,draft)} onFocus={()=>focus(id)} zIndex={70+index}/>;}):[],document.body)}</>;
 }
 
 

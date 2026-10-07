@@ -99,3 +99,12 @@
 @media(max-width:600px){.note-board-help{font-size:var(--fs-small)}.note-board-empty{left:24px;top:24px;max-width:230px}.note-board-index label{flex:1 1 130px}.note-board-index select{width:100%}.note-board-index-count{margin-left:0;flex-basis:100%}.note-board-metadata label{flex:1 1 100%;max-width:none}.note-board select,.note-board input{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.note-window .note-board-connector{transition:none}}
 @media(forced-colors:active){.note-board-node,.note-board-node.is-selected,.note-board-scroll,.note-window .note-board-connector,.note-board-options,.note-board-card-details{border:2px solid CanvasText}}
+
+/* Atalhos do quadro: lista de apoio dentro de "Mais opções". */
+.note-board-shortcuts{margin-top:var(--space-2)}
+.note-board-shortcuts>summary{cursor:pointer;min-height:var(--target);display:flex;align-items:center;color:var(--ink-soft)}
+.note-board-shortcuts dl{display:grid;gap:var(--space-2);margin:var(--space-2) 0}
+.note-board-shortcuts dl>div{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:var(--space-3)}
+.note-board-shortcuts dt{font-weight:600;color:var(--ink)}
+.note-board-shortcuts dd{margin:0;color:var(--muted)}
+@media(max-width:520px){.note-board-shortcuts dl>div{grid-template-columns:1fr;gap:0}}

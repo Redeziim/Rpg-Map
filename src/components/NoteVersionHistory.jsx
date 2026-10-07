@@ -5,7 +5,7 @@ import './NoteVersionHistory.css';
 
 const labels={title:'Nome',body:'Texto',board:'Mapa mental'};
 const dates=new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'});
-const kinds={save:'Conteúdo salvo',access:'Acesso alterado',baseline:'Versão anterior'};
+const kinds={save:'Conteúdo salvo',access:'Acesso alterado',baseline:'Versão anterior',trash:'Movida para a lixeira',restore:'Restaurada da lixeira'};
 
 function BoardSnapshot({board,roomId}){
   const width=board.width||960,height=board.height||620,outline=boardOutline(board);
