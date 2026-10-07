@@ -59,3 +59,23 @@
 .mist-theme .scene-reader-empty svg{flex:none;color:var(--gold);opacity:.8}
 .mist-theme .scene-reader-empty p{margin:0;font-size:var(--fs-small);line-height:1.6;max-width:44ch}
 .mist-theme .status-bars-empty{margin:0;padding:10px 12px;border-left:2px solid var(--line-strong);line-height:1.6}
+
+/* Mapa 2D sem imagem: estado vazio centralizado, com ação. */
+.mist-theme .canvas-area .empty-state{min-height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:32px 20px}
+.mist-theme .canvas-area .empty-state p{margin:0 0 14px;max-width:44ch}
+.mist-theme .map-empty-action{min-height:44px;padding:8px 16px;background:#c4a15b;color:#101010;border:1px solid #d9b771;font-weight:600;cursor:pointer}
+
+/* Diálogo de ponto: mesmas superfícies, bordas e botões do restante do tema. */
+.mist-theme .modal{background:var(--surface-2);border:1px solid var(--gold);border-radius:4px;box-shadow:0 20px 60px #000c}
+.mist-theme .modal .form-group label{font:600 var(--fs-label) 'Source Sans 3','Segoe UI',sans-serif;letter-spacing:1.5px;color:var(--gold)}
+.mist-theme .modal .form-group input,.mist-theme .modal .form-group textarea{background:var(--surface-0);border:1px solid #574930;border-radius:3px;color:var(--ink);font:15px/1.5 'Source Sans 3','Segoe UI',sans-serif}
+.mist-theme .modal .form-group input:focus,.mist-theme .modal .form-group textarea:focus{border-color:var(--gold);background:var(--surface-0);box-shadow:none}
+.mist-theme .modal .type-btn{min-height:44px;background:var(--surface-1);border:1px solid var(--line-strong);border-radius:3px;color:var(--ink);font:600 14px 'Source Sans 3','Segoe UI',sans-serif}
+.mist-theme .modal .type-btn:hover{background:#26221a;border-color:var(--type-color);transform:none}
+.mist-theme .modal .type-btn.active{background:#2a2418;border-color:var(--type-color);color:#fff0dc;box-shadow:inset 3px 0 var(--type-color)}
+.mist-theme .modal .btn-primary,.mist-theme .modal .btn-secondary{min-height:44px;border-radius:3px;font:600 14px 'Source Sans 3','Segoe UI',sans-serif}
+.mist-theme .modal .btn-primary{background:#c4a15b;border:1px solid #d9b771;color:#101010}
+.mist-theme .modal .btn-primary:hover:not(:disabled){background:#dfbd75;transform:none;box-shadow:none}
+.mist-theme .modal .btn-primary:disabled{opacity:.5}
+.mist-theme .modal .btn-secondary{background:#25221c;border:1px solid #6c5936;color:#e7d6b1}
+.mist-theme .modal .btn-secondary:hover{background:#363023;transform:none}

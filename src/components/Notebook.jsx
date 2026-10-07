@@ -189,6 +189,12 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onClose,onPosi
 export default function Notebook({title,hint,notes=[],onSave,onShare,readOnly=false,className='',storageKey,scope,members=[],username='',canShare=false,points=[],onOpenPoint,openRequest,roomId}){
   const key='grimorio-notes-v2:'+storageKey;
   const library=useRef(null),positions=useRef(null),openers=useRef(new Map()),tabId=useRef(null);
+  useEffect(()=>{
+    const close=event=>{const el=library.current;if(el?.open&&!el.contains(event.target))el.open=false;};
+    const escape=event=>{const el=library.current;if(event.key==='Escape'&&el?.open){el.open=false;el.querySelector('summary')?.focus();}};
+    document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
+  },[]);
   if(tabId.current===null)tabId.current=draftTabId();
   if(positions.current===null){try{positions.current=JSON.parse(localStorage.getItem(key+':positions'))||{};}catch{positions.current={};}}
   const [localSnapshot]=useState(()=>{const record=readLocalDraftWindows(key,tabId.current);return {...record,windows:validDraftWindows(record.windows,scope,notes)};});

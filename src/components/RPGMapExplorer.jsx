@@ -561,7 +561,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             <details className="account-menu"><summary>@{user.username}</summary><div className="account-nav-actions"><button onClick={onExit}>Minhas mesas</button><button onClick={onLogout}>Sair da conta</button></div></details>
             <div className="user-indicator">
               <Users size={20} />
-              <span>{points.length} pontos</span>
+              <span>{points.length} {points.length===1?'ponto':'pontos'}</span>
             </div>
           </div>
         </div>
@@ -708,9 +708,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             <main className="canvas-area">
               {!mapImage ? (
                 <div className="empty-state">
-                  <Map size={64} />
+                  <Map size={40} aria-hidden="true" />
                   <h2>Nenhum mapa carregado</h2>
-                  <p>{canManageMap2D ? 'Envie um mapa pelo painel para começar a exploração.' : 'O mestre ainda não revelou o mapa desta jornada.'}</p>
+                  <p>{canManageMap2D ? 'Envie a imagem do mapa em Ferramentas 2D para começar a exploração. Pontos, rotas e névoa dependem dela.' : 'O mestre ainda não revelou o mapa desta jornada.'}</p>
+                  {canManageMap2D&&!map2dToolsOpen&&<button type="button" className="map-empty-action" onClick={()=>setMap2dToolsOpen(true)}>Abrir Ferramentas 2D</button>}
                 </div>
               ) : (
                 <div 
