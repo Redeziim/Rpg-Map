@@ -558,7 +558,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             <div className="room-title-nav">{room.name}</div>
             {room.role==='admin'?<button className={`mode-btn ${viewMode==='master'?'active':''}`} onClick={()=>{setAdminMode(viewMode==='master'?'player':'master');setDrawError('');}} title="Como ADM, você pode alternar entre jogador e mestre"><ShieldCheck size={18}/>{viewMode==='master'?'ADM · modo mestre':'ADM · modo jogador'}</button>:<div className="identity-label">{ROLE_LABELS[room.role]} · @{user.username}</div>}
             <span className={`sync-status ${connection!=='online'?'offline':''}`} role="status">{saving?'Enviando alterações…':connection==='online'?'Conectado à mesa':connection==='connecting'?'Conectando…':'Reconectando ao servidor…'}</span>
-            <div className="account-nav-actions"><button onClick={onExit}>Minhas mesas</button><button onClick={onLogout}>Sair da conta</button></div>
+            <details className="account-menu"><summary>@{user.username}</summary><div className="account-nav-actions"><button onClick={onExit}>Minhas mesas</button><button onClick={onLogout}>Sair da conta</button></div></details>
             <div className="user-indicator">
               <Users size={20} />
               <span>{points.length} pontos</span>

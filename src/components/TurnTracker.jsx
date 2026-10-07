@@ -1,5 +1,5 @@
-import React,{useRef,useState} from 'react';
-import {ArrowDown,ArrowUp,Skull,Users,X} from 'lucide-react';
+import React,{useEffect,useRef,useState} from 'react';
+import {ArrowDown,ArrowUp,ChevronDown,ChevronUp,Skull,Users,X} from 'lucide-react';
 import './TurnTracker.css';
 import useCombatRecovery from './useCombatRecovery.js';
 import CombatEffects,{emptyEffectDraft,matchesEffectDraft} from './CombatEffects.jsx';
@@ -32,6 +32,8 @@ export default function TurnTracker({room,username,userId,editable,saving,connec
     return {id,name:npc?.name||id,kind:npc?.kind||'player',avatar:npc?null:room.groupBars?.[id]?.avatar};
   });
   const active=combat.activeId,activeActor=actors.find(actor=>actor.id===active);
+  const [expanded,setExpanded]=useState(()=>!!combat.activeId);
+  useEffect(()=>{if(active)setExpanded(true);},[active]);
   const nextId=order.length?order[(Math.max(-1,order.indexOf(active))+1)%order.length]:null;
   const excludedPlayers=room.members.filter(member=>member.role!=='master'&&excluded.includes(member.username));
   const kindLabel=kind=>kind==='enemy'?'Inimigo':kind==='npc'?'NPC':'Jogador';
@@ -47,6 +49,7 @@ export default function TurnTracker({room,username,userId,editable,saving,connec
   };
   return <section className="turn-tracker" aria-label="Turnos da mesa" aria-busy={saving}>
     <div className="turn-heading">
+      <button type="button" className="turn-toggle" aria-expanded={expanded} aria-label={expanded?'Recolher ordem de jogo e efeitos':'Mostrar ordem de jogo e efeitos'} title={expanded?'Recolher':'Mostrar ordem de jogo'} onClick={()=>setExpanded(open=>!open)}>{expanded?<ChevronUp size={18} aria-hidden="true"/>:<ChevronDown size={18} aria-hidden="true"/>}<span className="turn-toggle-count">{actors.length}</span></button>
       <div className="turn-heading-copy"><span className="eyebrow">{combat.round?`Rodada ${combat.round}`:'Ordem de jogo'}</span><p role="status">{activeActor?<><strong>{active===username?'Seu turno':`Turno de ${activeActor.name}`}</strong><span>{activeActor.kind!=='player'?` · ${kindLabel(activeActor.kind)}`:''}</span></>:'Turnos ainda não iniciados'}</p></div>
       {editable&&<div className="turn-actions"><button type="button" disabled={busy||!order.length} onClick={()=>act(active?'skip':'next')}>{active?'Pular turno':'Iniciar turnos'}</button><button type="button" disabled={busy||!active} onClick={()=>act('end')}>Encerrar</button><details className="turn-editor"><summary ref={editorSummaryRef}>Gerenciar turnos</summary><div className="turn-editor-panel">
         <h3>Participantes do combate</h3>
@@ -75,10 +78,10 @@ export default function TurnTracker({room,username,userId,editable,saving,connec
     </div>}
     {!recovery.pending&&recovery.notice&&<p className="turn-recovery-notice" role="status">{recovery.notice}</p>}
     {!recovery.pending&&!recovery.notice&&error&&<p className="turn-error" role="alert">{error}</p>}
-    {actors.length?<ol className="turn-roster" aria-label="Sequência dos turnos" tabIndex={0}>{actors.map((actor,index)=><li key={actor.id} title={actor.name} className={`turn-portrait turn-${actor.kind} ${active===actor.id?'is-current-turn':''} ${nextId===actor.id&&active!==actor.id?'is-next-turn':''}`} aria-current={active===actor.id?'step':undefined} aria-label={`${index+1}º: ${actor.name}, ${kindLabel(actor.kind)}${active===actor.id?', em turno':''}`}>
+    {expanded&&(actors.length?<ol className="turn-roster" aria-label="Sequência dos turnos" tabIndex={0}>{actors.map((actor,index)=><li key={actor.id} title={actor.name} className={`turn-portrait turn-${actor.kind} ${active===actor.id?'is-current-turn':''} ${nextId===actor.id&&active!==actor.id?'is-next-turn':''}`} aria-current={active===actor.id?'step':undefined} aria-label={`${index+1}º: ${actor.name}, ${kindLabel(actor.kind)}${active===actor.id?', em turno':''}`}>
       <span className="turn-portrait-image" aria-hidden="true">{actor.avatar?<img src={actor.avatar} width="34" height="34" alt=""/>:actor.kind==='enemy'?<Skull size={21}/>:actor.kind==='npc'?<Users size={21}/>:actor.name.slice(0,1).toUpperCase()}</span>
       <span className="turn-portrait-name">{actor.name}</span><span className="turn-portrait-rank">{index+1}</span>{Object.hasOwn(combat.initiative,actor.id)&&<span className="turn-portrait-initiative">Ini. {combat.initiative[actor.id]}</span>}
-    </li>)}</ol>:<p className="turn-empty">Adicione jogadores à mesa ou personagens ao combate.</p>}
-    <CombatEffects combat={combat} actors={[...actors,...excludedPlayers.map(member=>({id:member.username,name:member.username,excluded:true}))]} editable={editable} busy={busy} act={act} draft={effectDraft} setDraft={setEffectDraft}/>
+    </li>)}</ol>:<p className="turn-empty">Adicione jogadores à mesa ou personagens ao combate.</p>)}
+    {expanded&&<CombatEffects combat={combat} actors={[...actors,...excludedPlayers.map(member=>({id:member.username,name:member.username,excluded:true}))]} editable={editable} busy={busy} act={act} draft={effectDraft} setDraft={setEffectDraft}/>}
   </section>;
 }
