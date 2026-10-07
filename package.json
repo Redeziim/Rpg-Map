@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
-    "test": "node --test tests/*.test.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
     "backup": "node scripts/backup.js",
     "backup:auto": "node scripts/automaticBackup.js",
     "restore": "node scripts/restore.js",
