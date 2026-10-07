@@ -400,7 +400,7 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
   return <section className="note-board" aria-label="Mapa mental da nota">
     <div className="note-board-tools" role="toolbar" aria-label="Ferramentas do mapa mental">
       {!readOnly&&<>
-        <button type="button" className="note-board-new" onClick={()=>{const p=center();addIdeaAt(p.x,p.y);}}><Plus size={16} aria-hidden="true"/>Novo cartão</button>
+        <button type="button" className="note-board-new" onClick={()=>{const p=center(),k=boardValue.current.nodes.length%6;addIdeaAt(p.x+k*28,p.y+k*28);}}><Plus size={16} aria-hidden="true"/>Novo cartão</button>
         <button type="button" onClick={()=>fileRef.current?.click()}><ImagePlus size={16} aria-hidden="true"/>Imagem</button>
         <button type="button" aria-pressed={drawing} onClick={()=>{setDrawing(previous=>!previous);selectOnly(null);}}><Pencil size={16} aria-hidden="true"/>{drawing?'Terminar desenho':'Desenhar'}</button>
         <button type="button" onClick={undo} disabled={!history.current.past.length}><Undo2 size={16} aria-hidden="true"/>Desfazer</button>

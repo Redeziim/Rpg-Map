@@ -91,6 +91,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [pointSaveError,setPointSaveError]=useState(false);
   const [newPoint,setNewPoint]=useState({x:0,y:0,name:'',description:'',type:'cidade'});
   const [selectedMapTool,setMapTool]=useState('pan'),[strokeColor,setStrokeColor]=useState('#d9b777'),[drawError,setDrawError]=useState(''),[mapBusy,setMapBusy]=useState(false),[markingsShown,setMarkingsShown]=useState(40),[,setHistoryTick]=useState(0);
+  useEffect(()=>{if(!drawError||drawError.startsWith('Não foi possível'))return;const timer=setTimeout(()=>setDrawError(''),6000);return()=>clearTimeout(timer);},[drawError]);
   const mapTool=['reveal','cover'].includes(selectedMapTool)&&(!canManageMap2D||!mapFog.enabled)||selectedMapTool==='position'&&(!canSharePosition||!positionsEnabled)||selectedMapTool==='route'&&(!canManageMap2D||!routeDraft||routeDraft.imageVersion!==room.mapImageVersion)?'pan':selectedMapTool;
   const [scale,setScale]=useState(1);
   const [position,setPosition]=useState({x:0,y:0});
@@ -859,7 +860,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                 />
               </div>
               <div className="form-group">
-                <span id="new-point-type">Tipo</span>
+                <span id="new-point-type" className="form-label">Tipo</span>
                 <div className="type-grid" role="group" aria-labelledby="new-point-type">
                   {pointTypes.map(type => {
                     const Icon = type.icon;

@@ -79,3 +79,23 @@
 .mist-theme .modal .btn-primary:disabled{opacity:.5}
 .mist-theme .modal .btn-secondary{background:#25221c;border:1px solid #6c5936;color:#e7d6b1}
 .mist-theme .modal .btn-secondary:hover{background:#363023;transform:none}
+
+/* Mapa mental: quadro com altura mínima maior. */
+.note-board-scroll{min-height:260px}
+
+/* Diálogo de ponto: rótulo do grupo de tipos igual aos demais. */
+.mist-theme .modal .form-label{display:block;margin-bottom:.5rem;font:600 var(--fs-label) 'Source Sans 3','Segoe UI',sans-serif;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold)}
+
+/* Mapa: abas e ferramentas em linhas próprias, sem cobrir a imagem. */
+.mist-theme .view-mapa{flex-wrap:wrap;align-content:flex-start}
+.mist-theme .view-mapa .map-mode-tabs,.mist-theme .view-mapa .map-draw-tools{position:relative;inset:auto;top:auto;right:auto;flex:1 1 100%;width:100%;max-width:none;justify-content:flex-start;margin:0 0 8px}
+.mist-theme .view-mapa .map-draw-error,.mist-theme .view-mapa .map-draw-notice{position:relative;inset:auto;top:auto;right:auto;flex:1 1 100%;max-width:none;margin:0 0 8px}
+.mist-theme .view-mapa .tabletop-camera{padding-right:8px}
+.mist-theme .view-mapa>.canvas-area,.mist-theme .view-mapa>.tabletop-map,.mist-theme .view-mapa>.tabletop-stage{flex:1 1 100%}
+@media(min-width:901px){.mist-theme .view-mapa .canvas-area{min-height:480px;height:calc(100dvh - 240px)}}
+
+/* Nota em texto: o editor ocupa a altura do rótulo e o bloco de compartilhar fica abaixo, sem sobrepor.
+   A janela é renderizada fora de .mist-theme; o prefixo body vence o CSS do caderno, que carrega depois. */
+body .note-window .note-body-label{flex:1 0 240px}
+body .note-window .note-text-editor{flex:1;min-height:0}
+body .note-window .note-text-editor textarea{height:100%;min-height:0}
