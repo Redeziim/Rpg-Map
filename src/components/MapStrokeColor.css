@@ -6,11 +6,11 @@
 .mist-theme .view-mapa .map-draw-tools:has(.map-color-panel){z-index:6}
 .mist-theme .main-content.view-mapa:has(.map-color-panel){z-index:30}
 .map-color-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.map-color-panel h3{margin:0;font:600 14px Cinzel,Georgia,serif}
+.map-color-panel h3{margin:0;font:600 14px var(--font-display)}
 .map-color-panel p{margin:5px 0 14px;font:15px/1.4 'Crimson Pro',Georgia,serif}
 .mist-theme .view-mapa .map-draw-tools .map-color-panel header button{width:44px;flex-shrink:0;padding:0;background:transparent;border:0}
 .mist-theme .view-mapa .map-draw-tools .map-color-wheel{display:block;position:relative;width:208px;max-width:100%;height:auto;aspect-ratio:1;margin:0 auto 14px;padding:0;border:0;border-radius:50%;background:radial-gradient(circle closest-side,#fff,transparent),conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);touch-action:none;user-select:none;cursor:crosshair}
-.map-color-wheel::before{content:"";position:absolute;inset:0;border-radius:50%;background:#000;opacity:var(--wheel-shade);pointer-events:none}
+.map-color-wheel::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--black);opacity:var(--wheel-shade);pointer-events:none}
 .map-color-position{position:absolute;z-index:1;display:block;width:16px;height:16px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #17130f;transform:translate(-50%,-50%);pointer-events:none}
 .map-color-panel label{display:block;font:14px/1.5 'Crimson Pro',Georgia,serif;margin-top:10px}
 .map-color-panel .map-color-tone{display:flex;justify-content:space-between}
@@ -24,4 +24,4 @@
 .mist-theme .map-color-code input{width:100%;min-width:0;min-height:44px;font:16px Georgia,serif}
 .mist-theme .view-mapa .map-draw-tools .map-color-done{width:100%;margin-top:14px}
 @media(max-width:900px){.map-color-picker{position:static}.map-color-panel{position:fixed;right:auto;left:50%;top:50%;transform:translate(-50%,-50%);max-height:calc(100dvh - 32px)}}
-@media(forced-colors:active){.map-color-wheel,.map-color-seal,.map-color-presets button::after,.map-color-code span{forced-color-adjust:none}.map-color-position{border-color:#fff;box-shadow:0 0 0 2px #000}}
+@media(forced-colors:active){.map-color-wheel,.map-color-seal,.map-color-presets button::after,.map-color-code span{forced-color-adjust:none}.map-color-position{border-color:#fff;box-shadow:0 0 0 2px var(--black)}}

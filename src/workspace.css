@@ -5,12 +5,12 @@
   --workspace-gold:#d6b36b;
   --workspace-edge:#56472d;
   --workspace-hover:#252117;
-  --workspace-font:'Source Sans 3',sans-serif;
+  --workspace-font:var(--font-body);
   grid-template-columns:184px minmax(0,1fr);
   font-family:var(--workspace-font);
   font-size:14px;
   line-height:1.45;
-  background:#141412;
+  background:var(--surface-1);
 }
 .mist-theme .parchment-bg::before,.mist-theme .parchment-bg::after{animation:none;opacity:.25}
 .mist-theme .header-content{padding:22px 14px;gap:20px}
@@ -39,7 +39,7 @@
 .mist-theme .sheet-seal{border-radius:3px;font-size:var(--fs-small);padding:5px 8px}
 .mist-theme input,.mist-theme select,.mist-theme textarea,.mist-theme .sheet-tool-btn,.mist-theme .field-type-btn,.mist-theme .field-add-btn,.mist-theme .roll-btn{font-family:var(--workspace-font);font-size:13px}
 .mist-theme button{transition:none}
-.mist-theme .sheet-tool-btn{padding:8px 10px;min-height:40px;background:#24211b;color:#dfc691}
+.mist-theme .sheet-tool-btn{padding:8px 10px;min-height:40px;background:var(--paper-1);color:#dfc691}
 .mist-theme .sheet-tool-btn:hover{background:#332c20}
 .mist-theme .empty-state{padding:28px 18px}
 .mist-theme .empty-state h2,.mist-theme .empty-state h3{font-size:20px;margin:12px 0 8px}
@@ -48,7 +48,7 @@
 
 /* One session strip, with a small notebook that opens over the workspace. */
 .mist-theme .session-strip{display:flex;align-items:flex-start;gap:12px;margin:20px 20px 0;position:relative;z-index:6}
-.mist-theme .session-strip .turn-tracker{width:auto;flex:1;min-width:0;margin:0;padding:10px 14px;background:#1c1b16;border-color:var(--workspace-edge);border-left-width:2px}
+.mist-theme .session-strip .turn-tracker{width:auto;flex:1;min-width:0;margin:0;padding:10px 14px;background:var(--paper-0);border-color:var(--workspace-edge);border-left-width:2px}
 .mist-theme .turn-heading{gap:8px}
 .mist-theme .turn-heading p{margin:0;font-size:14px}
 .mist-theme .turn-heading .eyebrow{font-size:var(--fs-label);margin:0 0 2px}
@@ -56,7 +56,7 @@
 .mist-theme .turn-tracker summary{font-size:var(--fs-small);min-height:44px;padding:6px 10px}
 .mist-theme .turn-order li{padding:8px 0}
 .mist-theme .turn-order{margin-top:8px;max-height:280px;overflow:auto}
-.mist-theme .notebook{border:1px solid var(--workspace-edge);background:#211e17;border-radius:3px;min-width:0;margin-top:18px}
+.mist-theme .notebook{border:1px solid var(--workspace-edge);background:var(--paper-1);border-radius:3px;min-width:0;margin-top:18px}
 .mist-theme .notebook summary{display:flex;align-items:center;gap:10px;list-style:none;cursor:pointer;padding:12px;color:var(--workspace-gold);min-height:48px}
 .mist-theme .notebook summary::-webkit-details-marker{display:none}
 .mist-theme .notebook summary>span{flex:1;font-size:14px;font-weight:600}
@@ -66,7 +66,7 @@
 .mist-theme .notebook-page textarea{display:block;min-height:192px;max-height:55dvh;border:1px solid #685338;border-left:3px solid #927243;border-radius:0;padding:8px 12px;color:#ede0bf;background:repeating-linear-gradient(transparent 0 27px,#c8a65e20 27px 28px),#252118;font:15px/28px var(--workspace-font)}
 .mist-theme .notebook-page>small{display:block;color:#bdb098;font-size:var(--fs-small);margin-top:8px}
 .mist-theme .master-notebook{width:220px;flex-shrink:0;margin:0;position:relative}
-.mist-theme .master-notebook[open] .notebook-page{position:absolute;right:-1px;top:100%;width:360px;max-width:calc(100vw - 32px);background:#211e17;border:1px solid var(--workspace-edge);border-top:0;box-shadow:0 12px 24px #0006;padding-top:8px}
+.mist-theme .master-notebook[open] .notebook-page{position:absolute;right:-1px;top:100%;width:360px;max-width:calc(100vw - 32px);background:var(--paper-1);border:1px solid var(--workspace-edge);border-top:0;box-shadow:0 12px 24px #0006;padding-top:8px}
 
 /* Membership is a roster, with a narrow invitation desk beside it. */
 .mist-theme .room-management{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,380px);column-gap:24px;align-items:start}
@@ -88,7 +88,7 @@
 .mist-theme .group-workspace{display:grid;grid-template-columns:minmax(0,1fr) 336px;align-items:start;gap:20px}
 .mist-theme .party-roster{min-width:0}
 .mist-theme .group-status-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px;align-items:start}
-.mist-theme .group-status-card{padding:16px;border-radius:3px;transition:none;animation:none;transform:none;background:#1b1a16;border:1px solid var(--workspace-edge);box-shadow:none}
+.mist-theme .group-status-card{padding:16px;border-radius:3px;transition:none;animation:none;transform:none;background:var(--paper-0);border:1px solid var(--workspace-edge);box-shadow:none}
 .mist-theme .group-status-card:hover,.mist-theme .group-status-card:focus-within{transform:none;animation:none;transition:none;box-shadow:none;border-color:var(--workspace-gold);background:var(--workspace-hover)}
 .mist-theme .group-status-card-header{gap:12px;margin-bottom:10px}
 .mist-theme .group-status-card-header h3{font:600 16px var(--workspace-font);color:var(--workspace-gold);overflow-wrap:anywhere}
@@ -120,8 +120,8 @@
 /* The sheet reads like a compact dossier; editing tools open on demand. */
 .mist-theme .view-ficha{display:grid;grid-template-columns:minmax(0,1fr) 236px;align-items:start}
 .mist-theme .sheet-sidebar{width:auto;margin-top:0;padding:14px;border-radius:3px;top:16px;box-shadow:none}
-.mist-theme .dossier-layout{grid-template-columns:150px minmax(0,1fr);min-height:340px;border-radius:3px;box-shadow:none;background:#191916}
-.mist-theme .dossier-profile{padding:16px 12px;background:#1f1d18}
+.mist-theme .dossier-layout{grid-template-columns:150px minmax(0,1fr);min-height:340px;border-radius:3px;box-shadow:none;background:var(--paper-0)}
+.mist-theme .dossier-profile{padding:16px 12px;background:var(--paper-1)}
 .mist-theme .dossier-content{padding:18px}
 .mist-theme .dossier-title{padding-bottom:12px;margin-bottom:16px}
 .mist-theme .dossier-title h3{font-size:21px}
@@ -225,7 +225,7 @@
 .mist-theme .upload-btn:focus-within{outline:2px solid #e5c480;outline-offset:3px}
 .mist-theme .upload-btn input{display:block;position:absolute;width:1px;height:1px;min-height:1px;padding:0;opacity:0;clip-path:inset(50%)}
 .mist-theme .map-keyboard-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0}
-.mist-theme .map-keyboard-actions button{min-height:44px;padding:7px;border:1px solid var(--workspace-edge);background:#25221c;color:#e7d6b1;cursor:pointer}
+.mist-theme .map-keyboard-actions button{min-height:44px;padding:7px;border:1px solid var(--workspace-edge);background:var(--paper-1);color:var(--ink-warm);cursor:pointer}
 .mist-theme .map-keyboard-actions button:last-child:nth-child(4){grid-column:1/-1}
 @media(prefers-reduced-motion:reduce){.mist-theme button,.mist-theme .group-status-card{transition:none;animation:none}}
 @media(forced-colors:active){.mist-theme .group-status-card:hover,.mist-theme .group-status-card:focus-within{outline:2px solid Highlight}}
@@ -235,13 +235,13 @@
 .mist-theme .main-content.view-mapa{display:block;padding:10px;position:relative;min-height:0}
 .mist-theme .view-mapa .map-mode-tabs{position:absolute;top:18px;right:18px;z-index:4;width:auto;max-width:calc(100% - 20px);flex-wrap:wrap;justify-content:flex-end}
 .mist-theme .view-mapa .map-mode-tabs button{background:#1c1a16ed;min-height:38px}
-.mist-theme .view-mapa .map-mode-tabs .map-focus-button{border-color:#9a7740;color:#f0d391}
+.mist-theme .view-mapa .map-mode-tabs .map-focus-button{border-color:#9a7740;color:var(--gold-light)}
 .mist-theme .view-mapa .tabletop-map{display:block;position:relative;width:100%;min-height:0}
 .mist-theme .view-mapa .tabletop-stage{width:100%}
-.mist-theme .view-mapa .tabletop-camera{min-height:56px;padding:8px;align-items:center;padding-right:400px;background:#191815}
+.mist-theme .view-mapa .tabletop-camera{min-height:56px;padding:8px;align-items:center;padding-right:400px;background:var(--paper-0)}
 .mist-theme .view-mapa .tabletop-camera button{min-height:38px}
 .mist-theme .view-mapa .tabletop-viewport{height:calc(100dvh - 230px);min-height:460px;max-height:none}
-.mist-theme .view-mapa .tabletop-tools,.mist-theme .view-mapa .sidebar{display:block;position:absolute;z-index:5;top:58px;left:8px;width:min(330px,calc(100% - 16px));max-height:calc(100% - 66px);overflow:auto;padding:16px;background:#1c1a17f7;border:1px solid #846a40;box-shadow:10px 14px 32px #0009}
+.mist-theme .view-mapa .tabletop-tools,.mist-theme .view-mapa .sidebar{display:block;position:absolute;z-index:5;top:58px;left:8px;width:min(330px,calc(100% - 16px));max-height:calc(100% - 66px);overflow:auto;padding:16px;background:#1c1a17f7;border:1px solid var(--gold-shadow);box-shadow:10px 14px 32px #0009}
 .mist-theme .view-mapa .tabletop-tools[hidden],.mist-theme .view-mapa .sidebar[hidden]{display:none}
 .mist-theme .view-mapa .tabletop-tools h2{font-size:19px}
 .mist-theme .view-mapa .legacy-map-layout{display:block;position:relative;width:100%;min-height:0}
@@ -252,25 +252,25 @@
 .mist-theme .view-mapa .map-artwork .map-canvas{display:block;box-shadow:none;transform:none;transition:none}
 .mist-theme .view-mapa .map-strokes{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
 .mist-theme .view-mapa .map-point-markers circle{filter:drop-shadow(1px 2px 3px #000c)}
-.mist-theme .view-mapa .map-point-markers text{font:700 14px Cinzel,Georgia,serif;fill:#fff4d9;stroke:#171912;stroke-width:3px;paint-order:stroke;letter-spacing:.02em}
-.mist-theme .view-mapa .map-draw-tools{position:absolute;top:68px;right:18px;z-index:4;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;padding:6px;background:#1a1915ee;border:1px solid #80663d;box-shadow:0 8px 20px #0009}
-.mist-theme .view-mapa .map-draw-tools button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 11px;border:1px solid #68563b;background:#27231c;color:#e9d9b8;cursor:pointer;font:600 var(--fs-small) Cinzel,Georgia,serif}
+.mist-theme .view-mapa .map-point-markers text{font:700 14px var(--font-display);fill:#fff4d9;stroke:#171912;stroke-width:3px;paint-order:stroke;letter-spacing:.02em}
+.mist-theme .view-mapa .map-draw-tools{position:absolute;top:68px;right:18px;z-index:4;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;padding:6px;background:#1a1915ee;border:1px solid var(--gold-shadow);box-shadow:0 8px 20px #0009}
+.mist-theme .view-mapa .map-draw-tools button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:8px 11px;border:1px solid #68563b;background:#27231c;color:#e9d9b8;cursor:pointer;font:600 var(--fs-small) var(--font-display)}
 .mist-theme .view-mapa .map-draw-tools button[aria-pressed=true]{background:#69532e;border-color:#d9b777;color:#fff7e4}
-.mist-theme .view-mapa .map-draw-tools button:not(:disabled):hover{border-color:#e2c786;color:#fff7e4}
+.mist-theme .view-mapa .map-draw-tools button:not(:disabled):hover{border-color:var(--gold-bright);color:#fff7e4}
 .mist-theme .view-mapa .map-draw-tools button:disabled{opacity:.45;cursor:not-allowed}
 .mist-theme .view-mapa .map-draw-error,.mist-theme .view-mapa .map-draw-notice{position:absolute;z-index:4;top:194px;right:18px;max-width:320px;padding:10px 14px;background:#39231d;border:1px solid #c57861;color:#ffe2d5}
-.mist-theme .view-mapa .map-draw-notice{background:#2e2a1d;border-color:#a78954;color:#f1dfb8}
-.mist-theme .view-mapa .map-draw-help{position:absolute;z-index:4;top:132px;right:18px;max-width:340px;padding:6px 10px;background:#1a1915db;border-left:2px solid #a78954;color:#eadfc9;font:13px/1.35 'Crimson Pro',Georgia,serif}
-.mist-theme .view-mapa .map-draw-tools :focus-visible{outline:2px solid #f0d391;outline-offset:2px}
+.mist-theme .view-mapa .map-draw-notice{background:#2e2a1d;border-color:var(--gold-deep);color:#f1dfb8}
+.mist-theme .view-mapa .map-draw-help{position:absolute;z-index:4;top:132px;right:18px;max-width:340px;padding:6px 10px;background:#1a1915db;border-left:2px solid var(--gold-deep);color:#eadfc9;font:13px/1.35 'Crimson Pro',Georgia,serif}
+.mist-theme .view-mapa .map-draw-tools :focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
 .mist-theme .view-mapa .map-markings{margin-top:18px;border-top:1px solid #6d5839;padding-top:10px;color:#e3d0aa}
-.mist-theme .view-mapa .map-markings summary{cursor:pointer;font:600 13px Cinzel,Georgia,serif;min-height:44px;display:flex;align-items:center}
+.mist-theme .view-mapa .map-markings summary{cursor:pointer;font:600 13px var(--font-display);min-height:44px;display:flex;align-items:center}
 .mist-theme .view-mapa .map-markings ol{max-height:270px;overflow:auto;list-style:none;display:grid;gap:5px;padding:0}
-.mist-theme .view-mapa .map-markings li{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #4c4030;font-size:14px}
+.mist-theme .view-mapa .map-markings li{display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line-strong);font-size:14px}
 .mist-theme .view-mapa .map-markings li span{min-width:0;overflow-wrap:anywhere}
 .mist-theme .view-mapa .map-markings button{min-height:44px;padding:6px 10px;background:#34261f;color:#ffd1c2;border:1px solid #965b4b;cursor:pointer}
 .mist-theme .view-mapa .map-markings button:hover{background:#503026}
-.mist-theme .view-mapa .map-markings .map-markings-more{width:100%;margin-top:8px;border-color:#846a40;background:#2a251e;color:#e7d1a6}
-.mist-theme .view-mapa .map-markings :focus-visible{outline:2px solid #f0d391;outline-offset:2px}
+.mist-theme .view-mapa .map-markings .map-markings-more{width:100%;margin-top:8px;border-color:var(--gold-shadow);background:#2a251e;color:#e7d1a6}
+.mist-theme .view-mapa .map-markings :focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
 .mist-theme .view-mapa .map-canvas{border:0;outline:3px solid #6b5738;max-width:none;max-height:none}
 .mist-theme .view-mapa .sidebar{top:52px}
 .mist-theme.rpg-container.map-focus{display:block;height:100dvh;overflow:auto}
@@ -284,6 +284,6 @@
 @media(max-width:1100px){.mist-theme .view-mapa .tabletop-map{display:block}.mist-theme .view-mapa .tabletop-tools{top:58px}.mist-theme .view-mapa .tabletop-stage{grid-row:auto}.mist-theme .view-mapa .map-mode-tabs{position:relative;inset:auto;max-width:none;width:100%;justify-content:flex-start;margin-bottom:8px}.mist-theme .view-mapa .tabletop-camera{padding-right:8px}.mist-theme.map-focus .view-mapa .map-mode-tabs{position:relative;inset:auto}}
 @media(max-width:900px){.mist-theme .view-mapa .map-mode-tabs{position:relative;inset:auto;max-width:none;width:100%;justify-content:flex-start;margin-bottom:8px}.mist-theme .view-mapa .tabletop-camera{padding-right:8px}.mist-theme .view-mapa .tabletop-viewport{height:calc(100dvh - 270px)}.mist-theme.map-focus .view-mapa .map-mode-tabs{position:relative;inset:auto}.mist-theme.map-focus .view-mapa .tabletop-viewport{height:calc(100dvh - 240px)}}
 @media(max-width:760px){.mist-theme .main-content.view-mapa{padding:8px}.mist-theme .view-mapa .map-mode-tabs{gap:5px}.mist-theme .view-mapa .map-mode-tabs button{min-height:44px;padding:7px 9px}.mist-theme .view-mapa .tabletop-camera{min-height:54px}.mist-theme .view-mapa .tabletop-camera button{min-height:44px}.mist-theme .view-mapa .tabletop-viewport{height:calc(100dvh - 330px);min-height:320px}.mist-theme .view-mapa .canvas-area{height:calc(100dvh - 280px);min-height:350px}.mist-theme .view-mapa .tabletop-tools,.mist-theme .view-mapa .sidebar{top:56px;max-height:calc(100% - 64px)}.mist-theme.map-focus .view-mapa .tabletop-viewport{height:calc(100dvh - 230px);min-height:350px}.mist-theme.map-focus .view-mapa .canvas-area{height:calc(100dvh - 175px);min-height:400px}}
-@media(max-width:760px){.mist-theme .view-mapa .tabletop-camera{flex-wrap:nowrap;overflow-x:auto;scrollbar-color:#70593a #191815}.mist-theme .view-mapa .tabletop-camera button{flex-shrink:0}.mist-theme .view-mapa .canvas-wrapper{align-items:flex-start;padding-top:12px;box-sizing:border-box}.mist-theme .view-mapa .canvas-area,.mist-theme.map-focus .view-mapa .canvas-area{height:max(390px,calc(100dvh - 350px));min-height:390px}}
+@media(max-width:760px){.mist-theme .view-mapa .tabletop-camera{flex-wrap:nowrap;overflow-x:auto;scrollbar-color:#70593a var(--paper-0)}.mist-theme .view-mapa .tabletop-camera button{flex-shrink:0}.mist-theme .view-mapa .canvas-wrapper{align-items:flex-start;padding-top:12px;box-sizing:border-box}.mist-theme .view-mapa .canvas-area,.mist-theme.map-focus .view-mapa .canvas-area{height:max(390px,calc(100dvh - 350px));min-height:390px}}
 @media(max-width:900px){.mist-theme .view-mapa .map-draw-tools{position:relative;inset:auto;justify-content:flex-start;margin:0 0 8px}.mist-theme .view-mapa .map-draw-help,.mist-theme .view-mapa .map-draw-error,.mist-theme .view-mapa .map-draw-notice{position:relative;inset:auto;margin:0 0 8px;max-width:none}}
 @media(prefers-reduced-motion:reduce){.mist-theme .view-mapa .map-artwork{transition:none}}

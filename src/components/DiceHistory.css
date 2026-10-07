@@ -1,5 +1,5 @@
-.roll-ledger{--ledger-ink:var(--ink,#e4dbc7);--ledger-muted:var(--muted,#b1a791);--ledger-rule:var(--line,#4b4034);--ledger-accent:var(--gold,#d6b571);color:var(--ledger-ink);background:var(--panel,#211e1a);border-block:1px solid var(--ledger-rule);margin-block:14px;padding:8px 12px;min-width:0}
-.roll-ledger>summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;font-family:var(--font-display,'Cinzel',serif);font-size:14px;color:var(--ledger-accent)}
+.roll-ledger{--ledger-ink:var(--ink,#e4dbc7);--ledger-muted:var(--muted,#b1a791);--ledger-rule:var(--line,#4b4034);--ledger-accent:var(--gold,#d6b571);color:var(--ledger-ink);background:var(--panel,var(--paper-1));border-block:1px solid var(--ledger-rule);margin-block:14px;padding:8px 12px;min-width:0}
+.roll-ledger>summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;font-family:var(--font-display,var(--font-display));font-size:14px;color:var(--ledger-accent)}
 .roll-ledger-hint,.roll-ledger-empty{font-size:13px;color:var(--ledger-muted);line-height:1.5;margin:6px 0 12px}
 .roll-ledger ol{list-style:none;margin:0;padding:0;max-height:380px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .roll-ledger li{border-block-start:1px solid var(--ledger-rule);padding:10px 0;overflow-wrap:anywhere;content-visibility:auto;contain-intrinsic-size:auto 120px}
@@ -15,5 +15,5 @@
 .roll-ledger button:disabled{opacity:.6;cursor:wait}
 .roll-ledger summary:focus-visible,.roll-ledger button:focus-visible,.dice-scene-label select:focus-visible{outline:2px solid var(--ledger-accent);outline-offset:2px}
 .dice-scene-label{display:flex;flex-direction:column;gap:6px;margin-block:10px;font-size:13px}
-.dice-scene-label select{max-width:100%;width:100%;min-width:0;background:var(--panel,#211e1a);color:var(--ink,#e4dbc7);border:1px solid var(--line,#4b4034);padding:6px 8px}
+.dice-scene-label select{max-width:100%;width:100%;min-width:0;background:var(--panel,var(--paper-1));color:var(--ink,#e4dbc7);border:1px solid var(--line,#4b4034);padding:6px 8px}
 @media(forced-colors:active){.roll-ledger,.roll-ledger li,.roll-ledger button{border-color:CanvasText}.roll-ledger summary:focus-visible,.roll-ledger button:focus-visible,.dice-scene-label select:focus-visible{outline-color:Highlight}}

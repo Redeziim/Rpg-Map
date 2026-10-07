@@ -1,5 +1,5 @@
 .room-audit{--audit-ink:#eee7d9;--audit-muted:#c1b7a3;--audit-rule:#77633e;--audit-accent:#dec286;--audit-space:16px;margin-top:32px;border-top:2px solid var(--audit-rule);color:var(--audit-ink);background:#191c16;color-scheme:dark}
-.room-audit>summary{display:flex;align-items:center;gap:12px;min-height:52px;padding:12px var(--audit-space);cursor:pointer;color:var(--audit-accent);font:18px/1.4 'Cinzel',Georgia,serif;list-style:none}
+.room-audit>summary{display:flex;align-items:center;gap:12px;min-height:52px;padding:12px var(--audit-space);cursor:pointer;color:var(--audit-accent);font:18px/1.4 var(--font-display);list-style:none}
 .room-audit>summary::-webkit-details-marker{display:none}
 .room-audit>summary::after{content:'+';margin-left:auto;font:24px/1 Georgia,serif}
 .room-audit[open]>summary::after{content:'−'}
@@ -16,7 +16,7 @@
 .room-audit-list>li{display:grid;grid-template-columns:135px minmax(0,1fr) minmax(100px,180px);align-items:start;gap:12px;padding:16px 0 16px 16px;border-top:1px solid #77633e80;content-visibility:auto;contain-intrinsic-size:auto 90px}
 .room-audit-list time{color:var(--audit-muted);font-variant-numeric:tabular-nums}
 .room-audit-action{display:grid;gap:3px;overflow-wrap:anywhere}
-.room-audit-category{font:var(--fs-small)/1.5 'Cinzel',Georgia,serif;color:var(--audit-accent)}
+.room-audit-category{font:var(--fs-small)/1.5 var(--font-display);color:var(--audit-accent)}
 .room-audit-action>strong{font-weight:400;font-size:17px}
 .room-audit-action>span:last-child:not(.room-audit-category){color:var(--audit-muted)}
 .room-audit-author{overflow-wrap:anywhere;color:var(--audit-muted)}
@@ -25,7 +25,7 @@
 .room-audit-footnote{font-size:13px;margin:20px 0 0}
 .room-audit-status{font-size:13px;color:var(--audit-muted)}
 .room-audit-notice,.room-audit-empty{padding:12px;border-left:2px solid var(--audit-rule);background:#24291e}
-.room-audit-error{color:#ffd1cc;border-left:2px solid #d78780;padding:12px;background:#3a2020}
+.room-audit-error{color:var(--danger-ink);border-left:2px solid #d78780;padding:12px;background:#3a2020}
 .room-audit-error button{margin-top:8px}
 @media(max-width:600px){.room-audit{--audit-space:12px}.room-audit-tools{align-items:stretch;flex-direction:column}.room-audit-tools label{max-width:none}.room-audit-list>li{grid-template-columns:minmax(0,1fr);gap:6px;padding:14px 0 14px 12px}.room-audit-author{font-size:14px}.room-audit-action{grid-row:2}.room-audit-more{width:100%}}
 @media(forced-colors:active){.room-audit,.room-audit-list,.room-audit-list>li,.room-audit button,.room-management .room-audit select{border-color:CanvasText}.room-audit :is(summary,button,select):focus-visible{outline-color:Highlight}}

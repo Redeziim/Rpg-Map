@@ -1,37 +1,37 @@
 .point-details-overlay{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:20px;border:0;background:#0b0d0bd9;color:#eee3cf;display:flex;align-items:center;justify-content:center;overscroll-behavior:contain}
 .point-details-overlay::backdrop{background:#080a08d9}
-.point-details{width:min(100%,520px);max-height:calc(100dvh - 40px);overflow:auto;background:#1c1b17;border:1px solid #a78954;box-shadow:0 24px 64px #000b;font-family:'Crimson Pro',Georgia,serif}
+.point-details{width:min(100%,520px);max-height:calc(100dvh - 40px);overflow:auto;background:var(--paper-0);border:1px solid var(--gold-deep);box-shadow:0 24px 64px #000b;font-family:'Crimson Pro',Georgia,serif}
 .point-details-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #655135;color:#d9b777}
-.point-details-kicker{display:flex;align-items:center;gap:8px;text-transform:uppercase;font:600 var(--fs-small) Cinzel,Georgia,serif;letter-spacing:.12em}
+.point-details-kicker{display:flex;align-items:center;gap:8px;text-transform:uppercase;font:600 var(--fs-small) var(--font-display);letter-spacing:.12em}
 .point-details-header button{display:grid;place-items:center;width:44px;height:44px;border:1px solid transparent;background:transparent;color:inherit;cursor:pointer}
 .point-details-body{display:grid;gap:9px;padding:24px 26px 28px}
-.point-details-type{width:max-content;border-left:3px solid var(--point-color);padding:3px 9px;color:#d9c5a2;font:600 var(--fs-small) Cinzel,Georgia,serif;text-transform:uppercase;letter-spacing:.08em}
-.point-details-body h2{font:600 clamp(25px,4vw,37px) Cinzel,Georgia,serif;line-height:1.2;color:#f1dcaf;overflow-wrap:anywhere}
+.point-details-type{width:max-content;border-left:3px solid var(--point-color);padding:3px 9px;color:#d9c5a2;font:600 var(--fs-small) var(--font-display);text-transform:uppercase;letter-spacing:.08em}
+.point-details-body h2{font:600 clamp(25px,4vw,37px) var(--font-display);line-height:1.2;color:#f1dcaf;overflow-wrap:anywhere}
 .point-details-body .point-details-edit-title{font-size:20px;margin:0 0 6px}
 .point-details-description{font:18px/1.55 'Crimson Pro',Georgia,serif;white-space:pre-wrap;overflow-wrap:anywhere;color:#e4dccd}
 .point-details-notes{display:grid;gap:7px;margin-top:12px;padding-top:15px;border-top:1px solid #655135}
-.point-details-notes h3{font:600 13px Cinzel,Georgia,serif;color:#d9c5a2}
+.point-details-notes h3{font:600 13px var(--font-display);color:#d9c5a2}
 .point-details-notes button{min-height:44px;padding:8px 10px;border:1px solid #655135;background:#28261f;color:#f2e5cb;text-align:left;overflow-wrap:anywhere;cursor:pointer}
 .point-details-notes button:hover{border-color:#d1aa67;background:#3a3123}
-.point-details-body label{font:600 var(--fs-small) Cinzel,Georgia,serif;color:#cbb58a;margin-top:9px}
-.point-details-body input,.point-details-body textarea,.point-details-body select{width:100%;padding:11px 12px;background:#24221c;border:1px solid #76613f;color:#f2eadb;font:17px/1.4 'Crimson Pro',Georgia,serif;resize:vertical}
+.point-details-body label{font:600 var(--fs-small) var(--font-display);color:var(--ink-soft);margin-top:9px}
+.point-details-body input,.point-details-body textarea,.point-details-body select{width:100%;padding:11px 12px;background:var(--paper-1);border:1px solid var(--rule-strong);color:var(--ink);font:17px/1.4 'Crimson Pro',Georgia,serif;resize:vertical}
 .point-details-footer{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:14px 26px;border-top:1px solid #655135}
 .point-details-footer p{margin-right:auto;color:#ffc1a9}
-.point-details-footer button{min-height:44px;padding:8px 16px;border:1px solid #846a40;background:#26231c;color:#f0dfbe;cursor:pointer}
+.point-details-footer button{min-height:44px;padding:8px 16px;border:1px solid var(--gold-shadow);background:#26231c;color:#f0dfbe;cursor:pointer}
 .point-details-footer .point-details-save{background:#765c32;color:#fff6df}
 .point-details-header button:hover,.point-details-footer button:hover{background:#4a3925;border-color:#d1aa67;color:#fff8e8}
-.point-details :focus-visible{outline:2px solid #e2c786;outline-offset:3px}
+.point-details :focus-visible{outline:2px solid var(--gold-bright);outline-offset:3px}
 .point-details{--point-rule:#655135;--point-ink:#f2eadb;--point-accent:#e2c786}
 .point-details-notice{padding:12px;border-left:3px solid var(--point-accent);background:#30281b;color:#f3dfb9;line-height:1.45;overflow-wrap:anywhere}
 .point-details-notice p{margin:0 0 8px}
-.point-details-notice button,.point-details-review-actions button{min-height:44px;padding:9px 12px;border:1px solid #a78954;background:#28261f;color:var(--point-ink);font:inherit;cursor:pointer}
+.point-details-notice button,.point-details-review-actions button{min-height:44px;padding:9px 12px;border:1px solid var(--gold-deep);background:#28261f;color:var(--point-ink);font:inherit;cursor:pointer}
 .point-details-notice button:hover,.point-details-review-actions button:hover{background:#4a3925;border-color:var(--point-accent)}
 .point-details-review{display:grid;gap:16px;line-height:1.45}
-.point-details-review h3{font:600 20px Cinzel,Georgia,serif;color:#f1dcaf}
+.point-details-review h3{font:600 20px var(--font-display);color:#f1dcaf}
 .point-details-field-review{min-width:0;padding:12px 0;border:0;border-top:1px solid var(--point-rule)}
-.point-details-field-review legend{padding:0 8px 0 0;color:var(--point-accent);font:600 13px Cinzel,Georgia,serif}
+.point-details-field-review legend{padding:0 8px 0 0;color:var(--point-accent);font:600 13px var(--font-display)}
 .point-details-field-review dl{margin:0}
-.point-details-field-review dt{margin-top:8px;color:#cbb58a;font-weight:600}
+.point-details-field-review dt{margin-top:8px;color:var(--ink-soft);font-weight:600}
 .point-details-field-review dd{margin:4px 0 10px;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--point-ink)}
 .point-details-preview{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--point-ink)}
 .point-details-choices{display:grid;gap:6px}

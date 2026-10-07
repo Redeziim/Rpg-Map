@@ -1,15 +1,15 @@
 .mist-theme .map-layers{--layers-paper:#211f19;--layers-ink:#e7d6b1;--layers-edge:#80663d;margin:16px 0;padding:8px 10px;border:1px solid var(--layers-edge);background:var(--layers-paper);color:var(--layers-ink);min-width:0}
-.map-layers legend{padding:0 6px;font:600 13px Cinzel,Georgia,serif}
-.mist-theme .map-layers label{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;font:15px 'Source Sans 3',sans-serif}
+.map-layers legend{padding:0 6px;font:600 13px var(--font-display)}
+.mist-theme .map-layers label{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;font:15px var(--font-body)}
 .mist-theme .map-layers input[type=checkbox]{width:18px;height:18px;min-height:18px;accent-color:#d9b777;flex:none}
 .map-layers label span{flex:1}
 .map-layers label small{font-variant-numeric:tabular-nums}
-.map-layers p{margin:8px 0 0;font:13px/1.4 'Source Sans 3',sans-serif;color:#c9bea8}
-.mist-theme .map-stroke-audience{display:flex;align-items:center;gap:6px;color:#e7d6b1;font:13px 'Source Sans 3',sans-serif}
-.mist-theme .map-stroke-audience select,.mist-theme .map-markings .map-marking-audience select{box-sizing:border-box;min-height:44px;max-width:100%;padding:7px;border:1px solid #80663d;color:#f1dfb8;background:#211f19;font:14px 'Source Sans 3',sans-serif}
+.map-layers p{margin:8px 0 0;font:13px/1.4 var(--font-body);color:#c9bea8}
+.mist-theme .map-stroke-audience{display:flex;align-items:center;gap:6px;color:var(--ink-warm);font:13px var(--font-body)}
+.mist-theme .map-stroke-audience select,.mist-theme .map-markings .map-marking-audience select{box-sizing:border-box;min-height:44px;max-width:100%;padding:7px;border:1px solid var(--gold-shadow);color:#f1dfb8;background:var(--paper-1);font:14px var(--font-body)}
 .mist-theme .view-mapa .map-markings li{flex-wrap:wrap;padding:6px 0}
 .mist-theme .view-mapa .map-markings li>span{flex:1 1 140px}
-.map-marking-audience{flex:1 1 100%;display:flex;align-items:center;gap:8px;font:var(--fs-small) 'Source Sans 3',sans-serif}
+.map-marking-audience{flex:1 1 100%;display:flex;align-items:center;gap:8px;font:var(--fs-small) var(--font-body)}
 .map-marking-audience select{flex:1}
-.map-layers :focus-visible,.map-stroke-audience :focus-visible,.map-marking-audience :focus-visible{outline:2px solid #f0d391;outline-offset:2px}
+.map-layers :focus-visible,.map-stroke-audience :focus-visible,.map-marking-audience :focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
 @media(forced-colors:active){.mist-theme .map-layers{border-color:CanvasText}.mist-theme .map-layers input{accent-color:auto}}

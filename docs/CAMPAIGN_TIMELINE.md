@@ -11,7 +11,7 @@ Entregue em 2026-10-07. Somente mestres e o ADM no modo mestre criam, editam, ar
 
 ## Registro
 
-`id`, `kind` (`session` ou `decision`), `date` (`AAAA-MM-DD`, validada no calendário), `title` (até 120), `body` (até 10.000), `visibility` (`master` ou `table`), `pointIds` e `sceneIds` (até 20 cada), `archived`, `author`, `createdAt`, `updatedAt`, `version`.
+`id`, `kind` (`session`, `decision` ou `prep`), `date` (`AAAA-MM-DD`, validada no calendário), `title` (até 120), `body` (até 10.000), `visibility` (`master` ou `table`), `pointIds` e `sceneIds` (até 20 cada), `archived`, `author`, `createdAt`, `updatedAt`, `version`.
 
 ## API
 

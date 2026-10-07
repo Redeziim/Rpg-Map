@@ -150,7 +150,7 @@ Referência de design autorizada para consulta: [Hallmark](https://github.com/Nu
 
 ### P1
 
-63. Sistema de tokens para tipografia, cor, espaçamento e movimento.
+63. Primeira consolidação em 2026-10-07: catálogo de 50 tokens (cor, tipografia, espaço, forma, movimento e foco) em `src/theme.css`, documentado em `docs/DESIGN_TOKENS.md`. 264 cores e 147 famílias de fonte migraram sem mudança visível (comparação de pixels em 11 telas); restam 710 cores literais, com um limite que só desce em `tests/designTokens.test.js`.
 64. Direção visual própria para mapa, leitor, ficha e ferramentas de mestre, mantendo o mesmo universo.
 65. Movimento reduzido verificado em 2026-10-07: regra global em `theme.css`, regras próprias onde há animação e leitura da preferência nos efeitos feitos em script (dados 3D, mesa 3D, névoa, vídeo). Auditoria no navegador com a preferência ativa não achou transição ou animação ativa em nenhuma aba; `tests/reducedMotion.test.js` falha se uma folha de estilo animar sem tratar a preferência.
 66. Primeira rodada em 2026-10-07, com medição antes e depois em `docs/PERFORMANCE.md`: compressão dos estáticos (bandeja de dados de 15,8 MB para 5,9 MB; entrar na mesa de 1.037 KB para 253 KB), fontes sem bloquear a primeira pintura e vídeo do login depois do `load`. Textura da bandeja (2,4 MB) e carga antecipada do `three` seguem anotadas como pendências.
