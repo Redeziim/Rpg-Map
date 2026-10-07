@@ -1,0 +1,25 @@
+/* Buscar pontos: busca, chips de tipo e lista; a lista em si herda o estilo atual (.points-list, .point-item). */
+.point-finder{display:grid;gap:var(--space-2)}
+.point-search{display:grid;gap:var(--space-1);font-size:var(--fs-small);color:var(--ink-soft)}
+.point-search>span{display:flex;align-items:center;gap:var(--space-2);min-height:var(--target);padding:0 var(--space-3);border:1px solid var(--rule-strong);background:var(--surface-0)}
+.point-search input{flex:1;min-width:0;min-height:var(--target);border:0;background:transparent;color:var(--ink);font:var(--fs-body) var(--font-body)}
+.point-search>span:focus-within{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.point-search input:focus{outline:none}
+.point-types{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.point-types button{display:inline-flex;align-items:center;gap:var(--space-1);min-height:var(--target);padding:0 var(--space-3);border:1px solid var(--rule-strong);background:transparent;color:var(--ink);cursor:pointer;font:var(--fs-small) var(--font-body)}
+.point-types button span{color:var(--muted)}
+.point-types button[aria-pressed="true"]{border-color:var(--gold);box-shadow:inset 0 -3px 0 var(--gold)}
+.point-types button:disabled{opacity:.45;cursor:default}
+.point-types button:focus-visible,.point-clear:focus-visible,.point-show:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.point-count{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);margin:0;color:var(--muted);font-size:var(--fs-small)}
+.point-clear{display:inline-flex;align-items:center;gap:var(--space-1);min-height:var(--target);padding:0 var(--space-2);border:0;background:transparent;color:var(--gold-bright);cursor:pointer;font:var(--fs-small) var(--font-body);text-decoration:underline}
+.point-empty{margin:0;padding:var(--space-3);border:1px dashed var(--rule-strong);color:var(--muted);font-size:var(--fs-small)}
+.point-finder .point-item{display:flex;align-items:stretch;gap:var(--space-1)}
+.point-finder .point-item.is-found{outline:2px solid var(--gold-bright);outline-offset:-2px}
+.point-finder .point-info{flex:1;min-width:0;text-align:left}
+.point-show{min-width:var(--target);min-height:var(--target);display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--rule-strong);background:transparent;color:var(--gold-bright);cursor:pointer}
+.point-finder .delete-btn{min-width:var(--target);min-height:var(--target)}
+/* No mapa: o ponto encontrado ganha um anel; os que o filtro deixou de fora ficam esmaecidos. */
+.map-point-markers .is-found circle{stroke:var(--gold-light);stroke-width:5}
+.map-point-markers .is-dimmed{opacity:.3}
+@media(forced-colors:active){.point-search>span,.point-types button,.point-show{border-color:CanvasText}.point-types button[aria-pressed="true"]{border-color:Highlight}}

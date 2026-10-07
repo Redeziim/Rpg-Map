@@ -1,6 +1,8 @@
 import Notebook from './Notebook.jsx';
 import TurnTracker from './TurnTracker.jsx';
 import ToolSection from './ToolSection.jsx';
+import PointFinder from './PointFinder.jsx';
+import {POINT_TYPE_ALL,centerOnPoint,filterPoints} from '../shared/pointSearch.js';
 import {CloudFog as FogIcon,Download as DownloadIcon,Tag as TagIcon,Ruler as RulerIcon,Route as RouteIcon,Layers as LayersIcon} from 'lucide-react';
 import {AboutPanel,ScenesPanel} from './CampaignPages.jsx';
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
@@ -97,6 +99,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   useEffect(()=>{if(!drawError||drawError.startsWith('Não foi possível'))return;const timer=setTimeout(()=>setDrawError(''),6000);return()=>clearTimeout(timer);},[drawError]);
   const mapTool=['reveal','cover'].includes(selectedMapTool)&&(!canManageMap2D||!mapFog.enabled)||selectedMapTool==='position'&&(!canSharePosition||!positionsEnabled)||selectedMapTool==='route'&&(!canManageMap2D||!routeDraft||routeDraft.imageVersion!==room.mapImageVersion)?'pan':selectedMapTool;
   const [scale,setScale]=useState(1);
+  const [pointQuery,setPointQuery]=useState(''),[pointType,setPointType]=useState(POINT_TYPE_ALL),[foundPointId,setFoundPointId]=useState(null);
   const [position,setPosition]=useState({x:0,y:0});
   const [dragging,setDragging]=useState(false);
   const panGesture=useRef(null),drawGesture=useRef(null),keyboardPen=useRef(null),strokePreviewRef=useRef(null),suppressCanvasClick=useRef(false);
@@ -134,6 +137,17 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const savePoints=points=>saveShared({points});
   const openedPoint=points.find(point=>point.id===selectedPoint?.point.id);
   const selectPoint=(point,snapshot=room)=>setSelectedPoint({point,version:snapshot.pointVersions?.[point.id]});
+  // "Ver no mapa": centers the point (zooming in a little when the map is wide open) without opening its details.
+  const foundTimer=useRef(null);
+  useEffect(()=>()=>clearTimeout(foundTimer.current),[]);
+  const showPointOnMap=point=>{
+    if(!mapCanvasSize.width||!mapFit)return;
+    const zoom=Math.max(scale,1.5);
+    setScale(zoom);setPosition(centerOnPoint(point,{width:mapCanvasSize.width,height:mapCanvasSize.height,fit:mapFit,scale:zoom}));
+    setFoundPointId(point.id);clearTimeout(foundTimer.current);foundTimer.current=setTimeout(()=>setFoundPointId(null),5000);
+    // On a narrow screen the tools panel covers the map; close it so the point can be seen.
+    if(window.matchMedia('(max-width:760px)').matches)setMap2dToolsOpen(false);
+  };
   const openLinkedPoint=id=>{const point=points.find(point=>point.id===id);if(!point)return;setMapMode('2d');setActiveTab('mapa');selectPoint(point);};
   const visibleLinkedNotes=[...(viewMode==='master'?(room.state.masterNotebooks||[]).map(note=>({...note,scope:'@master'})):[]),...(room.state.playerSheets?.[user.username]?.notebooks||[]).map(note=>({...note,scope:user.username})),...(room.state.sharedNotebooks||[])];
   const visibleScenes=visibleCampaignScenes(room.state.campaignScenes,points,canManageScenes,room.state.scenePresentation);
@@ -301,6 +315,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
     { value: 'floresta', label: 'Floresta', icon: Grid, color: '#228b22' },
     { value: 'evento', label: 'Evento', icon: Sword, color: '#ff4500' },
   ].map(type=>({...type,...mapLegend.find(entry=>entry.type===type.value)}));
+  // With a search or a type chosen, markers outside the result fade on the map; with none, every marker stays as it is.
+  const pointFilterIds=pointQuery.trim()||pointType!==POINT_TYPE_ALL?new Set(filterPoints(points,{query:pointQuery,type:pointType,typeLabels:Object.fromEntries(pointTypes.map(type=>[type.value,type.label]))}).map(point=>point.id)):null;
 
   const handleCanvasClick = (e) => {
     if(['draw','reveal','cover','measure'].includes(mapTool))return;
@@ -645,34 +661,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                   <Grid size={18} />
                   Pontos de Interesse ({points.length})
                 </h3>
-                <div className="points-list">
-                  {points.map(point => {
-                    const typeInfo = pointTypes.find(t => t.value === point.type);
-                    const Icon = typeInfo?.icon || Castle;
-                    return (
-                      <div key={point.id} className="point-item">
-                        <button className="point-info" onClick={() => handlePointClick(point)}>
-                          <Icon size={16} style={{ color: typeInfo?.color }} />
-                          <div>
-                            <strong>{point.name}</strong>
-                            <small>{typeInfo?.label||point.type}</small>
-                            {pointLinks.has(point.id)&&<small className="point-link-count">{pointLinkLabel(pointLinks.get(point.id))}</small>}
-                          </div>
-                        </button>
-                        {canManageMap2D && (
-                          <button 
-                            className="delete-btn"
-                            aria-label={`Excluir ponto ${point.name}`}
-                            disabled={saving}
-                            onClick={() => deletePoint(point.id)}
-                          >
-                            <X size={16} />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <PointFinder points={points} types={pointTypes} query={pointQuery} onQuery={setPointQuery} type={pointType} onType={setPointType} linkLabel={point=>pointLinkLabel(pointLinks.get(point.id))} canDelete={canManageMap2D} saving={saving} onOpen={handlePointClick} onShow={showPointOnMap} onDelete={deletePoint} foundId={foundPointId}/>
               </div>
 
               <ToolSection id="controles" title="Controles e zoom" icon={<Settings2 size={16} aria-hidden="true"/>}>
@@ -748,7 +737,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                     <g fill="none" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">{displayedStrokes.map(stroke=><path key={stroke.id} data-stroke-id={stroke.id} d={stroke.path} stroke={stroke.color}/>)}</g>
                     <path ref={strokePreviewRef} fill="none" stroke={strokeColor} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
                     <MapRouteOverlay routes={displayedRoutes} draft={canManageMap2D&&routeDraft?.imageVersion===room.mapImageVersion?routeDraft:null} cursor={mapTool==='route'?routeCursor:null} screenRatio={mapFit*scale} scale={mapScale}/>
-                    <g className="map-point-markers">{points.map(point=>{const type=pointTypes.find(item=>item.value===point.type),label=pointLinkLabel(pointLinks.get(point.id));return <g key={point.id} data-point-id={point.id} transform={`translate(${point.x} ${point.y}) scale(${markerUnit})`}><circle r="12" fill={type?.color||'#c7ab76'} stroke="#fff1cf" strokeWidth="2"/><text x="0" y="-21" textAnchor="middle">{point.name.length>28?point.name.slice(0,27)+'…':point.name}</text>{label&&<g className="map-point-link-badge"><rect x="18" y="-9" width={label.length*6.5+12} height="22"/><text x="24" y="6">{label}</text></g>}</g>;})}</g>
+                    <g className="map-point-markers">{points.map(point=>{const type=pointTypes.find(item=>item.value===point.type),label=pointLinkLabel(pointLinks.get(point.id));return <g key={point.id} data-point-id={point.id} className={foundPointId===point.id?'is-found':pointFilterIds&&!pointFilterIds.has(point.id)?'is-dimmed':undefined} transform={`translate(${point.x} ${point.y}) scale(${markerUnit})`}><circle r="12" fill={type?.color||'#c7ab76'} stroke="#fff1cf" strokeWidth="2"/><text x="0" y="-21" textAnchor="middle">{point.name.length>28?point.name.slice(0,27)+'…':point.name}</text>{label&&<g className="map-point-link-badge"><rect x="18" y="-9" width={label.length*6.5+12} height="22"/><text x="24" y="6">{label}</text></g>}</g>;})}</g>
                     <MapPositionMarkers markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} screenRatio={mapFit*scale}/>
                     <rect ref={fogPreviewRef} visibility="hidden" fill={mapTool==='cover'?'#a84d51':'#d9b777'} fillOpacity=".2" stroke={mapTool==='cover'?'#eea4a7':'#f0d391'} strokeWidth="2" strokeDasharray="8 5" vectorEffect="non-scaling-stroke"/>
                     <circle ref={fogStartRef} visibility="hidden" fill={mapTool==='cover'?'#eea4a7':'#f0d391'}/>
