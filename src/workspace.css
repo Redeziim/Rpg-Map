@@ -179,8 +179,7 @@
   .mist-theme.rpg-container{display:block;--workspace-pad:14px}
   .mist-theme .header{height:auto;position:relative}
   .mist-theme .header-content{padding:12px 14px;gap:10px;flex-direction:row}
-  .mist-theme .tab-nav{flex-direction:row;padding:0 8px 8px;gap:2px}
-  .mist-theme .tab-nav{flex-wrap:wrap}
+  .mist-theme .tab-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:0 8px 8px;gap:2px}
   .mist-theme .tab-btn{font-size:var(--fs-small);padding:8px 4px;gap:5px;min-height:44px}
   .mist-theme .nav-footer{display:flex;justify-content:flex-end;padding:0 12px 10px}
   .mist-theme .nav-about-button{width:auto;padding:8px 12px}

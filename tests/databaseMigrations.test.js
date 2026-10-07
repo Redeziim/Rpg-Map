@@ -67,7 +67,7 @@ test('migrações persistem legado de texto e quadros, preservam dados/privacida
     let app=createApplication({dbPath:previous,rateLimit:false});
     const rooms=app.db.prepare('SELECT id,state,revision FROM rooms ORDER BY id').all();app.close();
     const v2=new DatabaseSync(previous);
-    v2.exec('DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DROP INDEX idx_sessions_expires; DROP INDEX idx_invites_expires; DELETE FROM schema_migrations WHERE version>=3; PRAGMA user_version=2;');v2.close();
+    v2.exec('DROP TABLE timeline_versions; DROP TABLE timeline_entries; DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DROP INDEX idx_sessions_expires; DROP INDEX idx_invites_expires; DELETE FROM schema_migrations WHERE version>=3; PRAGMA user_version=2;');v2.close();
     app=createApplication({dbPath:previous,rateLimit:false});
     try{assert.deepEqual(app.migration,{schemaApplied:DATABASE_USER_VERSION-2,roomsMigrated:0});assert.deepEqual(app.db.prepare('SELECT id,state,revision FROM rooms ORDER BY id').all(),rooms);assert.equal(app.db.prepare('PRAGMA quick_check').get().quick_check,'ok');}
     finally{app.close();}

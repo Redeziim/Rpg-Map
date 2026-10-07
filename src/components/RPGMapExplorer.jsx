@@ -4,7 +4,7 @@ import ToolSection from './ToolSection.jsx';
 import {CloudFog as FogIcon,Download as DownloadIcon,Tag as TagIcon,Ruler as RulerIcon,Route as RouteIcon,Layers as LayersIcon} from 'lucide-react';
 import {AboutPanel,ScenesPanel} from './CampaignPages.jsx';
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
-import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks, Clapperboard, Info, Pencil, Undo2, Redo2, Eraser, Hand, Ruler } from 'lucide-react';
+import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks, Clapperboard, Info, Pencil, Undo2, Redo2, Eraser, Hand, Ruler, BookOpen } from 'lucide-react';
 import PointDetails from './PointDetails.jsx';
 import MapStrokeColor from './MapStrokeColor.jsx';
 import MapLayers,{MapStrokeAudience,loadMapLayers} from './MapLayers.jsx';
@@ -38,6 +38,7 @@ const DiceFocus=lazy(()=>import('./DiceFocus.jsx'));
 const DiceRoller=lazy(()=>import('./DiceRoller.jsx'));
 const CharacterSheet=lazy(()=>import('./CharacterSheet.jsx'));
 const GroupStatus=lazy(()=>import('./GroupStatus.jsx'));
+const CampaignTimelinePanel=lazy(()=>import('./CampaignTimelinePanel.jsx'));
 
 const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,error,adminMode,setAdminMode}) => {
   const [heldDice,setHeldDice]=useState(null);
@@ -594,6 +595,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short">Grupo</span>
           </button>
           <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-pressed={activeTab==='cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
+          <button className={`tab-btn ${activeTab==='linha'?'active':''}`} aria-pressed={activeTab==='linha'} onClick={()=>setActiveTab('linha')}><BookOpen size={18} aria-hidden="true"/><span className="tab-label-full">Linha do tempo</span><span className="tab-label-short">Diário</span></button>
         </nav>
         <div className="nav-footer"><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-pressed={activeTab==='sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button></div>
       </header>
@@ -807,7 +809,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
               <DiceHistory key={`${room.id}:${room.role}:${viewMode}`} room={room} viewMode={viewMode}/>
             </aside>
           </>
-        ) : activeTab==='cenas' ? <ScenesPanel roomId={room.id} userId={user.id} scenes={visibleScenes} points={points} editable={canManageScenes} viewMode={viewMode} presentation={room.state.scenePresentation} connection={connection} onPresent={presentScene} request={sceneRequest} onRequestHandled={()=>setSceneRequest(null)} onOpenPoint={openLinkedPoint} saving={saving} error={error} onSave={(id,fields,version)=>mutate(mapRequestPath(version?`/campaign-scenes/${id}`:'/campaign-scenes'),version?{...fields,version}:{...fields,id},version?'PATCH':'POST')} onArchive={(scene,archived)=>mutate(mapRequestPath(`/campaign-scenes/${scene.id}`),{archived,version:scene.version},'PATCH')}/> : activeTab==='sobre' ? <AboutPanel roomId={room.id} username={user.username} role={room.role}/> : (
+        ) : activeTab==='cenas' ? <ScenesPanel roomId={room.id} userId={user.id} scenes={visibleScenes} points={points} editable={canManageScenes} viewMode={viewMode} presentation={room.state.scenePresentation} connection={connection} onPresent={presentScene} request={sceneRequest} onRequestHandled={()=>setSceneRequest(null)} onOpenPoint={openLinkedPoint} saving={saving} error={error} onSave={(id,fields,version)=>mutate(mapRequestPath(version?`/campaign-scenes/${id}`:'/campaign-scenes'),version?{...fields,version}:{...fields,id},version?'PATCH':'POST')} onArchive={(scene,archived)=>mutate(mapRequestPath(`/campaign-scenes/${scene.id}`),{archived,version:scene.version},'PATCH')}/> : activeTab==='linha' ? <Suspense fallback={<p role="status">Abrindo o diário da campanha…</p>}><CampaignTimelinePanel key={`${room.id}:${viewMode}`} roomId={room.id} userId={user.id} viewMode={viewMode} editable={canManageScenes} revision={room.timelineRevision} points={points} scenes={visibleScenes} connection={connection} onOpenPoint={openLinkedPoint} onOpenScene={id=>{const scene=visibleScenes.find(item=>item.id===id);if(scene)openLinkedScene(scene);}}/></Suspense> : activeTab==='sobre' ? <AboutPanel roomId={room.id} username={user.username} role={room.role}/> : (
           <section className="group-status-area"><div className="sheet-heading"><div><span className="eyebrow">Companheiros de jornada</span><h2>Status do grupo</h2></div><span className="sheet-seal"><Users size={16} />{playerNames.length} {playerNames.length===1?'jogador':'jogadores'}</span></div>
             <div className="group-workspace"><section className="party-roster" aria-label="Personagens da mesa"><Suspense fallback={<p role="status">Preparando o grupo…</p>}><GroupStatus
               viewMode={viewMode}

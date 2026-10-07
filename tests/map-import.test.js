@@ -86,7 +86,7 @@ test('a lost confirmation is recovered after restart; cancelling or replaying it
     const backup=join(f.directory,'backup.sqlite'),restored=join(f.directory,'restored.sqlite');
     await createBackup(join(f.directory,'review.sqlite'),backup);await restoreBackup(backup,restored);
     const previous=join(f.directory,'previous-v3.sqlite'),previousBackup=join(f.directory,'previous-backup.sqlite');copyFileSync(backup,previous);
-    const oldDatabase=new DatabaseSync(previous);oldDatabase.exec('DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DELETE FROM schema_migrations WHERE version>=4; PRAGMA user_version=3;');oldDatabase.close();
+    const oldDatabase=new DatabaseSync(previous);oldDatabase.exec('DROP TABLE timeline_versions; DROP TABLE timeline_entries; DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DELETE FROM schema_migrations WHERE version>=4; PRAGMA user_version=3;');oldDatabase.close();
     await createBackup(previous,previousBackup);
     assert.equal(Object.hasOwn(JSON.parse(readFileSync(previousBackup+'.json','utf8')).database.counts,'map_imports'),false,'old manifests keep the table counts from their schema version');
     await restoreBackup(previousBackup,join(f.directory,'previous-restored.sqlite'));

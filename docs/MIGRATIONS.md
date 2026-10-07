@@ -140,3 +140,7 @@ SQL continua 6. Falha de validação impede abertura e reverte toda a transaçã
 SQL 6→7 acrescenta `scene_media`, com BLOB, metadados e hash por mesa. JSON 6→7 acrescenta `mediaId: null` às cenas existentes e uma apresentação parada. Conserva integralmente o combate no formato 2, suas durações, rodada e versão. Estados anteriores recebem as transformações correspondentes na mesma transação; cada mesa migrada recebe uma única revisão.
 
 Os descritores históricos do SQL 6 continuam imutáveis. Inicialização e recuperação conferem tamanho, hash e referências dos arquivos. Backup/restauração conservam a mídia; exportações aplicam a permissão atual. Teste HTTP integrado confirma reinício, backup/restauração, combate preservado e acesso reservado/público. Contrato em [SCENE_MEDIA.md](SCENE_MEDIA.md), ADR 032.
+
+## SQL 008 — linha do tempo da campanha
+
+SQL 7→8 acrescenta 	imeline_entries, 	imeline_versions e idx_timeline_entries_order. O estado JSON das mesas não muda (continua 7), então nenhuma mesa recebe revisão por causa desta etapa. Os descritores históricos do SQL 7 (DATABASE_V7_TABLES) continuam imutáveis: backups 0–7 seguem reconhecidos e abrir a cópia restaurada aplica só a etapa 008. Inicialização e recuperação conferem datas, vínculos, autoria e se a última versão guardada é igual ao registro atual. Contrato em [CAMPAIGN_TIMELINE.md](CAMPAIGN_TIMELINE.md), ADR 034.

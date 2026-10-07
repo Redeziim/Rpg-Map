@@ -1,32 +1,48 @@
-# Linha do tempo da campanha — preparação do item 57
+# Linha do tempo da campanha — item 57
 
 ## Estado atual
 
-O usuário escolheu a opção recomendada: somente mestres/ADM no modo mestre criam e editam. Jogadores apenas consultam os registros liberados. A preparação contém o leitor React e funções de consulta/projeção; não aparece na navegação, não grava dados e não muda permissões ou esquema do banco. O item 57 permanece em andamento.
+Entregue em 2026-10-07. Somente mestres e o ADM no modo mestre criam, editam, arquivam e restauram. Jogadores consultam os registros publicados. A aba **Linha do tempo** (rótulo curto "Diário" no celular) está na navegação principal. Decisão registrada em `docs/adr/034-linha-do-tempo-da-campanha.md`.
 
-## Consulta preparada
+## Registro
 
-- Diário com data na margem, título, texto, autor, tipo Sessão/Decisão e indicação Só mestres quando aplicável.
-- Mais recentes primeiro: data do acontecimento, depois criação e identificador como desempate. Não ordenar só pela última edição.
-- Página inicial de 20 registros; filtro de sessões/decisões, continuação e retorno aos mais recentes.
-- Cursor com data/criação/identificador do último registro visível. A integração deverá acrescentar revisão da coleção e recusar cursor antigo depois de edição; não misturar páginas de versões diferentes.
-- Datas no formato YYYY-MM-DD, validadas no calendário, sem conversão para o dia anterior por fuso horário. Renderização em português, com UTC explícito.
-- Projeção reserva registros privados aos mestres, retira arquivados e filtra vínculos por pontos/cenas já autorizados. Um vínculo nunca libera seu destino nem revela o mapa.
-- Leitor sem animação nova, foco visível, controles de 44 px, textos longos quebráveis, estados vazio/carregando/erro/reconectando e layout em uma coluna no celular.
+`id`, `kind` (`session` ou `decision`), `date` (`AAAA-MM-DD`, validada no calendário), `title` (até 120), `body` (até 10.000), `visibility` (`master` ou `table`), `pointIds` e `sceneIds` (até 20 cada), `archived`, `author`, `createdAt`, `updatedAt`, `version`.
 
-## Integração depois da escolha
+## API
 
-1. Aplicar a decisão registrada: escrita e gestão reservadas ao mestre/ADM no modo mestre; consultas de jogadores recebem apenas registros liberados. Conferir a autorização em cada endpoint, snapshot, SSE, vínculo e exportação.
-2. Manter SQLite e APIs autenticadas existentes. Escolher armazenamento de entradas versionadas e registrar a migração explícita; preservar descritores históricos, backups, combate e mídia. Não adicionar serviço externo.
-3. Expor consulta paginada e detalhe com acesso por papel/modo/visibilidade, sem nomes/IDs privados em snapshots, SSE, vínculos ou exportação. Respostas de página precisam informar revisão; mudança durante paginação pede atualização explícita.
-4. Implementar criação/edição com data, tipo, título, texto e vínculos opcionais a pontos/cenas. Novos registros do mestre começam reservados; compartilhamento é explícito. Autoria vem da sessão, não do JSON enviado.
-5. Exigir versão para edição/arquivamento. Conflito conserva o rascunho e permite revisar os campos, sem sobrescrever automaticamente. Reutilizar os mecanismos locais já autorizados, com confirmação antes de descartar.
-6. Conectar o leitor à navegação como Linha do tempo. Abrir pontos/cenas por suas ações existentes; destino indisponível não amplia acesso. Arquivamento/restauração dependem da mesma política de edição definida no passo 1.
-7. Exportar somente entradas e referências autorizadas. Conferir reinício, migração, rollback e recuperação por backup.
+Todas sob `/api/rooms/:roomId/timeline`, autenticadas e com `mapViewMode`.
 
-## Validação planejada
+| Método e rota | Quem | O que faz |
+| --- | --- | --- |
+| `GET /` | participante | Página de 20 registros. Parâmetros: `kind`, `archived=1` (mestre), `before=data,criação,id` e `revision`. Devolve `entries`, `hasMore`, `next`, `revision`. |
+| `GET /:id` | participante | Detalhe. Reservado ou arquivado aparece como 404 para jogadores. |
+| `POST /` | mestre | Cria. O corpo leva `id` gerado pelo cliente. Repetir o mesmo corpo devolve 200 sem duplicar; corpo diferente com o mesmo `id` dá 409. |
+| `PATCH /:id` | mestre | Edita ou arquiva (`archived`). Exige `expectedVersion`. Conflito: 409 com `details.current`. |
+| `GET /:id/versions` | mestre | Histórico, da mais nova à mais antiga. |
+| `POST /:id/restore` | mestre | Restaura `version` como uma nova versão. Exige `expectedVersion`. |
 
-Limites públicos já usados e autorizados no projeto: API HTTP real e tela em `npm run dev`. Usar um fluxo integrado proporcional para ordenação/desempate/páginas, acesso, conflitos, reinício e exportação; não exigir três testes por feature. Navegador em desktop/celular e teclado. Leitor isolado usa apenas dados fictícios identificados como prévia.
+## Ordem, páginas e revisão
 
-Skills: `frontend-design`, `vercel-react-best-practices`, `tdd` no contrato HTTP após a escolha e `web-design-guidelines` na revisão. Nenhuma API externa necessária.
+Mais recentes primeiro: data do acontecimento, depois criação e identificador. O cursor pertence a um registro visível. A revisão resume o que a pessoa pode ler (contagem, soma de versões e última alteração; mestres e jogadores têm revisões diferentes). Uma página pedida com revisão antiga recebe 409; a tela avisa e volta aos mais recentes. O snapshot da mesa traz `timelineRevision` para a tela saber quando recarregar.
 
+## Privacidade
+
+- Jogadores nunca recebem registros reservados ou arquivados, nem em página, detalhe, snapshot, SSE, auditoria ou exportação.
+- Vínculos são filtrados contra os pontos (com névoa) e cenas que a pessoa já enxerga.
+- O texto não vai para a auditoria; só o tipo de ação `timeline.changed`.
+
+## Edição na tela
+
+Diálogo de edição com data, tipo, título, texto, visibilidade e vínculos. O rascunho é guardado no navegador por pessoa e mesa, pergunta antes de descartar e sobrevive a recarga. Se o registro mudou em outra janela, o editor oferece a revisão campo a campo (manter o rascunho ou usar a versão da mesa). O histórico de versões abre em diálogo próprio e restaura com um clique.
+
+## Persistência e recuperação
+
+Migração SQL 008: `timeline_entries`, `timeline_versions` e `idx_timeline_entries_order`. Backup e restauração conferem os registros e recusam um banco com data inválida, autor inexistente ou última versão diferente do registro atual. `npm run db:diagnose` conta registros e versões por mesa. A exportação JSON inclui `timeline` e `counts.timeline`.
+
+## Validação
+
+`tests/campaignTimeline.test.js` cobre pela API HTTP: permissões, autoria, validações, idempotência, privacidade e filtro de vínculos, ordem e páginas, revisão antiga, conflito, histórico e restauração, arquivamento, auditoria, exportação por papel, reinício, backup e restauração e recusa de dado inválido. Navegador: criação pelo editor, leitura como jogador, 1440 e 390 px sem rolagem horizontal.
+
+## Limites conhecidos
+
+Não há exclusão definitiva nem importação pela interface. O rascunho usa só `localStorage`. Não há pesquisa de texto na linha do tempo.

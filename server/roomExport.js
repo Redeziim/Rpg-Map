@@ -16,6 +16,7 @@ import {projectTabletopReferences} from './tabletopReferences.js';
 import {createExportWorkspace,defaultExportRoot} from './exportWorkspace.js';
 import {projectDiceEntry} from './diceHistory.js';
 import {projectCombat} from './combat.js';
+import {createCampaignTimeline} from './campaignTimeline.js';
 
 const fail=(status,message)=>{throw Object.assign(Error(message),{status});};
 const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(value,key)).map(key=>[key,value[key]]));
@@ -83,8 +84,10 @@ function projection(db,{roomId,user,viewMode}){
   const structures=db.prepare('SELECT id FROM dice_structures WHERE room_id=? ORDER BY id').all(roomId);
   const audit=master?db.prepare('SELECT * FROM room_audit WHERE room_id=? ORDER BY sequence DESC').all(roomId).map(row=>({sequence:row.sequence,actor:{id:row.actor_id,username:row.actor_username},action:row.action,details:JSON.parse(row.details),createdAt:row.created_at,revision:row.revision})):[];
   const diceHistory=db.prepare("SELECT entry FROM dice_rolls WHERE room_id=? AND (json_extract(entry,'$.visibility')='public' OR ?=1 OR user_id=?) ORDER BY created_at DESC,id DESC").all(roomId,role==='admin'?1:0,user.id).map(row=>projectDiceEntry(JSON.parse(row.entry),state.campaignScenes));
-  return {room:pick(room,['id','name','revision']),members,state,groupBars,raw,master,histories,noteAssets,models,sceneMedia,structures,audit,diceHistory,role,
-    counts:{points:state.points.length,notes:notes.length,versions:histories.reduce((n,h)=>n+h.versions.length,0),noteImages:noteAssets.length,models:models.length,scenes:state.campaignScenes.length,participants:members.length,audit:audit.length,diceRolls:diceHistory.length}};
+  // Reserved and archived entries leave the table only inside a master export; links follow the same projection as the state.
+  const timeline=createCampaignTimeline(db).exportEntries(roomId,{master,pointIds:new Set(state.points.map(point=>point.id)),sceneIds:new Set(state.campaignScenes.map(scene=>scene.id))});
+  return {room:pick(room,['id','name','revision']),members,state,groupBars,raw,master,histories,noteAssets,models,sceneMedia,structures,audit,diceHistory,timeline,role,
+    counts:{points:state.points.length,notes:notes.length,versions:histories.reduce((n,h)=>n+h.versions.length,0),noteImages:noteAssets.length,models:models.length,scenes:state.campaignScenes.length,participants:members.length,audit:audit.length,diceRolls:diceHistory.length,timeline:timeline.length}};
 }
 
 export function createRoomExports({db,renderMapFog,exportRoot=defaultExportRoot()}){
@@ -176,7 +179,7 @@ export function createRoomExports({db,renderMapFog,exportRoot=defaultExportRoot(
           check(job,checkAccess);const row=db.prepare('SELECT id,name,mesh FROM dice_structures WHERE room_id=? AND id=?').get(roomId,plan.structures[i].id);
           await w((i?',':'')+JSON.stringify({...row,mesh:JSON.parse(row.mesh)}));
         }
-        await w(']},"audit":'+JSON.stringify(plan.audit)+',"diceHistory":'+JSON.stringify(plan.diceHistory)+'}');
+        await w(']},"audit":'+JSON.stringify(plan.audit)+',"diceHistory":'+JSON.stringify(plan.diceHistory)+',"timeline":'+JSON.stringify(plan.timeline)+'}');
         const finished=once(job.stream,'finish',{signal:job.controller.signal});job.stream.end();await finished;
         job.stream=null;job.bytes=(await stat(job.path)).size;check(job,checkAccess);job.ready=true;
         return metadata(job);

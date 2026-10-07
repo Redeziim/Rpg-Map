@@ -6,6 +6,7 @@ import {MAP_ASSET_MEDIA,mapAssetPlacement} from '../src/shared/mapAssetTransfer.
 import {createModelValidator} from './modelValidation.js';
 import {createMapImports} from './mapImports.js';
 import {createDiceHistory,isPrivateRoll} from './diceHistory.js';
+import {createCampaignTimeline} from './campaignTimeline.js';
 import {createCombatOperations} from './combatOperations.js';
 import {changeTabletopObjects} from './tabletopObjects.js';
 import {assertLinkTarget,projectNoteBoard,projectTabletopReferences,resolveTabletopReference} from './tabletopReferences.js';
@@ -118,6 +119,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const transaction=fn=>{if(db.isTransaction)return fn();db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){if(db.isTransaction)db.exec('ROLLBACK');throw e;}};
   const clients=new Set(),limits=new Map(),renderMapFog=createMapFogRenderer(),validateMapImage=createMapImageValidator(),roomMedia=createRoomMediaTransfer();
   const diceHistory=createDiceHistory(db);
+  const campaignTimeline=createCampaignTimeline(db);
   const combatOperations=createCombatOperations(db);
   const roomExports=createRoomExports({db,renderMapFog,exportRoot});
   const mapImports=createMapImports(db);
@@ -221,7 +223,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     state.sharedNotebooks=state.sharedNotebooks.map(cleanNote);
     for(const sheet of Object.values(state.playerSheets))sheet.notebooks=sheet.notebooks.map(cleanNote);
     const diceViewer={userId,username:viewer,admin:m.role==='admin'};const history=diceHistory.page(roomId,state.campaignScenes,null,diceViewer);
-    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId,diceViewer),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,serverTime:Date.now()};
+    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId,diceViewer),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,timelineRevision:campaignTimeline.revision(roomId,master),serverTime:Date.now()};
   }
   function revoke(client,status){
     client.res.write(`event: revoked\ndata: ${JSON.stringify({status})}\n\n`);client.res.end();clients.delete(client);
@@ -692,6 +694,51 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       const view=snapshot(roomId,user.id,mapView());
       return json(res,200,{...diceHistory.page(roomId,view.state.campaignScenes,url.searchParams.get('before'),{userId:user.id,username:user.username,admin:view.role==='admin'}),revision:view.revision});
     }
+    if(path[3]==='timeline'){
+      const mode=mapView(),master=canManageMap(m.role,mode);
+      // Links shown to a reader are limited to what that reader can already see on the map and in the scenes.
+      const access=()=>{const view=snapshot(roomId,user.id,mode);return {master,pointIds:new Set((view.state.points||[]).map(point=>point.id)),sceneIds:new Set(view.state.campaignScenes.map(scene=>scene.id))};};
+      const changed=work=>{
+        if(!master)fail(403,'Editar a linha do tempo exige o modo mestre.');
+        limit(`timeline:${user.id}`,60);
+        const result=transaction(()=>{
+          if(!canManageMap(membership(roomId,user.id).role,mode))fail(403,'Seu papel na mesa mudou.');
+          const done=work(access());
+          if(done.repeated===false||done.changed===true){
+            const revision=query('SELECT revision FROM rooms WHERE id=?',roomId).revision;
+            if(!Number.isSafeInteger(revision+1))fail(409,'Limite de revisão da mesa atingido.');
+            run('UPDATE rooms SET revision=revision+1 WHERE id=?',roomId);audit.record(roomId,user,'timeline.changed');
+          }
+          return done;
+        });
+        if(result.repeated===false||result.changed===true)broadcast(roomId);
+        return result;
+      };
+      if(path.length===4&&method==='GET'){
+        const raw=url.searchParams.get('before');let before=null;
+        if(raw){const [date,createdAt,id,...extra]=raw.split(',');before={date,createdAt:Number(createdAt),id};if(extra.length||!/^\d+$/.test(createdAt||''))fail(400,'Página da campanha inválida.');}
+        const kind=url.searchParams.get('kind')||'all';
+        return json(res,200,campaignTimeline.page(roomId,{...access(),kind,archived:url.searchParams.get('archived')==='1',before,knownRevision:url.searchParams.get('revision')}));
+      }
+      if(path.length===4&&method==='POST'){
+        const result=changed(known=>campaignTimeline.create(roomId,user,requestBody,known));
+        return json(res,result.repeated?200:201,{entry:result.entry,revision:campaignTimeline.revision(roomId,true)});
+      }
+      if(path.length===5&&method==='GET')return json(res,200,{entry:campaignTimeline.get(roomId,path[4],access())});
+      if(path.length===5&&method==='PATCH'){
+        const result=changed(known=>campaignTimeline.update(roomId,user,path[4],requestBody,known));
+        return json(res,200,{entry:result.entry,revision:campaignTimeline.revision(roomId,true)});
+      }
+      if(path.length===6&&path[5]==='versions'&&method==='GET'){
+        if(!master)fail(403,'O histórico de versões exige o modo mestre.');
+        return json(res,200,{versions:campaignTimeline.versions(roomId,path[4])});
+      }
+      if(path.length===6&&path[5]==='restore'&&method==='POST'){
+        const result=changed(known=>campaignTimeline.restore(roomId,user,path[4],requestBody,known));
+        return json(res,200,{entry:result.entry,revision:campaignTimeline.revision(roomId,true)});
+      }
+      fail(404,'Rota não encontrada.');
+    }
     if(path[3]==='tray-rolls'&&method==='POST'&&path.length===4){
       const result=transaction(()=>{
         const operation=diceHistory.prepare(roomId,user.id,requestBody);
@@ -1037,7 +1084,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     route(req,res).catch(e=>{
       diagnostic?.failed(e);
       if(res.headersSent)return res.end();
-      json(res,e.status||500,{error:e.status?e.message:'Não foi possível concluir a operação.',...(diagnostic?{requestId:diagnostic.requestId}:{})});
+      json(res,e.status||500,{error:e.status?e.message:'Não foi possível concluir a operação.',...(e.status&&e.details?{details:e.details}:{}),...(diagnostic?{requestId:diagnostic.requestId}:{})});
     });
   });
   return {server,db,migration,maintenance,diagnostics,close:()=>{

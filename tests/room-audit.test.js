@@ -70,7 +70,7 @@ test('ação e registro são atômicos; migração, retenção, reinício e rest
     const audit=f.root+'/audit',before=(await f.call('owner',f.root)).data;
     await f.stop();
     // A real version-1 database: preserve its original tables, state and sessions.
-    const old=new DatabaseSync(f.dbPath);old.exec('DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DROP INDEX idx_sessions_expires; DROP INDEX idx_invites_expires; DROP TABLE room_audit; DELETE FROM schema_migrations WHERE version>=2; PRAGMA user_version=1;');old.close();
+    const old=new DatabaseSync(f.dbPath);old.exec('DROP TABLE timeline_versions; DROP TABLE timeline_entries; DROP TABLE scene_media; DROP TABLE combat_operations; DROP TABLE dice_live; DROP TABLE dice_receipts; DROP TABLE dice_rolls; DROP INDEX idx_map_imports_expires; DROP TABLE map_imports; DROP INDEX idx_sessions_expires; DROP INDEX idx_invites_expires; DROP TABLE room_audit; DELETE FROM schema_migrations WHERE version>=2; PRAGMA user_version=1;');old.close();
     const oldBackup=join(f.directory,'version1.sqlite');await createBackup(f.dbPath,oldBackup);const oldBytes=readFileSync(oldBackup);
     assert.equal((await verifyBackup(oldBackup)).database.userVersion,1);
     const migrated=join(f.directory,'migrated.sqlite');await restoreBackup(oldBackup,migrated);await f.start(migrated);

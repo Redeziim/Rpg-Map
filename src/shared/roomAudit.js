@@ -22,6 +22,7 @@ export const AUDIT_ACTIONS={
   'note.access':['notes','Compartilhamento de nota alterado'],
   'tabletop.changed':['tabletop','Objetos da mesa 3D alterados'],
   'campaign.changed':['campaign','Cenas da campanha alteradas'],
+  'timeline.changed':['campaign','Linha do tempo da campanha alterada'],
   'turns.changed':['turns','Ordem ou turno ativo alterado'],
 };
 export const AUDIT_RETENTION=1000;

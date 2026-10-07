@@ -10,3 +10,4 @@
 @media(hover:hover) and (pointer:fine){.campaign-timeline button:hover:not(:disabled){background:#302c20;border-color:var(--timeline-accent)}}
 @media(max-width:760px){.timeline-header{display:block}.timeline-header label{margin-top:20px;min-width:0}.timeline-entry{grid-template-columns:minmax(0,1fr);gap:16px;padding:24px 0}.timeline-date{flex-direction:row;flex-wrap:wrap;gap:4px 12px}.timeline-links{flex-direction:column;align-items:stretch}.timeline-pagination button{width:100%}}
 @media(forced-colors:active){.timeline-date,.timeline-header,.timeline-entry,.timeline-message,.campaign-timeline button,.timeline-header select{border-color:CanvasText}.campaign-timeline :focus-visible{outline-color:Highlight}}
+.timeline-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
