@@ -152,8 +152,8 @@ Referência de design autorizada para consulta: [Hallmark](https://github.com/Nu
 
 63. Sistema de tokens para tipografia, cor, espaçamento e movimento.
 64. Direção visual própria para mapa, leitor, ficha e ferramentas de mestre, mantendo o mesmo universo.
-65. Preferência de movimento reduzido em toda animação e efeito contínuo.
-66. Revisão de desempenho de fonte, imagens e componentes pesados.
+65. Movimento reduzido verificado em 2026-10-07: regra global em `theme.css`, regras próprias onde há animação e leitura da preferência nos efeitos feitos em script (dados 3D, mesa 3D, névoa, vídeo). Auditoria no navegador com a preferência ativa não achou transição ou animação ativa em nenhuma aba; `tests/reducedMotion.test.js` falha se uma folha de estilo animar sem tratar a preferência.
+66. Primeira rodada em 2026-10-07, com medição antes e depois em `docs/PERFORMANCE.md`: compressão dos estáticos (bandeja de dados de 15,8 MB para 5,9 MB; entrar na mesa de 1.037 KB para 253 KB), fontes sem bloquear a primeira pintura e vídeo do login depois do `load`. Textura da bandeja (2,4 MB) e carga antecipada do `three` seguem anotadas como pendências.
 
 ## Critério de execução para cada item
 

@@ -7,6 +7,7 @@ import {createModelValidator} from './modelValidation.js';
 import {createMapImports} from './mapImports.js';
 import {createDiceHistory,isPrivateRoll} from './diceHistory.js';
 import {createCampaignTimeline} from './campaignTimeline.js';
+import {createStaticFiles} from './staticFiles.js';
 import {createCombatOperations} from './combatOperations.js';
 import {changeTabletopObjects} from './tabletopObjects.js';
 import {assertLinkTarget,projectNoteBoard,projectTabletopReferences,resolveTabletopReference} from './tabletopReferences.js';
@@ -41,7 +42,7 @@ import {AUDIT_CATEGORIES} from '../src/shared/roomAudit.js';
 import { randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 import { mkdirSync, existsSync, statSync, createReadStream } from 'node:fs';
-import { resolve, dirname, extname, sep } from 'node:path';
+import { resolve, dirname, sep } from 'node:path';
 const scrypt = promisify(scryptCallback);
 const digest = s => createHash('sha256').update(s).digest('hex');
 const SESSION_MS = 7 * 86400000;
@@ -120,6 +121,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const clients=new Set(),limits=new Map(),renderMapFog=createMapFogRenderer(),validateMapImage=createMapImageValidator(),roomMedia=createRoomMediaTransfer();
   const diceHistory=createDiceHistory(db);
   const campaignTimeline=createCampaignTimeline(db);
+  const staticFiles=createStaticFiles();
   const combatOperations=createCombatOperations(db);
   const roomExports=createRoomExports({db,renderMapFog,exportRoot});
   const mapImports=createMapImports(db);
@@ -296,9 +298,8 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       if(!file.startsWith(resolve(distPath)+sep)&&file!==resolve(distPath))fail(403,'Caminho inválido.');
       if(!existsSync(file)||!statSync(file).isFile())file=resolve(distPath,'index.html');
       if(!existsSync(file))fail(404,'Execute npm run build para gerar o site.');
-      const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon'};
-      res.writeHead(200,{'Content-Type':mime[extname(file)]||'application/octet-stream','Cache-Control':file.endsWith('index.html')?'no-cache':'public, max-age=3600'});
-      if(method==='HEAD')res.end();else createReadStream(file).pipe(res);return;
+      const sent=await staticFiles.send(req,res,{file,urlPath:url.pathname,method});
+      if(sent?.stream)createReadStream(file).pipe(res);return;
     }
     if(method==='GET'&&url.pathname==='/api/health')return json(res,200,{ok:true});
     const ip=req.socket.remoteAddress || 'local';limit(`api:${ip}`,600);
