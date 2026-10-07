@@ -1,4 +1,5 @@
 import React from 'react';
+import { evaluateFormula, resolveFormulas } from '../shared/sheetFormulas.js';
 import { Type, ScrollText, Hash, Image as QIcon, ListPlus, Calculator, Sword, ListChecks, Heart } from 'lucide-react';
 
 const SHEET_FONTS = [
@@ -23,27 +24,7 @@ const FIELD_TYPES = [
   { id: 'checklist', label: 'Lista de marcação', icon: ListChecks, Heart },
 ];
 
-// Avalia uma fórmula simples com referências a outros campos pelo nome (ex: "(Força-10)/2).
-// Após substituir os nomes pelos valores, só sobra aritmética básica — nunca código arbitrário.
-const evaluateFormula = (formula, labelValueMap) => {
-  if (!formula) return null;
-  let expr = formula;
-  const labels = Object.keys(labelValueMap).sort((a, b) => b.length - a.length);
-  for (const label of labels) {
-    const safeLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(safeLabel, 'gi');
-    expr = expr.replace(re, `(${labelValueMap[label]})`);
-  }
-  if (!/^[0-9+\-*/().\s]*$/.test(expr)) return 'erro';
-  try {
-    // eslint-disable-next-line no-new-func
-    const result = Function(`"use strict"; return (${expr || '0'});`)();
-    if (typeof result !== 'number' || !isFinite(result)) return 'erro';
-    return Math.round(result * 100) / 100;
-  } catch {
-    return 'erro';
-  }
-};
+// As fórmulas vivem em src/shared/sheetFormulas.js (com piso, teto, min, max e referências entre fórmulas).
 
 // --- Auto-categorização de campos por nome ---
 // O Mestre (ou jogador) digita um nome e o sistema escolhe a aba correta,
@@ -72,4 +53,4 @@ export function suggestTab(label) {
 // Lista de abas padrão em ordem
 export const DEFAULT_TABS = ['Atributos', 'Status', 'Habilidades', 'Equipamento', 'Aparência', 'Notas', 'Geral'];
 
-export { SHEET_FONTS, FIELD_TYPES, evaluateFormula };
+export { SHEET_FONTS, FIELD_TYPES, evaluateFormula, resolveFormulas };

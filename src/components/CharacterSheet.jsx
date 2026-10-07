@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
 import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
-import { SHEET_FONTS, FIELD_TYPES, evaluateFormula, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
+import { SHEET_FONTS, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
+import { SHEET_SYSTEMS, buildSystemFields } from '../shared/sheetTemplates.js';
+const SheetImport = lazy(() => import('./SheetImport.jsx'));
 
 const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote, onShareNote, notebookMembers=[], notebookUsername='', mapPoints=[], onOpenPoint,openNoteRequest,roomId }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -127,6 +129,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
 
   // Todos os campos (base + extras) — usado para resolver fórmulas por nome
   const allFieldsForFormulas = [...sheetFields, ...extraFields];
+  const formulaResults = resolveFormulas(allFieldsForFormulas, draftValues);
 
   // Nomes de abas já usados em qualquer campo (base ou extra) — sugestões para o datalist
   const allTabNames = Array.from(new Set(allFieldsForFormulas.map(f => f.tab).filter(Boolean)));
@@ -177,11 +180,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
       )}
 
       {f.type === 'formula' && (() => {
-        const labelValueMap = {};
-        allFieldsForFormulas.forEach(other => {
-          labelValueMap[other.label] = draftValues[other.id];
-        });
-        const result = evaluateFormula(f.formula, labelValueMap);
+        const result = (formulaResults.get(f.id) ?? null);
         return (
           <div className="sheet-field-formula">
             <span className="formula-result">{result === null ? '—' : result}</span>
@@ -271,6 +270,21 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
 
   const categories = Array.from(new Set([...sheetFields, ...extraFields].map(f => f.tab || 'Geral')));
   const makeId = () => `f_${crypto.randomUUID()}`;
+  const [pendingSystem, setPendingSystem] = useState(null), [systemError, setSystemError] = useState('');
+  // Somar mantém o que já existe e só traz os campos de nome novo; substituir troca o modelo inteiro.
+  const systemPlan = pendingSystem && (() => {
+    const created = buildSystemFields(pendingSystem.system.id, makeId);
+    if (pendingSystem.mode === 'replace') return { fields: created, added: created.length };
+    const have = new Set(sheetFields.map(f => f.label.trim().toLowerCase()));
+    const extra = created.filter(f => !have.has(f.label.trim().toLowerCase()));
+    return { fields: [...sheetFields, ...extra], added: extra.length };
+  })();
+  const applySystem = () => {
+    if (!systemPlan) return;
+    if (systemPlan.fields.length > 200) { setSystemError('O modelo ficaria com mais de 200 campos. Remova campos antes de somar este sistema.'); return; }
+    onFieldsChange(systemPlan.fields);
+    setPendingSystem(null); setSystemError('');
+  };
   const createStarter = () => {
     if (sheetFields.length) return;
     const fields = [
@@ -299,6 +313,25 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         <div className="section-heading"><h3>Modelo da campanha</h3><span>{sheetFields.length} campos</span></div>
         <p className="status-bars-hint">Defina os campos e suas categorias. Cada jogador preenche os próprios valores.</p>
         {!sheetFields.length && <button className="sheet-tool-btn starter-button" onClick={createStarter}><Plus size={16} /> Começar com uma ficha base</button>}
+        <section className="system-templates" aria-label="Modelos de sistema">
+          <h4>Modelos de sistema</h4>
+          <p>Um modelo traz os campos e as fórmulas de um sistema. Nada fica fixo: some campos de outro sistema, troque de modelo ou edite tudo depois.</p>
+          <ul>{SHEET_SYSTEMS.map(system => <li key={system.id}>
+            <div><strong>{system.name}</strong><span>{system.summary}</span></div>
+            <div className="system-template-actions">
+              <button type="button" className="sheet-tool-btn" onClick={() => { setPendingSystem({ system, mode: 'add' }); setSystemError(''); }}>Somar campos</button>
+              {sheetFields.length > 0 && <button type="button" className="sheet-tool-btn" onClick={() => { setPendingSystem({ system, mode: 'replace' }); setSystemError(''); }}>Substituir o modelo</button>}
+            </div>
+          </li>)}</ul>
+          {pendingSystem && systemPlan && <div className="system-confirm" role="group" aria-label={`Confirmar ${pendingSystem.system.name}`}>
+            <p role="alert">{pendingSystem.mode === 'replace'
+              ? `Substituir os ${sheetFields.length} campos atuais pelos ${systemPlan.added} de ${pendingSystem.system.name}? O que os jogadores já preencheram continua guardado, mas só volta a aparecer em campos com o mesmo identificador, que um modelo novo não tem.`
+              : systemPlan.added ? `Somar ${systemPlan.added} ${systemPlan.added === 1 ? 'campo' : 'campos'} de ${pendingSystem.system.name} ao modelo? Campos com o mesmo nome dos que já existem não são repetidos.` : `Todos os campos de ${pendingSystem.system.name} já existem neste modelo.`}</p>
+            {systemError && <p role="alert">{systemError}</p>}
+            <button type="button" className="sheet-tool-btn" disabled={!systemPlan.added} onClick={applySystem}>{pendingSystem.mode === 'replace' ? 'Substituir modelo' : 'Somar campos'}</button>
+            <button type="button" className="sheet-tool-btn" onClick={() => { setPendingSystem(null); setSystemError(''); }}>Cancelar</button>
+          </div>}
+        </section>
         <div className="field-type-grid">{FIELD_TYPES.map(ft => { const Icon=ft.icon; return <button key={ft.id} className={`field-type-btn ${newFieldType===ft.id?'active':''}`} onClick={() => setNewFieldType(ft.id)}><Icon size={15} />{ft.label}</button>; })}</div>
         <form className="field-add-row" onSubmit={e => { e.preventDefault(); addField(); }}>
           <label>Nome do campo<input value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)} placeholder="Ex.: Força…" required /></label>
@@ -321,6 +354,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         <div className="dossier-content">
           {!activePlayer ? <div className="empty-state sheet-empty"><ScrollText size={42} /><h3>{isMaster ? 'Um olhar sobre a mesa' : 'Sua ficha começa aqui'}</h3><p>{isMaster ? 'Selecione um jogador para consultar seus atributos, recursos e observações.' : 'Informe seu nome ao lado para acessar a ficha da campanha.'}</p></div> : <>
             <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : saveStatus==='error' ? 'Falha ao salvar' : 'Sua ficha'}</span></div>
+            {!readOnly && categories.length > 0 && <Suspense fallback={null}><SheetImport fields={[...sheetFields, ...extraFields]} currentValues={draftValues} disabled={saveStatus === 'saving'} onApply={values => onUpdatePlayerSheet(activePlayer, { values })} /></Suspense>}
             {!categories.length && <div className="empty-state sheet-empty"><ScrollText size={36} /><h3>O modelo ainda está em branco</h3><p>{isMaster ? 'Adicione campos no modelo da campanha acima.' : 'O mestre irá definir os campos da campanha. Você já pode registrar observações abaixo.'}</p></div>}
             <div className="category-layout">{categories.map((category,i) => <section key={category} className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''}`}>
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>

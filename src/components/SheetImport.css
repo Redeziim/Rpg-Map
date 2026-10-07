@@ -1,0 +1,44 @@
+/* Importar ficha: uma faixa discreta acima da ficha; a revisão ocupa a largura toda e rola por dentro no celular. */
+.sheet-import{margin:0 0 var(--space-5);border:1px solid var(--rule);background:var(--paper-1);padding:var(--space-4)}
+.sheet-import h4{display:flex;align-items:center;gap:var(--space-2);margin:0 0 var(--space-1);font:600 var(--fs-body) var(--font-display);color:var(--ink)}
+.sheet-import p{margin:0;color:var(--muted);font-size:var(--fs-small);line-height:var(--lh-body)}
+.sheet-import-start{display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:center;justify-content:space-between}
+.sheet-import-start>div{flex:1 1 320px;min-width:0}
+.sheet-import-button{display:inline-flex;align-items:center;justify-content:center;min-height:var(--target);padding:0 var(--space-4);border:1px solid var(--gold);color:var(--ink);cursor:pointer;font:600 var(--fs-small) var(--font-body)}
+.sheet-import-button input{position:absolute;inline-size:1px;block-size:1px;opacity:0;pointer-events:none}
+.sheet-import-button:focus-within{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.sheet-import-notice{margin-top:var(--space-3)!important;color:var(--ink-soft)!important}
+.sheet-import-error{margin-top:var(--space-3)!important;color:var(--danger-ink)!important;border-left:3px solid var(--red);padding-left:var(--space-3)}
+.sheet-import-progress{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;justify-content:space-between}
+.sheet-import-progress p{color:var(--ink)}
+.sheet-import button{min-height:var(--target);display:inline-flex;align-items:center;gap:var(--space-1);padding:0 var(--space-3);border:1px solid var(--rule-strong);background:transparent;color:var(--ink);cursor:pointer;font:var(--fs-small) var(--font-body)}
+.sheet-import button.is-primary{border-color:var(--gold);color:var(--ink-strong);font-weight:600}
+.sheet-import button:disabled{opacity:.55;cursor:default}
+.sheet-import button:focus-visible,.sheet-import input:focus-visible,.sheet-import summary:focus-visible,.sheet-import-review h4:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.sheet-import-review>p{margin-bottom:var(--space-3)}
+.sheet-import-empty{border:1px solid var(--rule-strong);padding:var(--space-3);margin-bottom:var(--space-3)}
+.sheet-import-empty ul{margin:var(--space-2) 0 0;padding-left:var(--space-5);color:var(--muted);font-size:var(--fs-small)}
+.sheet-import-table-wrap{overflow-x:auto;margin-bottom:var(--space-3)}
+.sheet-import table{width:100%;border-collapse:collapse;font-size:var(--fs-small)}
+.sheet-import th,.sheet-import td{padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--rule-soft);text-align:left;vertical-align:top}
+.sheet-import thead th{color:var(--ink-soft);font-weight:600;white-space:nowrap}
+.sheet-import tbody th{font-weight:600;color:var(--ink)}
+.sheet-import tbody th small,.sheet-import td small{display:block;margin-top:2px;color:var(--muted);font-weight:400;overflow-wrap:anywhere}
+.sheet-import tr.is-off td,.sheet-import tr.is-off th{opacity:.6}
+.sheet-import td input[type=checkbox]{inline-size:22px;block-size:22px}
+.sheet-import td input:not([type=checkbox]){min-height:var(--target);inline-size:100%;min-inline-size:90px;padding:0 var(--space-2);background:var(--surface-0);border:1px solid var(--rule-strong);color:var(--ink);font:var(--fs-body) var(--font-body)}
+.sheet-import-pair{display:flex;align-items:center;gap:var(--space-1)}
+.sheet-import-pair input{min-inline-size:64px!important}
+.sheet-import-confidence{display:inline-block;padding:2px var(--space-2);border:1px solid var(--rule-strong);font-weight:600}
+.sheet-import-confidence.is-alta{border-color:var(--gold);color:var(--gold-bright)}
+.sheet-import-confidence.is-baixa{border-style:dashed;color:var(--ink-soft)}
+.sheet-import-missing{margin-bottom:var(--space-3)}
+.sheet-import-missing summary{cursor:pointer;min-height:var(--target);display:flex;align-items:center;color:var(--ink-soft)}
+.sheet-import-manual{margin-bottom:var(--space-3)!important}
+.sheet-import-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:flex-end}
+.visually-hidden{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:560px){.sheet-import{padding:var(--space-3)}.sheet-import-actions button{flex:1 1 100%}}
+@media(forced-colors:active){.sheet-import,.sheet-import button,.sheet-import-button,.sheet-import-confidence{border-color:CanvasText}.sheet-import :focus-visible{outline-color:Highlight}}
+
+.sheet-import-bulk{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)}
+.sheet-import-bulk span{color:var(--muted);font-size:var(--fs-small)}

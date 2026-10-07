@@ -15,6 +15,7 @@ test('static files are compressed by negotiation, cached by name and never mangl
   writeFileSync(join(dist,'assets','tray','base.obj'),model);
   writeFileSync(join(dist,'assets','pixel.png'),png);
   writeFileSync(join(dist,'assets','tiny.js'),'x=1');
+  writeFileSync(join(dist,'assets','pdf.worker.min-AbCd1234.mjs'),script);writeFileSync(join(dist,'assets','lang.traineddata.gz'),png);
   let app;
   try{
     app=createApplication({dbPath:join(directory,'static.sqlite'),distPath:dist,exportRoot:join(directory,'exports'),rateLimit:false,diagnosticsLogger:()=>{}});
@@ -39,6 +40,10 @@ test('static files are compressed by negotiation, cached by name and never mangl
     // Images and tiny files are sent as they are, and an unhashed asset is not marked immutable.
     const image=await wire('/assets/pixel.png','gzip, br'),tiny=await wire('/assets/tiny.js','gzip'),unhashed=await wire('/assets/tray/base.obj','gzip');
     assert.equal(image.headers['content-encoding'],undefined);assert.deepEqual(image.body,png);assert.equal(tiny.headers['content-encoding'],undefined);assert.equal(unhashed.headers['cache-control'],'public, max-age=3600');
+    // Module workers (PDF.js) need a JavaScript MIME type, and a gzip data file must be sent as it is, without a content encoding.
+    const worker=await wire('/assets/pdf.worker.min-AbCd1234.mjs','br'),data=await wire('/assets/lang.traineddata.gz','gzip, br');
+    assert.equal(worker.headers['content-type'],'text/javascript');assert.equal(worker.headers['content-encoding'],'br');assert.equal(worker.headers['cache-control'],'public, max-age=31536000, immutable');
+    assert.equal(data.headers['content-encoding'],undefined);assert.equal(data.headers['content-type'],'application/gzip');assert.deepEqual(data.body,png);
     // The entry page is never cached; a HEAD request has headers and no body; unknown paths fall back to the entry page; traversal stays blocked.
     const page=await wire('/qualquer/rota','gzip');assert.equal(page.headers['cache-control'],'no-cache');assert.match(gunzipSync(page.body).toString(),/<title>teste<\/title>/);
     const head=await raw('/assets/index-AbCd1234.js',{encoding:'gzip',method:'HEAD'});assert.equal(head.status,200);assert.equal(head.body.length,0);

@@ -4,12 +4,12 @@ import {brotliCompress,gzip,constants} from 'node:zlib';
 import {promisify} from 'node:util';
 
 const brotli=promisify(brotliCompress),deflate=promisify(gzip);
-const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon','.json':'application/json','.obj':'text/plain; charset=utf-8','.mtl':'text/plain; charset=utf-8','.mp4':'video/mp4'};
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.wasm':'application/wasm','.gz':'application/gzip','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon','.json':'application/json','.obj':'text/plain; charset=utf-8','.mtl':'text/plain; charset=utf-8','.mp4':'video/mp4'};
 // Text formats compress well; images and video are already compressed.
-const COMPRESSIBLE=new Set(['.html','.js','.css','.svg','.json','.obj','.mtl']);
+const COMPRESSIBLE=new Set(['.html','.js','.mjs','.css','.svg','.json','.obj','.mtl','.wasm']);
 const MIN_BYTES=1024,CACHE_LIMIT=96*1024*1024;
 // Vite names bundles name-HASH.ext in assets/. Those never change under the same name.
-const HASHED=/^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?)$/;
+const HASHED=/^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:m?js|css|woff2?)$/;
 
 export function createStaticFiles(){
   const cache=new Map();let cached=0;

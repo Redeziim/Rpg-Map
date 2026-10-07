@@ -124,3 +124,16 @@ body{background:var(--surface-0);color:var(--ink)}
   inset:0;
   background:radial-gradient(ellipse at 50% 35%,transparent 8%,#0b0a0980 86%);
 }
+
+/* Modelos de sistema no construtor da ficha. */
+.system-templates{margin:var(--space-4) 0;padding-top:var(--space-3);border-top:1px solid var(--rule)}
+.system-templates h4{margin:0 0 var(--space-1);font:600 var(--fs-body) var(--font-display);color:var(--ink)}
+.system-templates>p{margin:0 0 var(--space-3);color:var(--muted);font-size:var(--fs-small)}
+.system-templates ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-3)}
+.system-templates li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--space-3);align-items:center}
+.system-templates li>div:first-child{display:grid;gap:2px;min-width:0;flex:1 1 260px}
+.system-templates li span{color:var(--muted);font-size:var(--fs-small)}
+.system-template-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.system-confirm{margin-top:var(--space-3);padding:var(--space-3);border:1px solid var(--gold-deep);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
+.system-confirm p{flex:1 1 100%;margin:0}
+.system-templates .sheet-tool-btn{min-height:var(--target)}
