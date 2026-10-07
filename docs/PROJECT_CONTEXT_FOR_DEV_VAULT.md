@@ -48,6 +48,8 @@ Arquivos instalados e configuração: `Skills/`, `Skills/Configuracao-RPG-Map/`,
 - Preparação do mestre na linha do tempo é sempre reservada e nunca vai a jogadores (2026-10-07, ADR 034).
 - Cores e fontes novas usam os tokens de src/theme.css; o limite de cores literais só desce (2026-10-07).
 - Commits locais são permitidos sem pedir; push só quando o usuário pedir (2026-10-07).
+- A lixeira de notas só apaga quando o dono a esvazia; a exportação individual é em TXT, PNG e JSON, sem PDF (2026-10-07).
+- Fichas por sistema são listas de campos aplicadas ao modelo da mesa; leitura de PDF e imagem é local no navegador, sem IA externa, e sempre revisada antes de salvar (2026-10-07, ADR 035).
 - Usuário autorizou IndexedDB para cópias locais; novas APIs externas devem ser identificadas e aprovadas antes do uso no produto. Baixar código/repos de referência foi autorizado.
 
 ## Estado e próximo trabalho
