@@ -1,3 +1,35 @@
+# O que falta — estado de 2026-10-07
+
+Esta seção vale mais que o restante do documento, que é do ciclo de 2026-10-04 e está desatualizado (ele ainda lista como pendentes itens já entregues). Fonte de prioridades: `PLANO_DE_MELHORIAS.md`. Perguntas que dependem do mestre da mesa: `docs/PERGUNTAS_EM_ABERTO.md`.
+
+## Entregue nesta rodada
+
+Itens 16, 17, 18, 23 (opção A), 53, 57, 58, 59, 63, 65 e 66, e a primeira rodada dos itens 60 a 62. Resumo por item em `PLANO_DE_MELHORIAS.md`; contratos em `docs/CAMPAIGN_TIMELINE.md`, `docs/NOTES_TRASH_EXPORT.md`, `docs/SHEET_SYSTEMS.md`, `docs/POINT_SEARCH.md`, `docs/DESIGN_TOKENS.md` e `docs/PERFORMANCE.md`.
+
+## Falta decidir
+
+1. **Item 64 — direção visual.** Pedido pelo usuário para depois das funcionalidades (agora é a hora). As propostas por tela estão em `DESIGN.md`; falta escolher a tela-piloto (recomendada: Ferramentas de mestre).
+
+## Falta fazer
+
+2. **Importação de fichas (item 58).** Testar com fichas reais e oficiais de D&D e da Ordem Paranormal (as dos testes foram feitas à mão); testar um PDF preenchível de verdade (hoje os campos de formulário só passaram no interpretador); acrescentar mais sistemas em `src/shared/sheetTemplates.js`.
+3. **Acessibilidade (itens 60 a 62).** Teste com leitor de tela real (NVDA ou equivalente); contraste do texto sobre a imagem do mapa e sobre cenas 3D; teclado dentro do canvas do mapa 2D e do mapa mental além dos atalhos documentados.
+4. **Tokens de design (item 63).** Restam 710 cores literais, a maioria em `workspace.css`, `NoteBoard.css`, `Notebook.css`, `account.css` e `TurnTracker.css`. O limite em `tests/designTokens.test.js` só pode descer.
+5. **Desempenho (item 66).** Textura `public/assets/tray/base.png` (2,4 MB); `three` carregado ao entrar na mesa por causa da bandeja de dados; `base.obj` ainda com 3,5 MB comprimido.
+6. **Pontos do mapa (item 23, opção B).** Região e etiquetas só se uma mesa passar de uns 30 pontos.
+7. **Testes em paralelo.** `npm test` roda em série porque `diceHistory` e `transactions` falham com `ECONNRESET` quando os arquivos rodam juntos. Uma tarefa à parte foi aberta para achar a causa; o resultado dela não foi incorporado aqui.
+8. **Manutenção.** `npm audit` aponta 1 vulnerabilidade de severidade alta; a pasta `art/` do clone local continua fora do git; `README.md` e `AGENTS.md` ainda não mencionam `scripts/prepareOcr.js` (roda sozinho antes de `dev` e `build`).
+
+## Opções futuras que exigem aprovação
+
+- Leitura de fichas por IA (um modelo de linguagem lendo o arquivo) e resumo assistido de sessão (item 59): enviariam texto a um serviço externo, com custo, chave e privacidade a decidir. Hoje nada sai do navegador.
+- Mapa mental: refinamento amplo continua adiado, sem requisito novo.
+
+## Como retomar
+
+Fluxo em `Skills/fluxo-site` do `RPG-Dev-Vault`: escopo, banco, backend, frontend, QA, revisão e `/fechar-sessao`. Commits locais são livres; push só quando o usuário pedir. Banco de teste com caminho curto (`%TEMP%\...`), nunca o caminho longo do scratchpad. Node 24, Git e GitHub CLI ficam em `%LOCALAPPDATA%\Programs\devtools`.
+
+---
 # Prompt para continuar o RPG Map Explorer
 
 Atualizado em 2026-10-04, a partir de `PLANO_DE_MELHORIAS.md`, decisões/ADRs, skills e do commit de referência `1cb5f90baef92d99421c82ea139b53cb15b1b465`. O item 2 foi concluído localmente neste ciclo; o leitor do item 57 está pronto, mas ainda não integrado.
