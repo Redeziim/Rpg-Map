@@ -535,12 +535,6 @@
   flex: none !important;
 }
 
-
-  padding: 2rem;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
 .sheet-master-toolbar {
   display: flex;
   gap: 0.75rem;
