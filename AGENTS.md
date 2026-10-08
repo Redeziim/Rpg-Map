@@ -73,12 +73,19 @@ Tarefas e especificações em GitHub Issues de `Redeziim/Rpg-Map`. Consulte `doc
 
 Um único contexto: glossário em `GLOSSARY.md` e decisões em `docs/adr/`, criados conforme necessário. Consulte `docs/agents/domain.md`.
 
-## Contexto no vault
+## Contexto no vault (memória externa)
 
-Antes de começar, leia no vault `~/RPG-Dev-Vault` (outro computador: ajuste o caminho):
+O vault do Obsidian é a memória externa de todos os chats deste repositório. No Windows ele fica em `C:\Users\Arthur\RPG-Dev-Vault` (`~/RPG-Dev-Vault`; outro computador: ajuste o caminho) e é um repositório git com remoto `Redeziim/RPG-Dev-Vault`. A memória do chat acaba; o vault não. O que não estiver nele deve ser tratado como perdido.
+
+Antes de começar, leia:
 
 - `Projetos/RPG-Map-Explorer/PROJECT_CONTEXT_FOR_DEV_VAULT.md`
 - `Projetos/RPG-Map-Explorer/Progresso-e-Planejamento.md`
+- a `Chat-Contexto-AAAA-MM-DD.md` mais recente da mesma pasta
 - `Instrucoes-IA.md` para qualquer documentação escrita.
 
-Ao terminar a sessão, execute `/fechar-sessao` para atualizar o vault. Skills compartilhadas ficam em `~/RPG-Dev-Vault/Skills/`; use `~/RPG-Dev-Vault/scripts/link-skills.sh <este-diretorio>` para ligá-las.
+Antes de refazer qualquer coisa, procure no vault (`Projetos/RPG-Map-Explorer/`, `docs/adr/`, `PLANO_DE_MELHORIAS.md`, `PROMPT_PROXIMAS_ETAPAS.md`) se já foi feita ou decidida.
+
+Durante a sessão, não espere o fim para gravar. Ao concluir cada item do plano, tomar uma decisão ou deixar algo pela metade, atualize na hora `Progresso-e-Planejamento.md` (item feito, item em curso, próximo passo exato). Assim um chat que estoure o contexto no meio não perde o trabalho.
+
+Ao terminar a sessão, execute `/fechar-sessao` para consolidar o vault. Ele só faz commit; o push é do usuário. Skills compartilhadas ficam em `~/RPG-Dev-Vault/Skills/`; use `~/RPG-Dev-Vault/scripts/link-skills.sh <este-diretorio>` para ligá-las.
