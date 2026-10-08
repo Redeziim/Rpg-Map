@@ -1,0 +1,67 @@
+/* Casca compacta (2026-10-08): a barra lateral vira uma faixa de ícones e só mostra os nomes com o mouse em cima ou com o foco dentro.
+   Técnica: o conteúdo da barra continua montado na largura aberta (220 px) e o cabeçalho recorta em 64 px. Assim nada muda de
+   lugar quando ela abre: só se revela, por cima do conteúdo, sem empurrá-lo.
+   Vale a partir de 761 px; abaixo disso a navegação já é uma grade no topo (workspace.css). */
+@media(min-width:761px){
+  .mist-theme.rpg-container,.mist-theme.rpg-container.mist-theme{grid-template-columns:var(--rail-width) minmax(0,1fr)}
+  .mist-theme.rpg-container{--rail-width:64px;--rail-open:220px}
+  .mist-theme .header{width:var(--rail-width);min-width:0;overflow:hidden;z-index:40;
+    transition:width var(--motion-base) var(--ease-out) 160ms,box-shadow var(--motion-base) var(--ease-out) 160ms}
+  .mist-theme .header:hover,.mist-theme .header:has(:focus-visible){width:var(--rail-open);transition-delay:0ms;
+    box-shadow:8px 0 24px color-mix(in srgb,var(--black) 55%,transparent)}
+  /* o conteúdo tem sempre a largura aberta; o que passa de 64 px fica recortado */
+  .mist-theme .header>*{width:var(--rail-open);min-width:var(--rail-open);box-sizing:border-box}
+  .mist-theme .header-content{padding:18px 0 12px 14px;gap:14px}
+  .mist-theme .header :where(button,summary,.mode-btn,.sync-status,.room-title-nav){white-space:nowrap}
+  .mist-theme .tab-nav{padding:0 8px 0 8px}
+  /* ícone no centro dos 64 px: 8 px da lista + 14 px do botão + 9 px do meio do ícone = 31 px */
+  .mist-theme .tab-btn,.mist-theme .nav-about-button{padding-left:14px;overflow:hidden}
+  .mist-theme .nav-footer{padding:8px}
+  /* o que não é navegação some na faixa fechada, mas continua focável: ao receber foco, a barra abre e tudo reaparece */
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) .header-controls,
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) .logo>div:last-child{opacity:0;pointer-events:none}
+  .mist-theme .header-controls,.mist-theme .logo>div:last-child{transition:opacity var(--motion-fast) var(--ease-out)}
+  /* faixa fechada: o nome some (continua no HTML para leitor de tela) e só o ícone aparece; o aberto repinta o texto ao abrir */
+  .mist-theme .tab-btn,.mist-theme .nav-about-button{transition:color var(--motion-fast) var(--ease-out)}
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) :is(.tab-btn,.nav-about-button){color:transparent;border-color:transparent;background:transparent}
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) :is(.tab-btn,.nav-about-button) svg{color:var(--muted)}
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) .tab-btn.active{box-shadow:inset 3px 0 0 var(--gold)}
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) .tab-btn.active svg{color:var(--gold-bright)}
+}
+/* Faixa de cima, igual em todas as abas: turnos numa linha e os três cadernos como botões pequenos, não três cartões. */
+@media(min-width:1101px){
+  .mist-theme .session-strip{flex-wrap:nowrap;align-items:center;gap:8px;margin:12px 16px 0}
+  .mist-theme .session-strip .turn-tracker{flex:1 1 0;min-width:0;padding:4px 10px}
+  .mist-theme .session-strip .turn-heading{flex-wrap:nowrap;align-items:center;gap:10px}
+  .mist-theme .session-strip .turn-heading-copy{min-width:0}
+  .mist-theme .session-strip .turn-heading-copy p{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mist-theme .session-strip .turn-actions{flex-wrap:nowrap;gap:6px;margin-left:auto}
+  .mist-theme .session-strip .turn-actions button{white-space:nowrap}
+}
+.mist-theme .session-strip .notebook-library{flex:0 0 auto;width:auto;max-width:none}
+.mist-theme .session-strip .notebook-library summary{min-height:44px;padding:6px 12px;gap:8px;white-space:nowrap}
+.mist-theme .session-strip .notebook-library summary span{display:flex;flex-direction:row;align-items:baseline;gap:6px}
+.mist-theme .session-strip .notebook-library summary small{margin:0}
+/* Ferramentas do mapa: as de uso frequente ficam à vista; as raras ficam atrás de "Mais ferramentas". */
+.mist-theme #map-2d-tools .tools-more{border-bottom:1px solid var(--rule-soft)}
+.mist-theme #map-2d-tools .tools-more>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-3);min-height:var(--target);padding:var(--space-2) 0;color:var(--ink-soft);font:600 var(--fs-small) var(--font-display);letter-spacing:.05em;cursor:pointer;list-style:none}
+.mist-theme #map-2d-tools .tools-more>summary::-webkit-details-marker{display:none}
+.mist-theme #map-2d-tools .tools-more>summary::after{content:"";margin-left:auto;align-self:center;width:7px;height:7px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(45deg)}
+.mist-theme #map-2d-tools .tools-more[open]>summary::after{transform:rotate(-135deg)}
+.mist-theme #map-2d-tools .tools-more>summary small{flex-basis:100%;order:3;color:var(--muted);font:var(--fs-small) var(--font-body);letter-spacing:0}
+.mist-theme #map-2d-tools .tools-more>summary:focus-visible{outline:var(--focus-ring);outline-offset:calc(var(--focus-offset) * -1)}
+.mist-theme #map-2d-tools .tools-more>.tool-section:last-of-type{border-bottom:0}
+.mist-theme #map-2d-tools .tools-more>summary>small{color:var(--muted)}
+.mist-theme .session-strip .notebook-library summary>svg{flex:none}
+
+/* Menu de cada caderno de notas: o comum à vista; "Recuperar rascunhos" e "Reunir janelas" ficam em "Mais opções". */
+.mist-theme .notebook-library-list .note-more{border-top:1px solid var(--rule-soft);padding-top:var(--space-1)}
+.mist-theme .notebook-library-list .note-more>summary{display:flex;align-items:center;gap:var(--space-2);min-height:var(--target);padding:0 var(--space-2);color:var(--muted);font:var(--fs-small) var(--font-body);cursor:pointer;list-style:none}
+.mist-theme .notebook-library-list .note-more>summary::-webkit-details-marker{display:none}
+.mist-theme .notebook-library-list .note-more>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(45deg)}
+.mist-theme .notebook-library-list .note-more[open]>summary::after{transform:rotate(-135deg)}
+.mist-theme .notebook-library-list .note-more>summary:focus-visible{outline:var(--focus-ring);outline-offset:calc(var(--focus-offset) * -1)}
+.mist-theme .notebook-library-list .note-more[open]{display:grid;gap:6px}
+@media(prefers-reduced-motion:reduce){
+  .mist-theme .header,.mist-theme .header-controls,.mist-theme .logo>div:last-child{transition:none}
+}

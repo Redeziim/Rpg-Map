@@ -64,6 +64,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [tabletopSelection,setTabletopSelection]=useState([]);
   const [mapFocus,setMapFocus]=useState(false);
   const [map2dToolsOpen,setMap2dToolsOpen]=useState(false);
+  const [moreToolsOpen,setMoreToolsOpen]=useState(false);
   const [mapCanvasSize,setMapCanvasSize]=useState({width:0,height:0});
   const [mapViewportSize,setMapViewportSize]=useState({width:0,height:0});
   const [mapImageError,setMapImageError]=useState(false),[mapImageRetry,setMapImageRetry]=useState(0);
@@ -655,11 +656,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
               <ToolSection id="controles" status={instruments.controles.status} active={instruments.controles.active} title="Controles e zoom" icon={<Settings2 size={16} aria-hidden="true"/>}>
                 <div className="controls-info">
-                  <p><strong>Roda do mouse:</strong> aproximar ou afastar</p>
-                  <p><strong>Arrastar:</strong> mover o mapa no modo Mover; desenhar no modo Desenhar</p>
-                  <p><strong>Clique:</strong> {canManageMap2D ? 'adicionar ponto' : 'ver ponto'} no modo Mover; apagar traço no modo Borracha</p>
-                  <p><strong>Permissões:</strong> {canManageMap2D?'Você pode editar pontos e apagar traços de todos.':'Você pode desenhar e apagar somente seus próprios traços. Os pontos são para consulta.'}</p>
-                  <p id="map-keyboard-help"><strong>Teclado:</strong> foco no mapa, setas para mover, +/− para zoom e Home para centralizar. Abra pontos pela lista acima.</p>
+                  <p id="map-keyboard-help"><strong>Mover e ampliar:</strong> arraste o mapa e use a roda do mouse. Com o teclado, foque o mapa e use as setas, +/− e Home.</p>
+                  <p><strong>Clique:</strong> {canManageMap2D ? 'adiciona um ponto' : 'abre um ponto'} no modo Mover e apaga um traço no modo Borracha.</p>
+                  <p>{canManageMap2D?'Você edita pontos e apaga traços de todos.':'Você desenha e apaga só os seus traços; os pontos são para consulta.'}</p>
                 </div>
                 {mapImage&&<div className="map-keyboard-actions" role="group" aria-label="Controles do mapa 2D">
                   <button onClick={()=>setScale(prev=>Math.min(prev*1.2,3))}>Aproximar</button>
@@ -673,6 +672,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
               </ToolSection>
               <ToolSection id="medida" status={instruments.medida.status} active={instruments.medida.active} title="Grade e régua" icon={<RulerIcon size={16} aria-hidden="true"/>} forceOpen={mapTool==='measure'}><MapMeasurement scale={mapScale} version={room.mapScaleVersion} measurement={measurement} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onClear={()=>rulerRef.current?.clear()} onSave={saveMapScale} busy={mapBusy||saving} hasImage={!!mapImage} prefs={measurementPrefs} onPrefs={changeMeasurementPrefs} screenRatio={mapFit*scale}/></ToolSection>
               <ToolSection id="nevoa" status={instruments.nevoa.status} active={instruments.nevoa.active} title="Névoa de guerra" icon={<FogIcon size={16} aria-hidden="true"/>} forceOpen={['reveal','cover'].includes(mapTool)}><MapFog fog={mapFog} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onChange={changeFog} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
+              {canManageMap2D&&<ToolSection id="imagem" title="Imagem do mapa" icon={<Upload size={16} aria-hidden="true"/>} status={instruments.imagem.status}>
+                <label className="upload-btn"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleImageUpload} disabled={saving||!!imageUpload} aria-label={mapImage?'Trocar imagem':'Selecionar imagem'}/>{mapImage?'Trocar imagem':'Selecionar imagem'}</label>
+              </ToolSection>}
+              <details className="tools-more" open={moreToolsOpen||mapTool==='position'||mapTool==='route'||!!routeDraft||!!legendDraft} onToggle={event=>setMoreToolsOpen(event.currentTarget.open)}><summary>Mais ferramentas<small>posições, rotas, legenda, exportar e traços</small></summary>
               <ToolSection id="posicoes" status={instruments.posicoes.status} active={instruments.posicoes.active} title="Posições dos jogadores" icon={<Users size={16} aria-hidden="true"/>} forceOpen={mapTool==='position'}><MapPositions key={room.mapPositionSettingsVersion} enabled={positionsEnabled} canManage={canManageMap2D} canShare={canSharePosition} hasOwn={room.hasOwnMapPosition} markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} conflict={positionConflict} covered={positionCovered} onEnable={changePositionSettings} onChoose={beginPositionChoice} onShare={()=>saveOwnPosition()} onClear={()=>saveOwnPosition(null,room.ownMapPositionVersion,room.mapPositionSettingsVersion)} onCancel={cancelPositionChoice} onRebase={()=>setPositionChoice(current=>({...current,version:room.ownMapPositionVersion,settingsVersion:room.mapPositionSettingsVersion}))} tool={mapTool} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
               <ToolSection id="rotas" status={instruments.rotas.status} active={instruments.rotas.active} title="Rotas de exploração" icon={<RouteIcon size={16} aria-hidden="true"/>} forceOpen={!!routeDraft}><MapExploration routes={mapRoutes} versions={room.mapRouteVersions||{}} imageVersion={room.mapImageVersion} scale={mapScale} canManage={canManageMap2D} draft={routeDraft} onDraft={setRouteDraft} onChoose={beginRouteChoice} choosing={mapTool==='route'} onStop={stopRouteChoice} onSave={saveRoute} onArchive={archiveRoute} busy={mapBusy||saving} hasImage={!!mapImage} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} error={error}/></ToolSection>
               <ToolSection id="legenda" status={instruments.legenda.status} active={instruments.legenda.active} title="Legenda do mapa" icon={<TagIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLegendEditor legend={mapLegend} version={room.mapLegendVersion} canManage={canManageMap2D} onSave={saveLegend} busy={mapBusy||saving} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} draft={legendDraft} onDraft={setLegendDraft}/></ToolSection>
@@ -684,10 +687,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                 grid:measurementPrefs.grid,measurement,screenRatio:mapFit*scale,markerUnit,roomName:room.name
               })}/></ToolSection>
               <ToolSection id="tracos" status={instruments.tracos.status} active={instruments.tracos.active} title="Mostrar traços" icon={<LayersIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLayers strokes={readableStrokes} username={user.username} settings={layerSettings} onChange={changeLayerSettings}/></ToolSection>
-              {canManageMap2D&&<ToolSection id="imagem" title="Imagem do mapa" icon={<Upload size={16} aria-hidden="true"/>} status={instruments.imagem.status}>
-                <label className="upload-btn"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleImageUpload} disabled={saving||!!imageUpload} aria-label={mapImage?'Trocar imagem':'Selecionar imagem'}/>{mapImage?'Trocar imagem':'Selecionar imagem'}</label>
-              </ToolSection>}
               {!!readableStrokes.length&&<details className="map-markings"><summary>Traços do mapa ({readableStrokes.length})</summary><ol>{readableStrokes.slice(-markingsShown).map((stroke,visibleIndex)=>{const index=readableStrokes.length-Math.min(markingsShown,readableStrokes.length)+visibleIndex;return <li key={stroke.id}><span>Traço {index+1} · {stroke.author}{strokeVisibility(stroke)==='master'?' · Só mestres':''}{!displayedStrokes.includes(stroke)?' · Oculto nesta visão':''}</span>{canEraseStroke(stroke)&&<button type="button" onClick={()=>eraseStroke(stroke)} disabled={mapBusy} aria-label={`Apagar traço ${index+1} de ${stroke.author}`}>Apagar</button>}{canManageMap2D&&<label className="map-marking-audience">Visibilidade do traço {index+1}<select name={`map-marking-audience-${stroke.id}`} autoComplete="off" value={strokeVisibility(stroke)} disabled={mapBusy} onChange={event=>changeStrokeVisibility(stroke,event.target.value)}><option value="table">Todos</option><option value="master">Só mestres</option></select></label>}</li>;})}</ol>{readableStrokes.length>markingsShown&&<button type="button" className="map-markings-more" onClick={()=>setMarkingsShown(count=>count+40)}>Mostrar traços anteriores</button>}</details>}
+              </details>
             </aside>
 
             {/* Canvas principal */}
