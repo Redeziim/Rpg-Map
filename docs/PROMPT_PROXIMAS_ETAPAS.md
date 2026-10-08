@@ -8,7 +8,7 @@ Itens 16, 17, 18, 23 (opção A), 53, 57, 58, 59, 63, 65 e 66, e a primeira roda
 
 ## Falta decidir
 
-1. **Item 64 — direção visual.** Pedido pelo usuário para depois das funcionalidades (agora é a hora). As propostas por tela estão em `DESIGN.md`; falta escolher a tela-piloto (recomendada: Ferramentas de mestre).
+1. **Item 64 — direção visual.** A tela-piloto Ferramentas de mestre foi aplicada em 2026-10-07 (`DESIGN.md`). Falta o usuário aprovar a direção e escolher a próxima tela: Mapa 2D, Mesa 3D ou Bandeja de dados. Também restam, no mesmo painel, os estilos antigos embutidos em `RPGMapExplorer.jsx` (bloco `<style>`), que vale migrar para folhas com tokens aos poucos.
 
 ## Falta fazer
 

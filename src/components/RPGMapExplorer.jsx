@@ -2,6 +2,8 @@ import Notebook from './Notebook.jsx';
 import TurnTracker from './TurnTracker.jsx';
 import ToolSection from './ToolSection.jsx';
 import PointFinder from './PointFinder.jsx';
+import {activeInstruments,instrumentStatuses} from '../shared/mapInstruments.js';
+import './MasterTools.css';
 import {POINT_TYPE_ALL,centerOnPoint,filterPoints} from '../shared/pointSearch.js';
 import {CloudFog as FogIcon,Download as DownloadIcon,Tag as TagIcon,Ruler as RulerIcon,Route as RouteIcon,Layers as LayersIcon} from 'lucide-react';
 import {AboutPanel,ScenesPanel} from './CampaignPages.jsx';
@@ -563,6 +565,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
   const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
   const groupEntries=room.groupBars;
+  const instruments=instrumentStatuses({mapImage:!!mapImage,pointCount:points.length,scale,gridVisible:!!measurementPrefs.grid,hasScale:!!mapScale,fogEnabled:!!mapFog.enabled,positionsEnabled:!!positionsEnabled,routeCount:mapRoutes.length,legendVisible:!!explorationPrefs.legend,strokeCount:readableStrokes.length,mapTool,routeDraft:!!routeDraft}),inUse=activeInstruments(instruments);
   return (
     <div className={`rpg-container mist-theme ${activeTab==='mapa'&&mapFocus?'map-focus':''}`}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -642,29 +645,13 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             </div>
             {mapMode==='3d'?<Suspense fallback={<p role="status">Preparando a mesa 3D…</p>}><TabletopMap key={`${room.id}:${user.id}`} room={room} userId={user.id} mutate={mutate} editable={canManageMap2D} viewMode={viewMode} selected={tabletopSelection} setSelected={setTabletopSelection} destinations={{points,scenes:visibleScenes,notes:visibleLinkedNotes}} onOpenReference={openObjectReference}/></Suspense>:<div className="legacy-map-layout">
             {/* Sidebar */}
-            <aside id="map-2d-tools" className="sidebar" hidden={!map2dToolsOpen}>
-              <div className="sidebar-section">
-                <h3>
-                  <Upload size={18} />
-                  Mapa
-                </h3>
-                {canManageMap2D && (
-                  <label className="upload-btn">
-                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleImageUpload} disabled={saving||!!imageUpload} aria-label={mapImage?'Trocar imagem':'Selecionar imagem'}/>
-                    {mapImage?'Trocar imagem':'Selecionar imagem'}
-                  </label>
-                )}
-              </div>
-
-              <div className="sidebar-section">
-                <h3>
-                  <Grid size={18} />
-                  Pontos de Interesse ({points.length})
-                </h3>
+            <aside id="map-2d-tools" className="sidebar" aria-label="Ferramentas do mapa 2D" hidden={!map2dToolsOpen}>
+              <header className="tools-head"><h2>{canManageMap2D?'Ferramentas do mestre':'Ferramentas do mapa'}</h2><p role="status" aria-live="polite">{inUse.length?`Em uso: ${inUse.join(', ')}`:'Nenhum instrumento em uso'}</p></header>
+              <ToolSection id="pontos" title="Pontos de interesse" icon={<Grid size={16} aria-hidden="true"/>} defaultOpen={!canManageMap2D} status={instruments.pontos.status}>
                 <PointFinder points={points} types={pointTypes} query={pointQuery} onQuery={setPointQuery} type={pointType} onType={setPointType} linkLabel={point=>pointLinkLabel(pointLinks.get(point.id))} canDelete={canManageMap2D} saving={saving} onOpen={handlePointClick} onShow={showPointOnMap} onDelete={deletePoint} foundId={foundPointId}/>
-              </div>
+              </ToolSection>
 
-              <ToolSection id="controles" title="Controles e zoom" icon={<Settings2 size={16} aria-hidden="true"/>}>
+              <ToolSection id="controles" status={instruments.controles.status} active={instruments.controles.active} title="Controles e zoom" icon={<Settings2 size={16} aria-hidden="true"/>}>
                 <div className="controls-info">
                   <p><strong>Roda do mouse:</strong> aproximar ou afastar</p>
                   <p><strong>Arrastar:</strong> mover o mapa no modo Mover; desenhar no modo Desenhar</p>
@@ -682,19 +669,22 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                   Zoom: {Math.round(scale * 100)}%
                 </div>
               </ToolSection>
-              <ToolSection id="medida" title="Grade e régua" icon={<RulerIcon size={16} aria-hidden="true"/>} forceOpen={mapTool==='measure'}><MapMeasurement scale={mapScale} version={room.mapScaleVersion} measurement={measurement} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onClear={()=>rulerRef.current?.clear()} onSave={saveMapScale} busy={mapBusy||saving} hasImage={!!mapImage} prefs={measurementPrefs} onPrefs={changeMeasurementPrefs} screenRatio={mapFit*scale}/></ToolSection>
-              <ToolSection id="nevoa" title="Névoa de guerra" icon={<FogIcon size={16} aria-hidden="true"/>} forceOpen={['reveal','cover'].includes(mapTool)}><MapFog fog={mapFog} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onChange={changeFog} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
-              <ToolSection id="posicoes" title="Posições dos jogadores" icon={<Users size={16} aria-hidden="true"/>} forceOpen={mapTool==='position'}><MapPositions key={room.mapPositionSettingsVersion} enabled={positionsEnabled} canManage={canManageMap2D} canShare={canSharePosition} hasOwn={room.hasOwnMapPosition} markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} conflict={positionConflict} covered={positionCovered} onEnable={changePositionSettings} onChoose={beginPositionChoice} onShare={()=>saveOwnPosition()} onClear={()=>saveOwnPosition(null,room.ownMapPositionVersion,room.mapPositionSettingsVersion)} onCancel={cancelPositionChoice} onRebase={()=>setPositionChoice(current=>({...current,version:room.ownMapPositionVersion,settingsVersion:room.mapPositionSettingsVersion}))} tool={mapTool} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
-              <ToolSection id="rotas" title="Rotas de exploração" icon={<RouteIcon size={16} aria-hidden="true"/>} forceOpen={!!routeDraft}><MapExploration routes={mapRoutes} versions={room.mapRouteVersions||{}} imageVersion={room.mapImageVersion} scale={mapScale} canManage={canManageMap2D} draft={routeDraft} onDraft={setRouteDraft} onChoose={beginRouteChoice} choosing={mapTool==='route'} onStop={stopRouteChoice} onSave={saveRoute} onArchive={archiveRoute} busy={mapBusy||saving} hasImage={!!mapImage} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} error={error}/></ToolSection>
-              <ToolSection id="legenda" title="Legenda do mapa" icon={<TagIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLegendEditor legend={mapLegend} version={room.mapLegendVersion} canManage={canManageMap2D} onSave={saveLegend} busy={mapBusy||saving} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} draft={legendDraft} onDraft={setLegendDraft}/></ToolSection>
-              <ToolSection id="exportar" title="Exportar vista" icon={<DownloadIcon size={16} aria-hidden="true"/>}><MapViewExport ready={!!mapImage&&!!mapCanvasSize.width&&!mapImageError} master={canManageMap2D} capture={()=>({
+              <ToolSection id="medida" status={instruments.medida.status} active={instruments.medida.active} title="Grade e régua" icon={<RulerIcon size={16} aria-hidden="true"/>} forceOpen={mapTool==='measure'}><MapMeasurement scale={mapScale} version={room.mapScaleVersion} measurement={measurement} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onClear={()=>rulerRef.current?.clear()} onSave={saveMapScale} busy={mapBusy||saving} hasImage={!!mapImage} prefs={measurementPrefs} onPrefs={changeMeasurementPrefs} screenRatio={mapFit*scale}/></ToolSection>
+              <ToolSection id="nevoa" status={instruments.nevoa.status} active={instruments.nevoa.active} title="Névoa de guerra" icon={<FogIcon size={16} aria-hidden="true"/>} forceOpen={['reveal','cover'].includes(mapTool)}><MapFog fog={mapFog} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onChange={changeFog} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
+              <ToolSection id="posicoes" status={instruments.posicoes.status} active={instruments.posicoes.active} title="Posições dos jogadores" icon={<Users size={16} aria-hidden="true"/>} forceOpen={mapTool==='position'}><MapPositions key={room.mapPositionSettingsVersion} enabled={positionsEnabled} canManage={canManageMap2D} canShare={canSharePosition} hasOwn={room.hasOwnMapPosition} markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} conflict={positionConflict} covered={positionCovered} onEnable={changePositionSettings} onChoose={beginPositionChoice} onShare={()=>saveOwnPosition()} onClear={()=>saveOwnPosition(null,room.ownMapPositionVersion,room.mapPositionSettingsVersion)} onCancel={cancelPositionChoice} onRebase={()=>setPositionChoice(current=>({...current,version:room.ownMapPositionVersion,settingsVersion:room.mapPositionSettingsVersion}))} tool={mapTool} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
+              <ToolSection id="rotas" status={instruments.rotas.status} active={instruments.rotas.active} title="Rotas de exploração" icon={<RouteIcon size={16} aria-hidden="true"/>} forceOpen={!!routeDraft}><MapExploration routes={mapRoutes} versions={room.mapRouteVersions||{}} imageVersion={room.mapImageVersion} scale={mapScale} canManage={canManageMap2D} draft={routeDraft} onDraft={setRouteDraft} onChoose={beginRouteChoice} choosing={mapTool==='route'} onStop={stopRouteChoice} onSave={saveRoute} onArchive={archiveRoute} busy={mapBusy||saving} hasImage={!!mapImage} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} error={error}/></ToolSection>
+              <ToolSection id="legenda" status={instruments.legenda.status} active={instruments.legenda.active} title="Legenda do mapa" icon={<TagIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLegendEditor legend={mapLegend} version={room.mapLegendVersion} canManage={canManageMap2D} onSave={saveLegend} busy={mapBusy||saving} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} draft={legendDraft} onDraft={setLegendDraft}/></ToolSection>
+              <ToolSection id="exportar" status={instruments.exportar.status} active={instruments.exportar.active} title="Exportar vista" icon={<DownloadIcon size={16} aria-hidden="true"/>}><MapViewExport ready={!!mapImage&&!!mapCanvasSize.width&&!mapImageError} master={canManageMap2D} capture={()=>({
                 canvas:canvasRef.current,viewport:canvasWrapperRef.current,dimensions:mapCanvasSize,points,
                 pointLabels:Object.fromEntries(points.map(point=>[point.id,pointLinkLabel(pointLinks.get(point.id))])),
                 legend:mapLegend,showLegend:explorationPrefs.legend,strokes:displayedStrokes,routes:displayedRoutes,
                 fog:mapFog,master:canManageMap2D,markers:playerMarkers,members:room.members,userId:user.id,scale:mapScale,
                 grid:measurementPrefs.grid,measurement,screenRatio:mapFit*scale,markerUnit,roomName:room.name
               })}/></ToolSection>
-              <ToolSection id="tracos" title="Mostrar traços" icon={<LayersIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLayers strokes={readableStrokes} username={user.username} settings={layerSettings} onChange={changeLayerSettings}/></ToolSection>
+              <ToolSection id="tracos" status={instruments.tracos.status} active={instruments.tracos.active} title="Mostrar traços" icon={<LayersIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLayers strokes={readableStrokes} username={user.username} settings={layerSettings} onChange={changeLayerSettings}/></ToolSection>
+              {canManageMap2D&&<ToolSection id="imagem" title="Imagem do mapa" icon={<Upload size={16} aria-hidden="true"/>} status={instruments.imagem.status}>
+                <label className="upload-btn"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleImageUpload} disabled={saving||!!imageUpload} aria-label={mapImage?'Trocar imagem':'Selecionar imagem'}/>{mapImage?'Trocar imagem':'Selecionar imagem'}</label>
+              </ToolSection>}
               {!!readableStrokes.length&&<details className="map-markings"><summary>Traços do mapa ({readableStrokes.length})</summary><ol>{readableStrokes.slice(-markingsShown).map((stroke,visibleIndex)=>{const index=readableStrokes.length-Math.min(markingsShown,readableStrokes.length)+visibleIndex;return <li key={stroke.id}><span>Traço {index+1} · {stroke.author}{strokeVisibility(stroke)==='master'?' · Só mestres':''}{!displayedStrokes.includes(stroke)?' · Oculto nesta visão':''}</span>{canEraseStroke(stroke)&&<button type="button" onClick={()=>eraseStroke(stroke)} disabled={mapBusy} aria-label={`Apagar traço ${index+1} de ${stroke.author}`}>Apagar</button>}{canManageMap2D&&<label className="map-marking-audience">Visibilidade do traço {index+1}<select name={`map-marking-audience-${stroke.id}`} autoComplete="off" value={strokeVisibility(stroke)} disabled={mapBusy} onChange={event=>changeStrokeVisibility(stroke,event.target.value)}><option value="table">Todos</option><option value="master">Só mestres</option></select></label>}</li>;})}</ol>{readableStrokes.length>markingsShown&&<button type="button" className="map-markings-more" onClick={()=>setMarkingsShown(count=>count+40)}>Mostrar traços anteriores</button>}</details>}
             </aside>
 

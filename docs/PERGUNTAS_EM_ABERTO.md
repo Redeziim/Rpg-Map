@@ -4,7 +4,7 @@ Atualizado em 2026-10-07. Respondidas e já implementadas: 16 (lixeira só apaga
 
 ## Item 64 — aplicar a direção visual
 
-Você pediu para deixar para depois das funcionalidades. As propostas por tela estão em `DESIGN.md`. Quando for a hora, a pergunta é em qual tela começar: Ferramentas de mestre (recomendada), Mapa 2D, Mesa 3D ou Bandeja de dados.
+A tela-piloto escolhida foi **Ferramentas de mestre** e já está aplicada (ver `DESIGN.md`). Falta decidir: gostou da direção (índice de instrumentos com régua lateral)? Se sim, qual tela vem agora: Mapa 2D, Mesa 3D ou Bandeja de dados?
 
 ## Importação de fichas
 

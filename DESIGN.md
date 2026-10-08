@@ -32,8 +32,19 @@ Proposta de 2026-10-07, dentro da identidade acima. Cada tela tem uma referênci
 | Linha do tempo (leitor) | Marginalia de diário: data na margem, texto corrido | Filete dourado na margem que marca o tipo do registro | Aplicado |
 | Ficha | Ficha física em papel carvão | Atributos centrados, nome em Cinzel | Aplicado (ver acima) |
 | Mapa 2D | Cartografia impressa: legenda, escala, rosa dos ventos | Legenda e escala como parte da imagem exportada, não como painel flutuante | Proposto |
-| Ferramentas de mestre | Painel tático de instrumentos: seções recolhíveis, numeração só onde há sequência | Cada ferramenta ativa acende uma marca dourada na régua lateral | Proposto |
+| Ferramentas de mestre | Painel tático de instrumentos: seções recolhíveis, numeração só onde há sequência | Cada ferramenta ativa acende uma marca dourada na régua lateral | Aplicado (tela-piloto, 2026-10-07) |
 | Mesa 3D | Mesa de madeira escura sob luz baixa | Anel dourado fino em volta do objeto selecionado | Proposto |
 | Bandeja de dados | Bandeja de feltro | Sombra projetada curta sob cada dado parado | Proposto |
 
 Regras que valem para todas: uma referência por tela; ouro só para ação e seleção; nenhum cartão arredondado como estrutura; contorno de foco sempre `--focus-ring`; nada que anime sem função.
+### Ferramentas de mestre — tela-piloto aplicada
+
+Painel "Ferramentas do mestre" (Mapa 2D, para jogadores "Ferramentas do mapa"). Estilos em `src/components/MasterTools.css`; estado dos instrumentos em `src/shared/mapInstruments.js`; seção em `src/components/ToolSection.jsx`.
+
+- **Índice de instrumentos.** Todos os instrumentos aparecem de uma vez, recolhidos, cada um com seu estado à direita ("Névoa · Desligada", "Pontos · 12", "Controles · 100%", "Rotas · 2 rotas"). Antes as ferramentas ficavam depois de "Mapa" e de uma lista de cartões, no fim da rolagem. A ordem é: Pontos, Controles e zoom, Grade e régua, Névoa, Posições, Rotas, Legenda, Exportar, Traços e, só para o mestre, Imagem do mapa. Para jogadores a seção Pontos já abre aberta.
+- **Régua lateral (detalhe memorável).** Uma coluna de marcas (a cada 8 px, e mais longas a cada 48 px) corre pela borda esquerda. O instrumento em uso (medir, névoa, posição ou rota) ganha na régua uma seta dourada, o estado "Em uso" escrito e o título do instrumento em dourado; o cabeçalho diz "Em uso: …" (região `role=status`). Cor não é o único sinal: em contraste forçado a seta usa `Highlight`.
+- **Hierarquia.** Títulos em Cinzel pequeno, estados em Source Sans mutado, filetes entre linhas no lugar de caixas; sem gradiente, sem cartões, sem movimento. Os nomes dos pontos usavam a fonte padrão do navegador (Arial) por causa de um bloco de CSS antigo dentro do JSX; passaram para a fonte do app.
+- **Pontos.** Linhas densas separadas por filete; marca dourada à esquerda ao passar o mouse e no ponto encontrado; ações de 44 px (ver no mapa, excluir); listas longas em páginas de 40 com "Mostrar mais", sem rolagem dentro da rolagem.
+- **Preservado.** Nenhuma função mudou: mesmas seções, mesmos controles, mesmas permissões.
+
+Verificação: axe-core sem violações com o painel em repouso e com todas as seções abertas; nenhum título quebra em duas linhas a 360 px; sem rolagem horizontal a 390 px; alvos de 44 px (o único menor é o campo de arquivo escondido dentro do botão de imagem); `tests/mapInstruments.test.js`.
