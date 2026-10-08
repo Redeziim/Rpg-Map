@@ -11,9 +11,9 @@ Feita em 2026-10-08, a pedido do usuário: achar o que é redundante ou pesado, 
 | Ferramentas do mapa 2D | Dez seções de peso igual, mais uma lista de traços solta no fim. "Mostrar traços" e "Traços do mapa" tratavam da mesma coisa em dois lugares. | 11 botões e 22 campos no painel. |
 | Controles e zoom | Cinco parágrafos de instrução, repetindo o que a barra de cima e o teclado já dizem. | |
 | Notas | Três cadernos com o mesmo menu longo (Recuperar rascunhos, Nova nota, Reunir janelas, lixeira). Cada janela de nota tem Texto, Mapa mental, Buscar, Compartilhar, Histórico, Exportar e Lixeira. | 23 botões só no código do caderno. |
-| Dados | Duas bandejas: "Dados" na ficha e "Bandeja da mesa" em Status do Grupo. | Não alterado; ver perguntas. |
-| Nome "Mesa" | A aba "Mesa" é de participantes e convites; "Mesa 3D" é o mapa; o nome da campanha também é "mesa". | Não alterado; ver perguntas. |
-| Envio de mapa | O diálogo pede para escolher a resolução ("Mais leve" ou "Mais detalhe") antes de publicar. | Não alterado; ver perguntas. |
+| Dados | Duas bandejas: "Dados" na ficha e "Bandeja da mesa" em Status do Grupo, sem dizer a diferença. | Mantidas; a diferença passou a estar escrita (ver abaixo). |
+| Nome "Mesa" | A aba "Mesa" é de participantes e convites; "Mesa 3D" é o mapa; o nome da campanha também é "mesa". | Renomeada para "Participantes" (ver abaixo). |
+| Envio de mapa | O diálogo pede para escolher a resolução ("Mais leve" ou "Mais detalhe") antes de publicar. | Não alterado; ver o fim deste documento. |
 
 ## O que foi feito
 
@@ -22,7 +22,7 @@ Feita em 2026-10-08, a pedido do usuário: achar o que é redundante ou pesado, 
 - **Ferramentas do mapa**: ficam à vista Pontos, Controles e zoom, Grade e régua, Névoa de guerra e Imagem do mapa. Posições e Traços vão para "Mais ferramentas", que abre sozinho quando uma delas está em uso (as outras três foram removidas, ver abaixo). A lista de traços entrou no mesmo grupo e o texto de ajuda caiu de cinco parágrafos para três linhas.
 - **Notas**: "Recuperar rascunhos" e "Reunir janelas" foram para "Mais opções" dentro do menu de cada caderno. Nada foi removido.
 
-Nenhuma função foi apagada. Tudo continua acessível, só menos à vista.
+Esta primeira rodada não apagou nada: só reorganizou. As remoções vieram depois, por decisão do usuário (próxima seção).
 
 ## Decisões do usuário (2026-10-08) e o que foi feito com elas
 
