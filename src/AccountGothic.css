@@ -1,0 +1,109 @@
+/* Entrada na direção gótica sutil (2026-10-09): frontispício de grimório.
+   Login e "Minhas mesas" usam a mesma linguagem da ficha: moldura dupla com cantos em L, losangos dourados, rachadura como filete,
+   grão leve no papel. Só tokens de theme.css e texturas de gothic.css. Única animação: fade e deslocamento curto na abertura. */
+
+/* corpo e controles na fonte do app (o CSS antigo pedia Segoe UI) */
+.mist-theme.account-screen,.mist-theme.account-loading,.account-screen input,.account-screen select,.account-screen button,.room-error-toast{font-family:var(--font-body)}
+.mist-theme.account-screen,.mist-theme.account-loading{font-size:var(--fs-body);line-height:var(--lh-body)}
+
+/* moldura dupla: borda, fio interno a 5 px e quatro cantos em L por cima, sem capturar cliques */
+.login-panel,.lobby-forms>section{position:relative;border:1px solid var(--rule-strong);border-radius:var(--radius-s);background:var(--grain),var(--paper-0);background-blend-mode:soft-light,normal;box-shadow:inset 0 0 0 1px var(--black),0 0 0 1px var(--black)}
+.login-panel::after,.lobby-forms>section::after{content:"";position:absolute;inset:5px;z-index:2;pointer-events:none;border:1px solid var(--rule)}
+.login-panel::before,.lobby-forms>section::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:
+  linear-gradient(var(--gold),var(--gold)) left 5px top 5px/22px 2px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) left 5px top 5px/2px 22px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) right 5px top 5px/22px 2px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) right 5px top 5px/2px 22px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) left 5px bottom 5px/22px 2px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) left 5px bottom 5px/2px 22px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) right 5px bottom 5px/22px 2px no-repeat,
+  linear-gradient(var(--gold),var(--gold)) right 5px bottom 5px/2px 22px no-repeat}
+
+/* marca */
+.account-brand{color:var(--gold);font-size:44px;line-height:1;gap:var(--space-3)}
+.account-brand svg{flex-shrink:0;padding:6px;border:1px solid var(--gold);border-bottom:3px solid var(--red);background:var(--surface-1);box-sizing:content-box}
+
+/* página de rosto */
+.login-story{max-width:620px}
+.login-story .account-caption{display:block;margin-top:var(--space-6)}
+.login-story h1{font:600 clamp(36px,4.4vw,60px)/var(--lh-tight) var(--font-display);margin:var(--space-3) 0 var(--space-5);color:var(--ink-strong);text-wrap:balance}
+.login-story>p{color:var(--ink-warm);font-size:var(--fs-lead);max-width:440px;margin:0}
+/* rachadura como filete entre o título e o índice */
+.login-story .crack{height:8px;max-width:320px;margin:var(--space-6) 0 var(--space-5);background:var(--crack) left center/320px 8px repeat-x;opacity:.8}
+
+/* índice dos papéis: numerais romanos na margem, nome em Cormorant, descrição em corpo */
+.login-role-list{margin:0;padding:0;list-style:none;display:grid;gap:0;counter-reset:papel;color:var(--muted);max-width:440px}
+.login-role-list li{counter-increment:papel;display:grid;grid-template-columns:44px minmax(0,1fr);align-items:baseline;gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--rule-soft)}
+.login-role-list li:last-child{border-bottom:1px solid var(--rule-soft)}
+.login-role-list li::before{content:counter(papel,upper-roman);font:600 var(--fs-small) var(--font-display);letter-spacing:.14em;color:var(--gold-deep)}
+.login-role-list b{font:600 20px var(--font-display);color:var(--gold-light);margin-right:var(--space-2)}
+.login-role-list span{color:var(--muted)}
+
+/* painel de acesso */
+.login-panel{padding:var(--space-6) 36px 34px}
+.account-screen .account-caption{font-size:var(--fs-small);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep)}
+.login-panel .account-caption{display:flex;align-items:center;gap:var(--space-3)}
+.login-panel .account-caption::before{content:"";width:7px;height:7px;background:var(--gold);transform:rotate(45deg);flex-shrink:0}
+.login-panel h2{font:600 32px/var(--lh-tight) var(--font-display);color:var(--ink-strong);margin:var(--space-3) 0 var(--space-5)}
+.login-panel .account-hint{margin:0 0 var(--space-4)}
+.account-screen label{color:var(--ink-warm);letter-spacing:.02em}
+.account-screen input,.account-screen select{background:var(--surface-0);border:1px solid var(--rule);border-radius:var(--radius-s);padding:var(--space-3);transition:border-color var(--motion-fast) var(--ease-out)}
+.account-screen input:hover,.account-screen select:hover{border-color:var(--rule-strong)}
+.account-screen input:focus-visible,.account-screen select:focus-visible,.account-screen button:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset);border-color:var(--gold-bright)}
+.account-primary{border-radius:var(--radius-s);border-color:var(--gold-light);background:var(--gold);color:var(--surface-0);font:700 var(--fs-small)/1 var(--font-body);letter-spacing:.08em;text-transform:uppercase;transition:background-color var(--motion-fast) var(--ease-out)}
+.account-primary:hover:not(:disabled){background:var(--gold-light)}
+.account-text-button{color:var(--ink-warm);font-family:var(--font-body);transition:color var(--motion-fast) var(--ease-out)}
+.account-text-button:hover{color:var(--gold-light)}
+.account-error{border-left:3px solid var(--wine-line);background:var(--wine-deep);color:var(--danger-ink);border-radius:0}
+
+/* Minhas mesas */
+.lobby-header{border-bottom:0;padding-bottom:0}
+.lobby-header::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;background:var(--crack) left center/320px 8px repeat-x;opacity:.55}
+.lobby-header{position:relative;margin-bottom:var(--space-3)}
+.lobby-heading{padding:var(--space-6) 0 var(--space-5)}
+.lobby-heading h1{font:600 clamp(34px,4vw,46px)/var(--lh-tight) var(--font-display);color:var(--ink-strong)}
+.lobby-forms{gap:var(--space-5)}
+.lobby-forms>section{padding:var(--space-5) 28px 28px}
+.lobby-forms h2{font:600 24px/var(--lh-tight) var(--font-display);color:var(--gold-light);margin:0}
+.lobby-forms h2 svg{color:var(--gold)}
+.lobby-forms p{color:var(--muted)}
+
+/* lista de mesas: livro de registro, linhas separadas por filete, marca dourada à esquerda */
+.room-list>h2{font:600 28px/var(--lh-tight) var(--font-display);color:var(--ink-strong);margin:0 0 var(--space-4);display:flex;align-items:center;gap:var(--space-3)}
+.room-list>h2::after{content:"";flex:1;height:8px;background:var(--crack) left center/320px 8px repeat-x;opacity:.55}
+.room-row{position:relative;margin:0;padding:var(--space-4) var(--space-4) var(--space-4) var(--space-5);border:0;border-bottom:1px solid var(--rule-soft);border-radius:0;background:none;font-family:var(--font-body);transition:background-color var(--motion-fast) var(--ease-out)}
+.room-row::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;background:var(--gold);transform:scaleY(0);transform-origin:center;transition:transform var(--motion-base) var(--ease-out)}
+.room-row:hover:not(:disabled),.room-row:focus-visible{background:var(--paper-1);border-bottom-color:var(--rule-soft)}
+.room-row:hover:not(:disabled)::before,.room-row:focus-visible::before{transform:scaleY(1)}
+.room-row strong{font:600 22px/var(--lh-tight) var(--font-display);color:var(--ink-strong)}
+.room-row small{color:var(--muted)}
+.room-row>svg{color:var(--gold-deep);transition:transform var(--motion-base) var(--ease-out),color var(--motion-fast) var(--ease-out)}
+.room-row:hover:not(:disabled)>svg{color:var(--gold);transform:translateX(3px)}
+.role-badge{border-radius:var(--radius-s);padding:var(--space-1) var(--space-3);font-family:var(--font-body);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:12px!important;border-color:var(--gold-shadow);background:var(--paper-1);color:var(--gold-light)}
+.role-admin{background:var(--wine-deep);border-color:var(--wine-line);color:var(--danger-ink)}
+.role-master{background:var(--paper-1);border-color:var(--gold-deep);color:var(--gold-light)}
+.lobby-empty{border:0;border-top:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft);padding:var(--space-5) var(--space-3);color:var(--muted)}
+
+/* abertura: o texto sobe um pouco e aparece, em sequência curta */
+@keyframes account-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.login-story>*,.login-panel,.lobby-heading,.lobby-forms>section,.room-list{animation:account-rise 280ms var(--ease-out) both}
+.login-story>:nth-child(2){animation-delay:40ms}.login-story>:nth-child(3){animation-delay:80ms}.login-story>:nth-child(4){animation-delay:120ms}.login-story>:nth-child(5){animation-delay:160ms}.login-story>:nth-child(6){animation-delay:200ms}
+.login-panel{animation-delay:100ms}.lobby-forms>section:nth-child(2){animation-delay:60ms}.room-list{animation-delay:100ms}
+
+@media(max-width:850px){
+  .account-brand{font-size:34px}
+  .login-story .account-caption{margin-top:var(--space-4)}
+  .login-story h1{font-size:34px;margin:var(--space-2) 0 var(--space-3)}
+  .login-story .crack,.login-story>p,.login-role-list{display:none}
+  .login-panel{padding:var(--space-5) var(--space-5) var(--space-5)}
+  .login-panel h2{font-size:28px}
+}
+@media(prefers-reduced-motion:reduce){
+  .login-story>*,.login-panel,.lobby-heading,.lobby-forms>section,.room-list{animation:none}
+  .room-row::before,.room-row>svg,.account-primary,.account-text-button,.account-screen input,.account-screen select{transition:none}
+}
+@media(forced-colors:active){
+  .login-panel::before,.login-panel::after,.lobby-forms>section::before,.lobby-forms>section::after,.lobby-header::after,.room-list>h2::after,.login-story .crack{display:none}
+  .login-panel,.lobby-forms>section{border-color:CanvasText}
+  .room-row::before{background:Highlight}
+}
