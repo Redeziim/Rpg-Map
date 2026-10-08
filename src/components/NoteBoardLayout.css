@@ -39,7 +39,14 @@
 /* palco: quadro com as ações do cartão e a seleção por cima */
 .note-board-stage{position:relative;display:flex;flex-direction:column}
 .note-board-scroll{background:var(--surface-0);border-color:var(--rule-strong)}
-.note-board-canvas{background-color:var(--paper-0);background-image:radial-gradient(circle,var(--rule) 1px,transparent 1.4px);background-size:28px 28px}
+/* grade: linhas a cada 28 px, e uma mais marcada a cada 140 px; translúcidas para não competir com os cartões */
+.note-board-canvas{background-color:var(--paper-0);
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--gold) 22%,transparent) 1px,transparent 1px),
+    linear-gradient(90deg,color-mix(in srgb,var(--gold) 22%,transparent) 1px,transparent 1px),
+    linear-gradient(color-mix(in srgb,var(--gold) 11%,transparent) 1px,transparent 1px),
+    linear-gradient(90deg,color-mix(in srgb,var(--gold) 11%,transparent) 1px,transparent 1px);
+  background-size:140px 140px,140px 140px,28px 28px,28px 28px}
 .note-board-overlays{position:absolute;left:var(--space-2);right:var(--space-2);bottom:var(--space-2);z-index:7;display:grid;gap:var(--space-2);justify-items:start;pointer-events:none}
 .note-board-overlays>*{pointer-events:auto;max-width:100%}
 .note-board-overlays .note-board-arrange,.note-board-overlays .note-board-card-details{margin:0;background:var(--paper-0);border:1px solid var(--rule-strong);box-shadow:0 10px 22px color-mix(in srgb,var(--black) 60%,transparent)}

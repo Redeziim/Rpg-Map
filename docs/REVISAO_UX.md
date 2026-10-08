@@ -43,6 +43,12 @@ Pedido do usuário depois de ver a primeira rodada.
 - **Mesa 3D**: saíram os textos que explicavam o óbvio (qualidade, movimento suave, importar terreno, luz e câmera). A instrução de teclado continua para leitor de tela, fora da vista.
 - **Notas**: o menu de cada caderno trocou o acordeão "Mais opções" por dois botões pequenos no rodapé ("Rascunhos" e "Reunir janelas"). O Mapa mental foi redesenhado: barra enxuta com contagem de cartões, o antigo "Mais opções" virou um painel flutuante "Mais" (coleção de imagens, aumentar área, filtros, conexões, atalhos) que não empurra o quadro, os detalhes do cartão e o arranjo da seleção ficam sobre o quadro, o cartão perdeu a faixa de título pesada e o fundo ganhou uma grade de pontos.
 
+## Terceira rodada (2026-10-08, à noite)
+
+- **Cadernos de notas**: saem também de Sobre e Linha do tempo (só o botão; as janelas de nota abertas continuam). Em Cenas ficam os cadernos e somem os turnos.
+- **Turnos e cadernos no canto superior direito**: nas abas em que aparecem, formam um grupo compacto alinhado à direita, sem esticar (acima de 760 px). Os três cadernos viram um grupo unido. Sem combate, o rótulo \""Ordem de jogo\"" some; com combate, \""Rodada N\"" continua. \""Gerenciar turnos\"" virou \""Gerenciar\"". O bloco de turnos caiu de cerca de 650 px para cerca de 490 px.
+- **Grade do Mapa mental**: no lugar dos pontos, uma grade de linhas translúcidas (a cada 28 px, e uma mais marcada a cada 140 px).
+
 ## O que ficou de fora de propósito
 
 - **Escolha de resolução ao enviar o mapa** ("Mais leve" ou "Mais detalhe"): não alterado; pode ficar atrás de "Opções" se atrapalhar.
