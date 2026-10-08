@@ -13,7 +13,7 @@ import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks, Clapperboard, Info, Pencil, Undo2, Redo2, Eraser, Hand, Ruler, BookOpen } from 'lucide-react';
 import PointDetails from './PointDetails.jsx';
 import MapStrokeColor from './MapStrokeColor.jsx';
-import {Swords} from 'lucide-react';
+import {DoorOpen,LogOut,Swords} from 'lucide-react';
 import MapLayers,{MapStrokeAudience,loadMapLayers} from './MapLayers.jsx';
 import MapFog,{MapFogOverlay} from './MapFog.jsx';
 import MapMeasurement,{MapGrid,MapRuler,loadMapMeasurementPrefs} from './MapMeasurement.jsx';
@@ -68,7 +68,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   useEffect(()=>{
     if(!turnsOpen)return undefined;
     const outside=event=>{if(!event.target.closest?.('.turns-pill'))setTurnsOpen(false);};
-    const escape=event=>{if(event.key==='Escape')setTurnsOpen(false);};
+    const escape=event=>{if(event.key!=='Escape')return;const panel=document.getElementById('turns-popover');if(panel?.contains(document.activeElement))document.querySelector('.turns-pill-button')?.focus();setTurnsOpen(false);};
     document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
     return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
   },[turnsOpen]);
@@ -571,10 +571,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             </div>
           </div>
         </div>
-        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-pressed={activeTab==='mesa'} onClick={()=>setActiveTab('mesa')}><Users size={18}/><span className="tab-label-full">Participantes</span><span className="tab-label-short">Pessoas</span></button>
+        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-current={activeTab==='mesa'?'page':undefined} onClick={()=>setActiveTab('mesa')}><Users size={18}/><span className="tab-label-full">Participantes</span><span className="tab-label-short">Pessoas</span></button>
           <button
             className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
-            aria-pressed={activeTab === 'mapa'}
+            aria-current={activeTab==='mapa'?'page':undefined}
             onClick={() => setActiveTab('mapa')}
           >
             <Map size={18} />
@@ -582,7 +582,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           </button>
           <button
             className={`tab-btn ${activeTab === 'ficha' ? 'active' : ''}`}
-            aria-pressed={activeTab === 'ficha'}
+            aria-current={activeTab==='ficha'?'page':undefined}
             onClick={() => setActiveTab('ficha')}
           >
             <ScrollText size={18} />
@@ -590,19 +590,19 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           </button>
           <button
             className={`tab-btn ${activeTab === 'grupo' ? 'active' : ''}`}
-            aria-pressed={activeTab === 'grupo'}
+            aria-current={activeTab==='grupo'?'page':undefined}
             onClick={() => setActiveTab('grupo')}
           >
             <Heart size={18} />
             <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short">Grupo</span>
           </button>
-          <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-pressed={activeTab==='cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
-          <button className={`tab-btn ${activeTab==='linha'?'active':''}`} aria-pressed={activeTab==='linha'} onClick={()=>setActiveTab('linha')}><BookOpen size={18} aria-hidden="true"/><span className="tab-label-full">Linha do tempo</span><span className="tab-label-short">Diário</span></button>
+          <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-current={activeTab==='cenas'?'page':undefined} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
+          <button className={`tab-btn ${activeTab==='linha'?'active':''}`} aria-current={activeTab==='linha'?'page':undefined} onClick={()=>setActiveTab('linha')}><BookOpen size={18} aria-hidden="true"/><span className="tab-label-full">Linha do tempo</span><span className="tab-label-short">Diário</span></button>
         </nav>
-        <div className="nav-footer"><ThemeToggle className="nav-about-button"/><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-pressed={activeTab==='sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button></div>
+        <div className="nav-footer"><button type="button" className="nav-about-button rail-only" onClick={onExit}><DoorOpen size={18} aria-hidden="true"/>Minhas mesas</button><ThemeToggle className="nav-about-button"/><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-current={activeTab==='sobre'?'page':undefined} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button><button type="button" className="nav-about-button rail-only" onClick={onLogout}><LogOut size={18} aria-hidden="true"/>Sair da conta</button></div>
       </header>
 
-      <div className="room-content">{connection!=='online'&&connection!=='connecting'&&<p className="connection-banner" role="status">Sem conexão com o servidor. Suas alterações só serão enviadas quando a conexão voltar; o que você está vendo pode estar desatualizado.</p>}<div className={`session-strip strip-${activeTab}`}><div className={`turns-pill${turnsOpen?' is-open':''}${myTurn?' is-my-turn':''}`}><button type="button" className="turns-pill-button" aria-expanded={turnsOpen} aria-controls="turns-popover" onClick={()=>setTurnsOpen(open=>!open)}><Swords size={16} aria-hidden="true"/><span>Turnos{combatState?.round?` · rodada ${combatState.round}`:''}</span>{turnLabel&&<small>{turnLabel}</small>}</button><div id="turns-popover" className="turns-popover" hidden={!turnsOpen}><TurnTracker key={`${room.id}:${user.id}`} room={room} username={user.username} userId={user.id} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/></div></div><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')} onTrash={(scope,id,trashed,version)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/trash`,{trashed,version},'PATCH')} onEmptyTrash={scope=>mutate(`/notes/${encodeURIComponent(scope)}/trash`,undefined,'DELETE')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')} onTrash={(_,id,trashed,version)=>mutate('/notes/@master/'+id+'/trash',{trashed,version},'PATCH')} onEmptyTrash={()=>mutate('/notes/@master/trash',undefined,'DELETE')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
+      <div className="room-content">{connection!=='online'&&connection!=='connecting'&&<p className="connection-banner" role="status">Sem conexão com o servidor. Suas alterações só serão enviadas quando a conexão voltar; o que você está vendo pode estar desatualizado.</p>}<div className={`session-strip strip-${activeTab}`}><div className={`turns-pill${turnsOpen?' is-open':''}${myTurn?' is-my-turn':''}`}><button type="button" className="turns-pill-button" aria-expanded={turnsOpen} aria-controls="turns-popover" onClick={()=>setTurnsOpen(open=>!open)}><Swords size={16} aria-hidden="true"/><span>Turnos{combatState?.round?` · rodada ${combatState.round}`:''}</span>{turnLabel&&<small role="status">{turnLabel}</small>}</button><div id="turns-popover" className="turns-popover" hidden={!turnsOpen}><TurnTracker alwaysExpanded key={`${room.id}:${user.id}`} room={room} username={user.username} userId={user.id} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/></div></div><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')} onTrash={(scope,id,trashed,version)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/trash`,{trashed,version},'PATCH')} onEmptyTrash={scope=>mutate(`/notes/${encodeURIComponent(scope)}/trash`,undefined,'DELETE')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')} onTrash={(_,id,trashed,version)=>mutate('/notes/@master/'+id+'/trash',{trashed,version},'PATCH')} onEmptyTrash={()=>mutate('/notes/@master/trash',undefined,'DELETE')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
       <main id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1} onKeyDown={handleMapShortcut}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate} viewMode={viewMode}/>:activeTab === 'mapa' ? (
           <>

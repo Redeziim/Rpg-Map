@@ -355,7 +355,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
           </li>)}</ul>
           {pendingSystem && systemPlan && <div className="system-confirm" role="group" aria-label={`Confirmar ${pendingSystem.system.name}`}>
             <p role="alert">{pendingSystem.mode === 'replace'
-              ? `Substituir os ${sheetFields.length} campos atuais pelos ${systemPlan.added} de ${pendingSystem.system.name}? O que os jogadores já preencheram continua guardado, mas só volta a aparecer em campos com o mesmo identificador, que um modelo novo não tem.`
+              ? `Substituir os ${sheetFields.length} campos atuais pelos ${systemPlan.added} de ${pendingSystem.system.name}? O que os jogadores já preencheram não some do servidor, mas deixa de aparecer nas fichas, porque o modelo novo tem campos diferentes. Se quiser manter os valores, escolha Somar campos em vez de Substituir.`
               : systemPlan.added ? `Somar ${systemPlan.added} ${systemPlan.added === 1 ? 'campo' : 'campos'} de ${pendingSystem.system.name} ao modelo? Campos com o mesmo nome dos que já existem não são repetidos.` : `Todos os campos de ${pendingSystem.system.name} já existem neste modelo.`}</p>
             {systemError && <p role="alert">{systemError}</p>}
             <button type="button" className="sheet-tool-btn" disabled={!systemPlan.added} onClick={applySystem}>{pendingSystem.mode === 'replace' ? 'Substituir modelo' : 'Somar campos'}</button>

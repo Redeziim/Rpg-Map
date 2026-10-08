@@ -1,0 +1,10 @@
+/* Tela de erro: usa só os tokens do tema, então acompanha o modo claro e o sombrio. */
+.error-fallback{box-sizing:border-box;min-height:100dvh;display:grid;align-content:center;justify-items:start;gap:var(--space-4);max-width:34rem;margin:0 auto;padding:var(--space-6) var(--space-4);background:var(--surface-0);color:var(--ink)}
+.error-fallback h1{margin:0;font:600 var(--fs-heading) var(--font-display);color:var(--ink-strong)}
+.error-fallback p{margin:0;font:var(--fs-body)/var(--lh-body) var(--font-body);color:var(--ink-soft)}
+.error-fallback button{min-height:var(--target);padding:0 var(--space-5);border:1px solid var(--gold);background:var(--paper-2);color:var(--gold-bright);font:600 var(--fs-body) var(--font-body);cursor:pointer}
+.error-fallback button:hover{background:var(--paper-1)}
+.error-fallback button:focus-visible,.error-fallback summary:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.error-fallback details{max-width:100%;color:var(--muted);font:var(--fs-small) var(--font-body)}
+.error-fallback summary{min-height:var(--target);display:flex;align-items:center;cursor:pointer}
+.error-fallback pre{margin:0;padding:var(--space-3);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid var(--rule);background:var(--paper-0)}

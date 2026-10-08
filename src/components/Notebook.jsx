@@ -284,7 +284,7 @@ export default function Notebook({title,hint,notes:allNotes=[],onSave,onShare,on
     {!readOnly&&scope!=='shared'&&<button type="button" className="note-new" disabled={!ready||windows.length>=10} onClick={event=>open({id:crypto.randomUUID(),title:'Nova nota',body:'',board:emptyNoteBoard(),isNew:true},event.currentTarget)}><Plus size={16} aria-hidden="true"/>Nova nota</button>}
     {notes.length>0&&<label className="note-search">Buscar em {title.toLowerCase()}<input type="search" name={`note-search-${scope}`} autoComplete="off" value={search} onChange={event=>setSearch(event.target.value)} maxLength={100} placeholder="Título, texto ou ideia…"/></label>}
     {search.trim()&&<p role="status">{matches.length} {matches.length===1?'nota encontrada':'notas encontradas'}</p>}
-    {!notes.length&&<p>Nenhuma nota disponível.</p>}
+    {!notes.length&&<p>{scope==='shared'?'Nada compartilhado ainda. Para compartilhar, abra uma nota sua, use Mais e escolha Compartilhar.':'Nenhuma nota disponível.'}</p>}
     {notes.length>0&&!matches.length&&<p>Nenhuma nota encontrada neste caderno.</p>}
     {matches.map(note=><button key={noteKey({...note,scope:note.scope||scope})} disabled={!ready} onClick={event=>open(note,event.currentTarget)}><NotebookPen size={15} aria-hidden="true"/><span>{note.title}<small>{note.owner?` · ${note.owner==='@master'?'Mestre':note.owner}`:''}</small></span><small>{windows.some(windowNote=>noteKey(windowNote)===noteKey({...note,scope:note.scope||scope}))?'Aberta':'Abrir'}</small></button>)}
     {ready&&<div className="note-tools">

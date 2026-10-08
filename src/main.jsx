@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import ErrorBoundary from './ErrorBoundary.js'
 import './index.css'
 import './workspace.css'
 import './refine.css'
@@ -8,9 +9,12 @@ import './gothic.css'
 import './ShellGothic.css'
 import './themeLight.css'
 import './CompactShell.css'
+import './ErrorBoundary.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 )

@@ -46,14 +46,14 @@
 }
 /* Turnos: um botão minimizado, como os cadernos. Abre um painel com o bloco completo (ordem, controles e gerenciar). O bloco continua
    montado por dentro, então não perde o que estava sendo feito ao fechar. */
-.mist-theme .turns-pill{position:relative;flex:0 0 auto;margin-right:var(--space-2)}
+.mist-theme .turns-pill{flex:0 0 auto;margin-right:var(--space-2)}
 .mist-theme .turns-pill-button{display:flex;align-items:center;gap:8px;min-height:36px;padding:2px 10px;border:1px solid var(--rule-strong);background:var(--paper-1);color:var(--gold-bright);font:600 var(--fs-small) var(--font-body);cursor:pointer;white-space:nowrap}
 .mist-theme .turns-pill-button:hover,.mist-theme .turns-pill.is-open .turns-pill-button{background:var(--paper-2);border-color:var(--gold)}
 .mist-theme .turns-pill-button:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 .mist-theme .turns-pill-button small{color:var(--muted);font-size:var(--fs-small);font-weight:400}
 .mist-theme .turns-pill.is-my-turn .turns-pill-button{border-color:var(--gold-bright);background:var(--wine-deep)}
 .mist-theme .turns-pill.is-my-turn .turns-pill-button small{color:var(--ink-strong);font-weight:600}
-.mist-theme .turns-popover{position:absolute;top:calc(100% + 4px);right:0;z-index:30;width:min(560px,calc(100vw - 32px));max-height:min(70dvh,560px);overflow:auto;background:var(--paper-0);border:1px solid var(--rule-strong);box-shadow:0 14px 28px color-mix(in srgb,var(--black) 65%,transparent),inset 0 0 0 1px var(--black)}
+.mist-theme .turns-popover{position:absolute;top:calc(100% + 4px);right:0;z-index:30;width:min(560px,100%);max-height:min(70dvh,560px);overflow:auto;overscroll-behavior:contain;background:var(--paper-0);border:1px solid var(--rule-strong);box-shadow:0 14px 28px color-mix(in srgb,var(--black) 65%,transparent),inset 0 0 0 1px var(--black)}
 .mist-theme .turns-popover[hidden]{display:none}
 .mist-theme .turns-popover .turn-tracker{border:0;background:transparent;padding:var(--space-2) var(--space-3)}
 .mist-theme .session-strip .notebook-library{flex:0 0 auto;width:auto;max-width:none}
@@ -101,3 +101,12 @@
 .note-window .note-menu>div button{display:flex;align-items:center;gap:var(--space-2);width:100%;justify-content:flex-start}
 .note-window .note-menu-label{margin:var(--space-1) 0 0;padding:var(--space-2) var(--space-3) 0;border-top:1px solid var(--rule-soft);color:var(--muted);font:var(--fs-small) var(--font-body)}
 .note-window .note-menu-danger{margin-top:var(--space-1);color:var(--danger-ink)}
+
+/* Em tela de toque os controles novos voltam aos 44 px do projeto. */
+@media(pointer:coarse){
+  .mist-theme .turns-pill-button,.mist-theme .session-strip .notebook-library summary{min-height:var(--target)}
+  .note-window .note-board-tools button,.note-window .note-board-zoom button,.note-window .note-board-drawer-close{min-height:var(--target);min-width:var(--target)}
+  .note-window .note-board-node-grip{min-height:var(--target)}
+}
+/* "Minhas mesas" e "Sair da conta" só entram no rodapé da faixa de ícones; no celular continuam no menu da conta. */
+@media(max-width:760px){.mist-theme .rail-only{display:none}}

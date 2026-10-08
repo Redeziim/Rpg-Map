@@ -16,7 +16,7 @@ function InitiativeField({actor,value,version,saving,act}){
   </form>;
 }
 
-export default function TurnTracker({room,username,userId,editable,saving,connection,mutate}){
+export default function TurnTracker({alwaysExpanded=false,room,username,userId,editable,saving,connection,mutate}){
   const [npcName,setNpcName]=useState(''),[npcKind,setNpcKind]=useState('enemy');
   const [error,setError]=useState('');
   const [effectDraft,setEffectDraft]=useState(emptyEffectDraft);
@@ -32,7 +32,7 @@ export default function TurnTracker({room,username,userId,editable,saving,connec
     return {id,name:npc?.name||id,kind:npc?.kind||'player',avatar:npc?null:room.groupBars?.[id]?.avatar};
   });
   const active=combat.activeId,activeActor=actors.find(actor=>actor.id===active);
-  const [expanded,setExpanded]=useState(()=>!!combat.activeId);
+  const [expandedState,setExpanded]=useState(()=>!!combat.activeId),expanded=alwaysExpanded||expandedState;
   useEffect(()=>{if(active)setExpanded(true);},[active]);
   const nextId=order.length?order[(Math.max(-1,order.indexOf(active))+1)%order.length]:null;
   const excludedPlayers=room.members.filter(member=>member.role!=='master'&&excluded.includes(member.username));
@@ -49,7 +49,7 @@ export default function TurnTracker({room,username,userId,editable,saving,connec
   };
   return <section className="turn-tracker" aria-label="Turnos da mesa" aria-busy={saving}>
     <div className="turn-heading">
-      <button type="button" className="turn-toggle" aria-expanded={expanded} aria-label={`${expanded?'Recolher':'Mostrar'} ordem de jogo e efeitos · ${actors.length}`} title={expanded?'Recolher':'Mostrar ordem de jogo'} onClick={()=>setExpanded(open=>!open)}>{expanded?<ChevronUp size={18} aria-hidden="true"/>:<ChevronDown size={18} aria-hidden="true"/>}<span className="turn-toggle-count">{actors.length}</span></button>
+      {!alwaysExpanded&&<button type="button" className="turn-toggle" aria-expanded={expanded} aria-label={`${expanded?'Recolher':'Mostrar'} ordem de jogo e efeitos · ${actors.length}`} title={expanded?'Recolher':'Mostrar ordem de jogo'} onClick={()=>setExpanded(open=>!open)}>{expanded?<ChevronUp size={18} aria-hidden="true"/>:<ChevronDown size={18} aria-hidden="true"/>}<span className="turn-toggle-count">{actors.length}</span></button>}
       <div className="turn-heading-copy"><span className={`eyebrow${combat.round?'':' is-idle'}`}>{combat.round?`Rodada ${combat.round}`:'Ordem de jogo'}</span><p role="status">{activeActor?<><strong>{active===username?'Seu turno':`Turno de ${activeActor.name}`}</strong><span>{activeActor.kind!=='player'?` · ${kindLabel(activeActor.kind)}`:''}</span></>:'Turnos ainda não iniciados'}</p></div>
       {editable&&<div className="turn-actions"><button type="button" disabled={busy||!order.length} onClick={()=>act(active?'skip':'next')}>{active?'Pular turno':'Iniciar turnos'}</button><button type="button" disabled={busy||!active} onClick={()=>act('end')}>Encerrar</button><details className="turn-editor"><summary ref={editorSummaryRef}>Gerenciar</summary><div className="turn-editor-panel">
         <h3>Participantes do combate</h3>
