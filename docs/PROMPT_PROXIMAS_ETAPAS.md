@@ -8,7 +8,7 @@ Itens 16, 17, 18, 23 (opção A), 53, 57, 58, 59, 63, 65 e 66, e a primeira roda
 
 ## Falta decidir
 
-1. **Item 64 — direção visual.** A tela-piloto Ferramentas de mestre foi aplicada em 2026-10-07 (`DESIGN.md`). Falta o usuário aprovar a direção e escolher a próxima tela: Mapa 2D, Mesa 3D ou Bandeja de dados. Também restam, no mesmo painel, os estilos antigos embutidos em `RPGMapExplorer.jsx` (bloco `<style>`), que vale migrar para folhas com tokens aos poucos.
+1. **Item 64 — direção visual.** Em 2026-10-08 e 09 o usuário escolheu a direção gótica sutil (`docs/DIRECAO_GOTICA.md`): carvão, ouro envelhecido dominante e vinho de apoio, Cormorant nos títulos, grão leve e rachadura. As telas-piloto Ferramentas de mestre e Ficha de personagem estão aplicadas, com paleta e fontes em `src/theme.css` e texturas em `src/gothic.css`. Falta o usuário aprovar o contraste e as molduras da ficha, e então levar a mesma linguagem às demais telas (entrada, Mapa 2D e Mesa 3D, notas), migrar as cerca de 700 cores literais para tokens (pré-requisito do seletor de tema) e, por fim, o seletor de tema. Também restam os estilos antigos embutidos em `RPGMapExplorer.jsx` (bloco `<style>`).
 
 ## Falta fazer
 
