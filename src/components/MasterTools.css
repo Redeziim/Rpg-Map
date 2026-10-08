@@ -20,7 +20,11 @@
 .mist-theme #map-2d-tools .tool-section[open]>summary{border-bottom:1px solid var(--rule-soft)}
 .mist-theme #map-2d-tools .tool-section-body{padding:var(--space-3) 0 var(--space-4)}
 /* a marca na régua: instrumento em uso */
-.mist-theme #map-2d-tools .tool-section.is-active::before{content:"";position:absolute;left:-34px;top:var(--space-2);width:26px;height:calc(var(--target) - var(--space-3));background:var(--gold-bright);clip-path:polygon(0 0,100% 50%,0 100%)}
+.mist-theme #map-2d-tools .tool-section.is-active::before{content:"";position:absolute;left:-30px;top:calc(var(--target) / 2 - 10px);width:24px;height:20px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));
+  /* seta de haste fina e ponta larga */
+  clip-path:polygon(0 36%,58% 36%,58% 0,100% 50%,58% 100%,58% 64%,0 64%);animation:tool-arrow 1.5s ease-in-out infinite}
+.mist-theme #map-2d-tools .tool-section.is-active>summary{background:linear-gradient(90deg,color-mix(in srgb,var(--gold-bright) 16%,transparent),transparent 70%)}
+@keyframes tool-arrow{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
 .mist-theme #map-2d-tools .tool-section.is-active>summary .tool-status{color:var(--ink-strong);font-weight:600}
 .mist-theme #map-2d-tools .tool-section.is-active>summary .tool-title{color:var(--gold-bright)}
 /* imagem do mapa: botão simples, sem gradiente */
@@ -53,4 +57,5 @@
   .mist-theme #map-2d-tools .tool-section.is-active::before{background:Highlight}
   .mist-theme #map-2d-tools .tool-section>summary:focus-visible,.mist-theme #map-2d-tools .point-info:focus-visible{outline-color:Highlight}
 }
-@media(max-width:560px){.mist-theme #map-2d-tools>*{margin-left:30px}.mist-theme #map-2d-tools .tool-section.is-active::before{left:-30px;width:22px}}
+@media(prefers-reduced-motion:reduce){.mist-theme #map-2d-tools .tool-section.is-active::before{animation:none}}
+@media(max-width:560px){.mist-theme #map-2d-tools>*{margin-left:30px}.mist-theme #map-2d-tools .tool-section.is-active::before{left:-27px;width:21px}}
