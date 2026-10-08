@@ -30,10 +30,11 @@ test('every var(--name) without a fallback points to a declared property',()=>{
 });
 
 test('literal colors only go down: use a token or add one to docs/DESIGN_TOKENS.md',()=>{
-  // Baseline measured on 2026-10-07 after the first consolidation. Lower it whenever more colors move to tokens.
-  const BASELINE=710;
+  // 2026-10-09: todas as telas migraram para tokens. Só a roda de cores do traço do mapa guarda hexadecimais, porque são as cores que a pessoa escolhe.
+  const BASELINE=0,PALETTE='components/MapStrokeColor.css';
   let literals=0;
   for(const {name,text} of css){
+    if(name===PALETTE)continue;
     const body=text.replace(/url\([^)]*\)/g,'').replace(/--[a-z0-9-]+\s*:\s*#[0-9a-fA-F]{3,8}\b/g,'');
     literals+=(body.match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length;
   }

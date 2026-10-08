@@ -1,25 +1,25 @@
-.mist-theme .map-measurement{--measure-ink:#e7d6b1;--measure-edge:#80663d;min-width:0;margin:16px 0;padding:10px;border:1px solid var(--measure-edge);background:var(--paper-1);color:var(--measure-ink)}
+.mist-theme .map-measurement{--measure-ink:var(--ink-warm);--measure-edge:var(--rule-strong);min-width:0;margin:16px 0;padding:10px;border:1px solid var(--measure-edge);background:var(--paper-1);color:var(--measure-ink)}
 .map-measurement legend{padding:0 6px;font:600 13px var(--font-display)}
-.map-measurement p{margin:0 0 10px;font:14px/1.4 var(--font-body);color:#d2c7ae;overflow-wrap:anywhere}
+.map-measurement p{margin:0 0 10px;font:14px/1.4 var(--font-body);color:var(--ink-warm);overflow-wrap:anywhere}
 .mist-theme .map-measurement button{min-height:44px;white-space:normal;margin:0 0 8px;width:100%;font:14px var(--font-body);border:1px solid var(--measure-edge);background:var(--paper-2);color:var(--measure-ink)}
-.mist-theme .map-measurement button:hover:not(:disabled){background:var(--rule-soft);border-color:#d9b777}
-.mist-theme .map-measurement button[aria-pressed=true]{background:#735e32;border-color:#d9b777;color:var(--ink-strong)}
+.mist-theme .map-measurement button:hover:not(:disabled){background:var(--rule-soft);border-color:var(--gold-bright)}
+.mist-theme .map-measurement button[aria-pressed=true]{background:var(--gold-shadow);border-color:var(--gold-bright);color:var(--ink-strong)}
 .map-measurement :focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
 .map-measurement button:disabled{opacity:.55;cursor:not-allowed}
 .mist-theme .map-measurement .map-grid-toggle{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 8px;cursor:pointer;font:15px var(--font-body)}
-.mist-theme .map-grid-toggle input{width:18px;height:18px;min-height:18px;accent-color:#d9b777;flex:none}
+.mist-theme .map-grid-toggle input{width:18px;height:18px;min-height:18px;accent-color:var(--gold-bright);flex:none}
 .map-measurement summary{min-height:44px;box-sizing:border-box;padding:12px 0;cursor:pointer;font:14px var(--font-body);overflow-wrap:anywhere}
 .map-scale-settings{border-top:1px solid var(--measure-edge);margin-top:12px}
 .map-scale-editor{display:flex;flex-direction:column;gap:10px;padding:8px 0}
 .mist-theme .map-scale-editor label{display:flex;flex-direction:column;gap:5px;font:14px var(--font-body)}
-.mist-theme .map-scale-editor input{box-sizing:border-box;width:100%;min-width:0;min-height:44px;border:1px solid var(--measure-edge);padding:8px;color:#f1dfb8;background:#161a14;font:16px var(--font-body)}
-.map-scale-calibration,.map-scale-align{border-top:1px solid #58482e}
-.map-scale-editor .map-scale-error,.map-scale-conflict{padding:8px;border-left:3px solid #eea4a7;color:#f1d1c2}
+.mist-theme .map-scale-editor input{box-sizing:border-box;width:100%;min-width:0;min-height:44px;border:1px solid var(--measure-edge);padding:8px;color:var(--ink-warm);background:var(--paper-1);font:16px var(--font-body)}
+.map-scale-calibration,.map-scale-align{border-top:1px solid var(--gold-shadow)}
+.map-scale-editor .map-scale-error,.map-scale-conflict{padding:8px;border-left:3px solid var(--danger-ink);color:var(--danger-ink)}
 .map-scale-conflict button:last-child{margin:0}
 .map-measure-result{display:block;padding:10px 0;font:600 22px var(--font-body);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.map-measure-result small{display:block;margin-top:4px;font:13px var(--font-body);color:#d2c7ae}
+.map-measure-result small{display:block;margin-top:4px;font:13px var(--font-body);color:var(--ink-warm)}
 .map-grid-overlay,.map-ruler-overlay{forced-color-adjust:none}
 .map-ruler-label{font-family:var(--font-body);font-weight:600;font-variant-numeric:tabular-nums}
 .mist-theme .view-mapa .canvas-wrapper{position:relative}
-.map-scale-caption{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 24px);box-sizing:border-box;padding:6px 10px;border:1px solid var(--gold-shadow);background:#161a14;color:var(--ink-warm);font:14px/1.4 var(--font-body);pointer-events:none;overflow-wrap:anywhere;z-index:2}
+.map-scale-caption{position:absolute;left:12px;bottom:12px;max-width:calc(100% - 24px);box-sizing:border-box;padding:6px 10px;border:1px solid var(--gold-shadow);background:var(--paper-1);color:var(--ink-warm);font:14px/1.4 var(--font-body);pointer-events:none;overflow-wrap:anywhere;z-index:2}
 @media(forced-colors:active){.mist-theme .map-measurement{border-color:CanvasText}.mist-theme .map-measurement button[aria-pressed=true]{outline:2px solid Highlight}.map-scale-caption{background:Canvas;color:CanvasText;border-color:CanvasText}}

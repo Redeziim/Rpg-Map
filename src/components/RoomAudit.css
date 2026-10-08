@@ -1,19 +1,19 @@
-.room-audit{--audit-ink:#eee7d9;--audit-muted:#c1b7a3;--audit-rule:#77633e;--audit-accent:#dec286;--audit-space:16px;margin-top:32px;border-top:2px solid var(--audit-rule);color:var(--audit-ink);background:#191c16;color-scheme:dark}
+.room-audit{--audit-ink:#eee7d9;--audit-muted:#c1b7a3;--audit-rule:#77633e;--audit-accent:#dec286;--audit-space:16px;margin-top:32px;border-top:2px solid var(--audit-rule);color:var(--audit-ink);background:var(--paper-1);color-scheme:dark}
 .room-audit>summary{display:flex;align-items:center;gap:12px;min-height:52px;padding:12px var(--audit-space);cursor:pointer;color:var(--audit-accent);font:18px/1.4 var(--font-display);list-style:none}
 .room-audit>summary::-webkit-details-marker{display:none}
 .room-audit>summary::after{content:'+';margin-left:auto;font:24px/1 Georgia,serif}
 .room-audit[open]>summary::after{content:'−'}
-.room-audit>summary:hover,.room-audit button:hover:not(:disabled):not([aria-disabled="true"]){background:#303427}
+.room-audit>summary:hover,.room-audit button:hover:not(:disabled):not([aria-disabled="true"]){background:var(--paper-1)}
 .room-audit :is(summary,button,select):focus-visible{outline:2px solid var(--audit-accent);outline-offset:3px}
 .room-audit-content{padding:0 var(--audit-space) var(--audit-space);font:15px/1.6 'IM Fell English',Georgia,serif}
 .room-audit-hint,.room-audit-footnote{color:var(--audit-muted);margin:0 0 16px}
 .room-audit-tools{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin-bottom:20px}
 .room-audit-tools label{flex:1;max-width:300px;min-width:160px;color:var(--audit-ink);font-size:14px}
-.room-management .room-audit select{min-height:44px;padding:9px 12px;border:1px solid var(--audit-rule);border-radius:0;color:var(--audit-ink);background:#13170f;font:15px/1.4 'IM Fell English',Georgia,serif}
-.room-audit button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid var(--audit-rule);border-radius:0;background:#22261c;color:var(--audit-accent);font:14px/1.4 'IM Fell English',Georgia,serif;cursor:pointer}
+.room-management .room-audit select{min-height:44px;padding:9px 12px;border:1px solid var(--audit-rule);border-radius:0;color:var(--audit-ink);background:var(--paper-1);font:15px/1.4 'IM Fell English',Georgia,serif}
+.room-audit button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid var(--audit-rule);border-radius:0;background:var(--paper-1);color:var(--audit-accent);font:14px/1.4 'IM Fell English',Georgia,serif;cursor:pointer}
 .room-audit button:disabled,.room-audit button[aria-disabled="true"]{opacity:.6;cursor:default}
 .room-audit-list{list-style:none;padding:0;margin:0;border-left:1px solid var(--audit-rule)}
-.room-audit-list>li{display:grid;grid-template-columns:135px minmax(0,1fr) minmax(100px,180px);align-items:start;gap:12px;padding:16px 0 16px 16px;border-top:1px solid #77633e80;content-visibility:auto;contain-intrinsic-size:auto 90px}
+.room-audit-list>li{display:grid;grid-template-columns:135px minmax(0,1fr) minmax(100px,180px);align-items:start;gap:12px;padding:16px 0 16px 16px;border-top:1px solid color-mix(in srgb,var(--gold-shadow) 50%,transparent);content-visibility:auto;contain-intrinsic-size:auto 90px}
 .room-audit-list time{color:var(--audit-muted);font-variant-numeric:tabular-nums}
 .room-audit-action{display:grid;gap:3px;overflow-wrap:anywhere}
 .room-audit-category{font:var(--fs-small)/1.5 var(--font-display);color:var(--audit-accent)}
@@ -24,8 +24,8 @@
 .room-audit-more{margin-top:16px}
 .room-audit-footnote{font-size:13px;margin:20px 0 0}
 .room-audit-status{font-size:13px;color:var(--audit-muted)}
-.room-audit-notice,.room-audit-empty{padding:12px;border-left:2px solid var(--audit-rule);background:#24291e}
-.room-audit-error{color:var(--danger-ink);border-left:2px solid #d78780;padding:12px;background:#3a2020}
+.room-audit-notice,.room-audit-empty{padding:12px;border-left:2px solid var(--audit-rule);background:var(--paper-1)}
+.room-audit-error{color:var(--danger-ink);border-left:2px solid var(--accent);padding:12px;background:var(--wine-deep)}
 .room-audit-error button{margin-top:8px}
 @media(max-width:600px){.room-audit{--audit-space:12px}.room-audit-tools{align-items:stretch;flex-direction:column}.room-audit-tools label{max-width:none}.room-audit-list>li{grid-template-columns:minmax(0,1fr);gap:6px;padding:14px 0 14px 12px}.room-audit-author{font-size:14px}.room-audit-action{grid-row:2}.room-audit-more{width:100%}}
 @media(forced-colors:active){.room-audit,.room-audit-list,.room-audit-list>li,.room-audit button,.room-management .room-audit select{border-color:CanvasText}.room-audit :is(summary,button,select):focus-visible{outline-color:Highlight}}

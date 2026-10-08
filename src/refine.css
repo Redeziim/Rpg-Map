@@ -37,7 +37,7 @@
 .mist-theme .tabletop-empty{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);max-width:min(360px,calc(100% - 32px));padding:20px 22px;text-align:center;background:var(--surface-1);border:1px solid var(--line-strong);border-top:2px solid var(--red);pointer-events:auto;z-index:2}
 .mist-theme .tabletop-empty h3{margin:0 0 8px;font:400 20px var(--font-display);color:var(--gold)}
 .mist-theme .tabletop-empty p{margin:0 0 14px;font-size:var(--fs-small);line-height:1.6;color:var(--muted)}
-.mist-theme .tabletop-empty button{min-height:44px;padding:8px 16px;background:var(--gold);color:var(--surface-0);border:1px solid #d9b771;font-weight:600}
+.mist-theme .tabletop-empty button{min-height:44px;padding:8px 16px;background:var(--gold);color:var(--surface-0);border:1px solid var(--gold);font-weight:600}
 @media(max-width:760px){.mist-theme .tabletop-camera-label{display:none}.mist-theme .tabletop-camera .tabletop-camera-sep+button{min-width:44px;justify-content:center}}
 
 /* Grupo: bandeja e seleção de dados num único painel. */
@@ -63,22 +63,22 @@
 /* Mapa 2D sem imagem: estado vazio centralizado, com ação. */
 .mist-theme .canvas-area .empty-state{min-height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:32px 20px}
 .mist-theme .canvas-area .empty-state p{margin:0 0 14px;max-width:44ch}
-.mist-theme .map-empty-action{min-height:44px;padding:8px 16px;background:var(--gold);color:var(--surface-0);border:1px solid #d9b771;font-weight:600;cursor:pointer}
+.mist-theme .map-empty-action{min-height:44px;padding:8px 16px;background:var(--gold);color:var(--surface-0);border:1px solid var(--gold);font-weight:600;cursor:pointer}
 
 /* Diálogo de ponto: mesmas superfícies, bordas e botões do restante do tema. */
-.mist-theme .modal{background:var(--surface-2);border:1px solid var(--gold);border-radius:4px;box-shadow:0 20px 60px #000c}
+.mist-theme .modal{background:var(--surface-2);border:1px solid var(--gold);border-radius:4px;box-shadow:0 20px 60px color-mix(in srgb,var(--black) 80%,transparent)}
 .mist-theme .modal .form-group label{font:600 var(--fs-label) var(--font-body);letter-spacing:1.5px;color:var(--gold)}
 .mist-theme .modal .form-group input,.mist-theme .modal .form-group textarea{background:var(--surface-0);border:1px solid var(--rule);border-radius:3px;color:var(--ink);font:15px/1.5 var(--font-body)}
 .mist-theme .modal .form-group input:focus,.mist-theme .modal .form-group textarea:focus{border-color:var(--gold);background:var(--surface-0);box-shadow:none}
 .mist-theme .modal .type-btn{min-height:44px;background:var(--surface-1);border:1px solid var(--line-strong);border-radius:3px;color:var(--ink);font:600 14px var(--font-body)}
-.mist-theme .modal .type-btn:hover{background:#26221a;border-color:var(--type-color);transform:none}
-.mist-theme .modal .type-btn.active{background:#2a2418;border-color:var(--type-color);color:#fff0dc;box-shadow:inset 3px 0 var(--type-color)}
+.mist-theme .modal .type-btn:hover{background:var(--paper-2);border-color:var(--type-color);transform:none}
+.mist-theme .modal .type-btn.active{background:var(--paper-2);border-color:var(--type-color);color:var(--ink-strong);box-shadow:inset 3px 0 var(--type-color)}
 .mist-theme .modal .btn-primary,.mist-theme .modal .btn-secondary{min-height:44px;border-radius:3px;font:600 14px var(--font-body)}
-.mist-theme .modal .btn-primary{background:var(--gold);border:1px solid #d9b771;color:var(--surface-0)}
-.mist-theme .modal .btn-primary:hover:not(:disabled){background:#dfbd75;transform:none;box-shadow:none}
+.mist-theme .modal .btn-primary{background:var(--gold);border:1px solid var(--gold);color:var(--surface-0)}
+.mist-theme .modal .btn-primary:hover:not(:disabled){background:var(--gold);transform:none;box-shadow:none}
 .mist-theme .modal .btn-primary:disabled{opacity:.5}
-.mist-theme .modal .btn-secondary{background:var(--paper-1);border:1px solid #6c5936;color:var(--ink-warm)}
-.mist-theme .modal .btn-secondary:hover{background:#363023;transform:none}
+.mist-theme .modal .btn-secondary{background:var(--paper-1);border:1px solid var(--gold-shadow);color:var(--ink-warm)}
+.mist-theme .modal .btn-secondary:hover{background:var(--rule-soft);transform:none}
 
 /* Mapa mental: quadro com altura mínima maior. */
 .note-board-scroll{min-height:260px}
@@ -101,8 +101,8 @@ body .note-window .note-text-editor textarea{height:100%;min-height:0}
 
 /* Névoa de guerra: botões no tema (antes cinza padrão do navegador). */
 .mist-theme .view-mapa .map-fog-controls button{background:var(--paper-1);color:var(--ink-warm);border-color:var(--fog-edge)}
-.mist-theme .view-mapa .map-fog-controls button:hover:not(:disabled){background:#363023}
-.mist-theme .view-mapa .map-fog-controls button[aria-pressed=true]{background:#735e32;border-color:#d9b777;color:var(--ink-strong)}
+.mist-theme .view-mapa .map-fog-controls button:hover:not(:disabled){background:var(--rule-soft)}
+.mist-theme .view-mapa .map-fog-controls button[aria-pressed=true]{background:var(--gold-shadow);border-color:var(--gold-bright);color:var(--ink-strong)}
 
 /* Painel Ferramentas 2D: seções recolhíveis com o mesmo cabeçalho. */
 .mist-theme .tool-section{border-bottom:1px solid var(--line)}
@@ -123,8 +123,8 @@ body .note-window .note-text-editor textarea{height:100%;min-height:0}
 .mist-theme .main-content.view-mapa{position:relative}
 .mist-theme .view-mapa .map-messages{position:absolute;right:14px;bottom:14px;z-index:6;display:grid;gap:6px;width:min(560px,calc(100% - 28px));pointer-events:none}
 .mist-theme .view-mapa .map-messages:empty{display:none}
-.mist-theme .view-mapa .map-messages>*{pointer-events:auto;position:relative;inset:auto;top:auto;right:auto;max-width:none;margin:0;background:#1a1915f2;border:1px solid var(--gold-shadow);border-left-width:3px;box-shadow:0 8px 24px #000a}
-.mist-theme .view-mapa .map-messages>.map-draw-error{background:#39231df2;border-color:#c57861}
+.mist-theme .view-mapa .map-messages>*{pointer-events:auto;position:relative;inset:auto;top:auto;right:auto;max-width:none;margin:0;background:color-mix(in srgb,var(--paper-1) 95%,transparent);border:1px solid var(--gold-shadow);border-left-width:3px;box-shadow:0 8px 24px color-mix(in srgb,var(--black) 67%,transparent)}
+.mist-theme .view-mapa .map-messages>.map-draw-error{background:color-mix(in srgb,var(--paper-2) 95%,transparent);border-color:var(--accent)}
 .mist-theme .view-mapa .map-messages .map-route-choice-bar{padding:8px 10px}
 
 /* Mapa mental: "Mais opções" aberto não pode consumir o quadro; o painel rola por dentro. */
@@ -134,7 +134,7 @@ body .note-board-options-content{max-height:170px;overflow:auto}
 .mist-theme .mode-btn{min-height:44px}
 
 /* Aviso de conexão perdida visível em todas as abas. */
-.mist-theme .connection-banner{margin:20px 20px 0;padding:10px 14px;border:1px solid #c57861;border-left-width:4px;background:#39231d;color:#ffe2d5;font-size:var(--fs-small);line-height:1.5}
+.mist-theme .connection-banner{margin:20px 20px 0;padding:10px 14px;border:1px solid var(--accent);border-left-width:4px;background:var(--paper-2);color:var(--ink);font-size:var(--fs-small);line-height:1.5}
 @media(max-width:760px){.mist-theme .connection-banner{margin:14px 14px 0}}
 
 /* Alvos de toque: 44 px nos controles principais e no mínimo 28 px nos controles densos dos dados (item 62). */
@@ -148,5 +148,5 @@ body .note-board-options-content{max-height:170px;overflow:auto}
 }
 
 /* Rolagem privada: etiqueta no histórico e opção do lançador. */
-.mist-theme .roll-private-tag{margin-left:8px;padding:1px 7px;border:1px solid #a65358;color:#f0d7ce;background:#351c1f;font-style:normal;font-size:var(--fs-label);letter-spacing:.06em;text-transform:uppercase}
+.mist-theme .roll-private-tag{margin-left:8px;padding:1px 7px;border:1px solid var(--accent);color:var(--ink);background:var(--wine-deep);font-style:normal;font-size:var(--fs-label);letter-spacing:.06em;text-transform:uppercase}
 .mist-theme .tray-private-option{margin-top:4px}

@@ -13,8 +13,9 @@ Carvão com leve tom frio, papel escuro de tinta quente, ouro envelhecido como a
 | Filetes e bordas | `--rule-soft` #38322a, `--rule` #50473a, `--rule-strong` #74664a, `--line-strong` #4a4133, `--line` (ouro a 22%) |
 | Superfícies neutras | `--surface-0` #0b0c0c, `--surface-1` #121313, `--surface-2` #1a1b1a |
 | Superfícies de papel | `--paper-0` #161412, `--paper-1` #1d1a16, `--paper-2` #2a251f |
-| Alerta | `--red` #6f2a32, `--accent` #a8655f, `--danger-ink` #e8c2bb |
+| Alerta | `--red` #6f2a32, `--accent` #b8736c, `--danger-ink` #e8c2bb |
 | Extremo | `--black` #000000 |
+| Concluído ou válido | `--ok-ink` #b8ccb2 (verde de sálvia, só onde a cor precisa dizer "ok") |
 | Vinho e névoa (apoio) | `--wine-deep` #32141a, `--wine-line` #7a3a42, `--fog` #7a8683, `--fog-deep` #232928 |
 
 Regra de uso: ouro marca o que se pode acionar ou o que está selecionado; filete separa; superfície de papel agrupa. Borda dourada cheia fica para seleção e ação principal.
@@ -45,4 +46,6 @@ Texto corrido fica em no máximo 72 caracteres por linha.
 
 ## Estado da consolidação
 
-Em 2026-10-07: 264 cores literais viraram token quando ficavam a até 2 de diferença perceptual (ΔE) do token, e 147 famílias de fonte viraram `--font-display` ou `--font-body`. Comparação de pixels antes e depois, em 11 telas, deu no máximo 5 a 7 níveis de diferença por canal; a única mudança maior foi a face sorteada do D20. Restam 710 cores literais, a maioria em `workspace.css`, `NoteBoard.css`, `Notebook.css`, `account.css` e `TurnTracker.css`; cada uma tem de ser avaliada, porque muitas são variações isoladas de dourado e de marrom que não cabem em nenhum token sem mudar a aparência. O limite do teste desce quando essas cores migrarem.
+Em 2026-10-07: 264 cores literais viraram token quando ficavam a até 2 de diferença perceptual (ΔE) do token, e 147 famílias de fonte viraram `--font-display` ou `--font-body`.
+
+Em 2026-10-09: o resto migrou. Cada hexadecimal passou ao token mais próximo no espaço Lab (ΔE até 16), com a transparência preservada por `color-mix(in srgb, var(--token) N%, transparent)`. Cinzas azul-esverdeados escuros, que eram fundos e bordas estruturais das notas, viraram `--paper-1` e `--rule`; só os avisos de sucesso ficaram com `--ok-ink`. O bloco `<style>` de 2100 linhas que ficava dentro de `RPGMapExplorer.jsx` virou `src/legacy.css` (sem o `@import` de fontes do Google), passou pelo mesmo caminho e entrou sob a verificação. `--accent` clareou de #a8655f para #b8736c, porque como texto dava 4,4:1 sobre o carvão. O limite do teste caiu de 710 para 0; a única exceção declarada é `components/MapStrokeColor.css`, a roda de cores do traço, cujos hexadecimais são as cores que a pessoa escolhe. Cores em arquivos JavaScript (canvas, exportação do mapa, peles dos dados) seguem literais por serem desenho, não folha de estilo.
