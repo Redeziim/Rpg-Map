@@ -6,6 +6,7 @@ import './workspace.css'
 import './refine.css'
 import './gothic.css'
 import './ShellGothic.css'
+import './themeLight.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

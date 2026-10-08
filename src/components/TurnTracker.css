@@ -1,4 +1,4 @@
-.turn-tracker{--turn-gold:#d6b36b;--turn-line:#56472d;min-width:0;width:100%;padding:10px 14px;border:1px solid var(--turn-line);background:var(--paper-0);color:var(--ink);position:relative}
+.turn-tracker{--turn-gold:var(--gold);--turn-line:var(--line-strong);min-width:0;width:100%;padding:10px 14px;border:1px solid var(--turn-line);background:var(--paper-0);color:var(--ink);position:relative}
 .turn-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .turn-heading-copy{min-width:0}.turn-heading p{margin:0;color:var(--ink-warm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.turn-heading p strong{color:var(--gold-light);font-weight:700}
 .turn-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}

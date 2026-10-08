@@ -1,4 +1,4 @@
-.room-export{--export-ink:#eee7d9;--export-muted:#c1b7a3;--export-rule:#77633e;--export-accent:#dec286;--export-space:16px;margin-top:28px;border-top:2px solid var(--export-rule);color:var(--export-ink);background:var(--paper-1);color-scheme:dark}
+.room-export{--export-ink:var(--ink);--export-muted:var(--muted);--export-rule:var(--gold-shadow);--export-accent:var(--gold-bright);--export-space:16px;margin-top:28px;border-top:2px solid var(--export-rule);color:var(--export-ink);background:var(--paper-1);color-scheme:dark}
 .room-export>summary{display:flex;align-items:center;gap:12px;min-height:52px;padding:12px var(--export-space);cursor:pointer;color:var(--export-accent);font:18px/1.4 var(--font-display);list-style:none}
 .room-export>summary::-webkit-details-marker{display:none}
 .room-export>summary::after{content:'+';margin-left:auto;font:24px/1 Georgia,serif}

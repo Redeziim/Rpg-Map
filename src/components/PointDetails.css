@@ -21,7 +21,7 @@
 .point-details-footer .point-details-save{background:var(--gold-shadow);color:var(--ink-strong)}
 .point-details-header button:hover,.point-details-footer button:hover{background:var(--line-strong);border-color:var(--gold);color:var(--ink-strong)}
 .point-details :focus-visible{outline:2px solid var(--gold-bright);outline-offset:3px}
-.point-details{--point-rule:#655135;--point-ink:#f2eadb;--point-accent:#e2c786}
+.point-details{--point-rule:var(--gold-shadow);--point-ink:var(--ink);--point-accent:var(--gold-light)}
 .point-details-notice{padding:12px;border-left:3px solid var(--point-accent);background:var(--paper-2);color:var(--ink-warm);line-height:1.45;overflow-wrap:anywhere}
 .point-details-notice p{margin:0 0 8px}
 .point-details-notice button,.point-details-review-actions button{min-height:44px;padding:9px 12px;border:1px solid var(--gold-deep);background:var(--paper-2);color:var(--point-ink);font:inherit;cursor:pointer}

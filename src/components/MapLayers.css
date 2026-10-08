@@ -1,4 +1,4 @@
-.mist-theme .map-layers{--layers-paper:#211f19;--layers-ink:#e7d6b1;--layers-edge:#80663d;margin:16px 0;padding:8px 10px;border:1px solid var(--layers-edge);background:var(--layers-paper);color:var(--layers-ink);min-width:0}
+.mist-theme .map-layers{--layers-paper:var(--paper-1);--layers-ink:var(--ink-warm);--layers-edge:var(--gold-shadow);margin:16px 0;padding:8px 10px;border:1px solid var(--layers-edge);background:var(--layers-paper);color:var(--layers-ink);min-width:0}
 .map-layers legend{padding:0 6px;font:600 13px var(--font-display)}
 .mist-theme .map-layers label{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;font:15px var(--font-body)}
 .mist-theme .map-layers input[type=checkbox]{width:18px;height:18px;min-height:18px;accent-color:var(--gold-bright);flex:none}

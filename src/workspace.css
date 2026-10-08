@@ -2,9 +2,9 @@
 .mist-theme.rpg-container {
   --workspace-gap:16px;
   --workspace-pad:20px;
-  --workspace-gold:#d6b36b;
-  --workspace-edge:#56472d;
-  --workspace-hover:#252117;
+  --workspace-gold:var(--gold);
+  --workspace-edge:var(--line-strong);
+  --workspace-hover:var(--paper-2);
   --workspace-font:var(--font-body);
   grid-template-columns:184px minmax(0,1fr);
   font-family:var(--workspace-font);

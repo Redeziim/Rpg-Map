@@ -7,7 +7,7 @@
   --paper-0:#161412;--paper-1:#1d1a16;--paper-2:#2a251f;
   --danger-ink:#e8c2bb;--black:#000000;
   /* Estado concluído ou válido: verde de sálvia, sem saturação, só onde a cor precisa dizer "ok". */
-  --ok-ink:#b8ccb2;
+  --ok-ink:#b8ccb2;--on-red:#f6ecd6;
   /* Vinho e névoa: apoio do ouro. O vinho marca perigo e moldura; a névoa, informação secundária. */
   --wine-deep:#32141a;--wine-line:#7a3a42;--fog:#7a8683;--fog-deep:#232928;
   /* Tipografia */
@@ -85,7 +85,7 @@ body{background:var(--surface-0);color:var(--ink)}
 .mist-theme .dice-term-chip{background:var(--paper-2);color:var(--gold-light)}
 .mist-theme .dice-display-area,.mist-theme .canvas-area{background:var(--surface-0)}
 .mist-theme .dice-type-btn:hover{background:var(--paper-2);border-color:var(--accent)}
-.mist-theme .dice-op-toggle button.active{background:var(--red);color:var(--ink-strong);border-color:var(--accent)}
+.mist-theme .dice-op-toggle button.active{background:var(--red);color:var(--on-red);border-color:var(--accent)}
 .mist-theme .term-remove,.mist-theme .delete-btn,.mist-theme .field-remove-btn,.mist-theme .sheet-field-remove-mini{color:var(--danger-ink);background:var(--wine-deep)}
 .mist-theme .dice-face-value-mini{background:color-mix(in srgb,var(--surface-1) 90%,transparent);color:var(--gold-bright)}
 .mist-theme .dice-history-item strong,.mist-theme .dice-total-line strong{color:var(--gold)}

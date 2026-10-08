@@ -1,4 +1,4 @@
-.note-board{--board-edge:#675c42;--board-gold:#dfbd7c;display:flex;flex-direction:column;flex:1;min-height:320px;color:var(--ink)}
+.note-board{--board-edge:var(--rule-strong);--board-gold:var(--gold-bright);display:flex;flex-direction:column;flex:1;min-height:320px;color:var(--ink)}
 .note-board>*{flex-shrink:0}
 .note-board-options,.note-board-card-details{margin:0 0 8px;border:1px solid var(--rule);background:var(--surface-2);font-size:var(--fs-small)}
 .note-board-options summary,.note-board-card-details summary{box-sizing:border-box;min-height:44px;padding:11px 10px;color:var(--gold-light);cursor:pointer;overflow-wrap:anywhere}

@@ -12,7 +12,7 @@
 .notebook-library-list .note-search input{box-sizing:border-box;width:100%;min-width:0;min-height:44px;padding:8px 10px;border:1px solid var(--rule-strong);border-radius:2px;background:var(--surface-2);color:var(--ink-strong);font:14px var(--font-body)}
 .notebook-library-list .note-search input::placeholder{color:var(--muted)}
 .notebook-library-list p,.notebook-library-list small{font-size:var(--fs-small);color:var(--muted)}
-.note-window{--note-gold:#dbba75;position:fixed;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);display:flex;flex-direction:column;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--rule-strong);box-shadow:0 12px 36px color-mix(in srgb,var(--black) 73%,transparent);color:var(--ink);color-scheme:dark;font:14px/1.45 var(--font-body)}
+.note-window{--note-gold:var(--gold);position:fixed;max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);display:flex;flex-direction:column;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--rule-strong);box-shadow:0 12px 36px color-mix(in srgb,var(--black) 73%,transparent);color:var(--ink);color-scheme:dark;font:14px/1.45 var(--font-body)}
 .note-window:focus-within{border-color:var(--note-gold)}
 .note-window-header{display:flex;align-items:center;background:var(--paper-1);border-bottom:1px solid var(--gold-shadow);padding:4px;gap:4px}
 .note-window-header,.note-window>footer{flex-shrink:0}
@@ -42,7 +42,7 @@
 .note-owner{margin:0 0 8px;color:var(--gold-bright);font-size:var(--fs-small)}
 .note-stale{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px;margin-bottom:12px;border:1px solid var(--gold-deep);background:var(--rule-soft);font-size:var(--fs-small)}
 .note-window .note-stale button{min-height:44px}
-.note-conflict{--conflict-paper:#22261f;--conflict-edge:#756747;--conflict-muted:#c8c0ae;display:grid;gap:14px;margin:0 0 14px;padding:14px;background:var(--conflict-paper);border:1px solid var(--conflict-edge);box-shadow:inset 4px 0 0 var(--note-gold)}
+.note-conflict{--conflict-paper:var(--fog-deep);--conflict-edge:var(--rule-strong);--conflict-muted:var(--muted);display:grid;gap:14px;margin:0 0 14px;padding:14px;background:var(--conflict-paper);border:1px solid var(--conflict-edge);box-shadow:inset 4px 0 0 var(--note-gold)}
 .note-conflict header{display:grid;gap:4px}
 .note-conflict-kicker{font:600 var(--fs-small) var(--font-body);text-transform:uppercase;letter-spacing:.13em;color:var(--note-gold)}
 .note-conflict h2{margin:0;color:var(--gold-light);font:600 20px/1.2 var(--font-display);text-wrap:balance;overflow-wrap:anywhere}
@@ -81,7 +81,7 @@
 .note-window :focus-visible,.notebook-library-list :focus-visible{outline:2px solid var(--note-gold,var(--gold));outline-offset:2px}
 @media(max-width:600px){.note-window input:not([type=checkbox]):not([type=radio]),.note-window textarea{font-size:16px}.note-window .note-dock-toggle span{display:none}.note-window-content{padding:10px}.note-window footer{padding:7px 54px 7px 10px}.note-window.is-docked footer{padding-right:10px}.note-conflict{padding:10px}.note-conflict-columns,.note-conflict-choices{grid-template-columns:minmax(0,1fr)}.mist-theme .session-strip .notebook-library-list{right:auto;left:0}}
 @media(forced-colors:active){.note-window,.note-board-node{border:2px solid CanvasText}.note-window:focus-within{border-color:Highlight}.note-window .note-resize{border:1px solid CanvasText}}
-.note-recovery{--recovery-edge:#756747;--recovery-ink:#eee6d8;padding:10px;border-left:3px solid var(--recovery-edge);background:var(--paper-1);color:var(--recovery-ink);font:14px/1.4 var(--font-body);overflow-wrap:anywhere}
+.note-recovery{--recovery-edge:var(--rule-strong);--recovery-ink:var(--ink);padding:10px;border-left:3px solid var(--recovery-edge);background:var(--paper-1);color:var(--recovery-ink);font:14px/1.4 var(--font-body);overflow-wrap:anywhere}
 .note-recovery h3{margin:0 0 8px;font:600 15px var(--font-display)}
 .note-recovery p{margin:8px 0}
 .note-recovery button{width:100%;margin-top:6px;justify-content:space-between;flex-wrap:wrap}

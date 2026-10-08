@@ -1,4 +1,4 @@
-.room-audit{--audit-ink:#eee7d9;--audit-muted:#c1b7a3;--audit-rule:#77633e;--audit-accent:#dec286;--audit-space:16px;margin-top:32px;border-top:2px solid var(--audit-rule);color:var(--audit-ink);background:var(--paper-1);color-scheme:dark}
+.room-audit{--audit-ink:var(--ink);--audit-muted:var(--muted);--audit-rule:var(--gold-shadow);--audit-accent:var(--gold-bright);--audit-space:16px;margin-top:32px;border-top:2px solid var(--audit-rule);color:var(--audit-ink);background:var(--paper-1);color-scheme:dark}
 .room-audit>summary{display:flex;align-items:center;gap:12px;min-height:52px;padding:12px var(--audit-space);cursor:pointer;color:var(--audit-accent);font:18px/1.4 var(--font-display);list-style:none}
 .room-audit>summary::-webkit-details-marker{display:none}
 .room-audit>summary::after{content:'+';margin-left:auto;font:24px/1 Georgia,serif}

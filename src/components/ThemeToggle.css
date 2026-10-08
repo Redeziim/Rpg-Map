@@ -1,0 +1,5 @@
+/* Seletor de tema. O botão herda o formato do contexto (navegação, cabeçalho da lista de mesas, login); aqui só o estado ligado. */
+.theme-toggle{display:inline-flex;align-items:center;gap:var(--space-2);min-height:var(--target);cursor:pointer;font-family:var(--font-body)}
+.theme-toggle[aria-pressed="true"]{color:var(--gold-light);border-color:var(--gold-shadow)}
+.theme-toggle[aria-pressed="true"] svg{color:var(--gold)}
+.login-theme{display:flex;justify-content:flex-end;margin-bottom:var(--space-4)}

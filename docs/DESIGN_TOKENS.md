@@ -15,6 +15,7 @@ Carvão com leve tom frio, papel escuro de tinta quente, ouro envelhecido como a
 | Superfícies de papel | `--paper-0` #161412, `--paper-1` #1d1a16, `--paper-2` #2a251f |
 | Alerta | `--red` #6f2a32, `--accent` #b8736c, `--danger-ink` #e8c2bb |
 | Extremo | `--black` #000000 |
+| Texto sobre vinho | `--on-red` (marfim claro nos dois temas) |
 | Concluído ou válido | `--ok-ink` #b8ccb2 (verde de sálvia, só onde a cor precisa dizer "ok") |
 | Vinho e névoa (apoio) | `--wine-deep` #32141a, `--wine-line` #7a3a42, `--fog` #7a8683, `--fog-deep` #232928 |
 
@@ -49,3 +50,12 @@ Texto corrido fica em no máximo 72 caracteres por linha.
 Em 2026-10-07: 264 cores literais viraram token quando ficavam a até 2 de diferença perceptual (ΔE) do token, e 147 famílias de fonte viraram `--font-display` ou `--font-body`.
 
 Em 2026-10-09: o resto migrou. Cada hexadecimal passou ao token mais próximo no espaço Lab (ΔE até 16), com a transparência preservada por `color-mix(in srgb, var(--token) N%, transparent)`. Cinzas azul-esverdeados escuros, que eram fundos e bordas estruturais das notas, viraram `--paper-1` e `--rule`; só os avisos de sucesso ficaram com `--ok-ink`. O bloco `<style>` de 2100 linhas que ficava dentro de `RPGMapExplorer.jsx` virou `src/legacy.css` (sem o `@import` de fontes do Google), passou pelo mesmo caminho e entrou sob a verificação. `--accent` clareou de #a8655f para #b8736c, porque como texto dava 4,4:1 sobre o carvão. O limite do teste caiu de 710 para 0; a única exceção declarada é `components/MapStrokeColor.css`, a roda de cores do traço, cujos hexadecimais são as cores que a pessoa escolhe. Cores em arquivos JavaScript (canvas, exportação do mapa, peles dos dados) seguem literais por serem desenho, não folha de estilo.
+
+## Temas
+
+Dois temas, escolhidos no botão "Tema claro" (rodapé da navegação lateral, cabeçalho de "Minhas mesas" e painel de login). O padrão é o sombrio e não escreve atributo; o claro liga `<html data-theme="claro">`. A escolha fica em `localStorage` (`grimorio-tema`), vale só para este navegador e acompanha as outras abas abertas. Um script em `index.html` aplica o tema salvo antes da primeira pintura.
+
+- **Sombrio**: os valores de `:root` em `src/theme.css` (carvão, ouro envelhecido, vinho).
+- **Claro** (`src/themeLight.css`): papel envelhecido (`--surface-0` #e7dec9, `--paper-0` #f3ebd8), tinta marrom (`--ink` #2a2118) e ouro escurecido. Nos tons de ouro, `--gold-light` e `--gold-bright` continuam sendo os mais fortes, o que no claro quer dizer mais escuros. A fumaça de fundo (vídeo com mistura "screen") some no claro.
+- **Regra para código novo**: use só tokens, nunca hexadecimais, e confira o par texto e fundo nos dois temas. `tests/themeLight.test.js` exige que o claro redefina todo token de cor do sombrio e que 13 pares de texto e fundo passem em AA (4,5:1) nos dois.
+- **Fora do tema**: a cena 3D, o desenho do mapa, as peles dos dados e o PNG exportado são conteúdo da campanha e continuam como estão.

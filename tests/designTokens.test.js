@@ -34,8 +34,9 @@ test('literal colors only go down: use a token or add one to docs/DESIGN_TOKENS.
   const BASELINE=0,PALETTE='components/MapStrokeColor.css';
   let literals=0;
   for(const {name,text} of css){
-    if(name===PALETTE)continue;
-    const body=text.replace(/url\([^)]*\)/g,'').replace(/--[a-z0-9-]+\s*:\s*#[0-9a-fA-F]{3,8}\b/g,'');
+    if(name===PALETTE||name==='themeLight.css')continue;
+    // variáveis locais também contam (--note-gold: #hex); só o :root de theme.css e o tema claro declaram cores por valor
+    const body=text.replace(/url\([^)]*\)/g,'').replace(name==='theme.css'?/:root\{[^}]*\}/:/^\b$/,'');
     literals+=(body.match(/#[0-9a-fA-F]{3,8}\b/g)||[]).length;
   }
   assert.ok(literals<=BASELINE,`${literals} cores literais; o limite é ${BASELINE}. Use var(--token).`);

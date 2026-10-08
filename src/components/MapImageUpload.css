@@ -1,4 +1,4 @@
-.map-upload-dialog{--upload-paper:#1c1b17;--upload-ink:#efe5d2;--upload-rule:#76613f;--upload-accent:#e2c786;--upload-preview-height:380px;box-sizing:border-box;width:min(860px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);margin:auto;padding:0;border:1px solid var(--gold-deep);background:var(--upload-paper);color:var(--upload-ink);overscroll-behavior:contain;color-scheme:dark}
+.map-upload-dialog{--upload-paper:var(--paper-1);--upload-ink:var(--ink-strong);--upload-rule:var(--gold-shadow);--upload-accent:var(--gold-light);--upload-preview-height:380px;box-sizing:border-box;width:min(860px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);margin:auto;padding:0;border:1px solid var(--gold-deep);background:var(--upload-paper);color:var(--upload-ink);overscroll-behavior:contain;color-scheme:dark}
 .map-upload-dialog::backdrop{background:color-mix(in srgb,var(--surface-0) 85%,transparent)}
 .map-upload-sheet{font:16px/1.5 var(--font-body)}
 .map-upload-sheet header{position:relative;padding:20px 76px 18px 24px;border-bottom:1px solid var(--upload-rule)}

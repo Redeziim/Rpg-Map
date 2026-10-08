@@ -1,0 +1,18 @@
+/* Tema claro: papel envelhecido, tinta marrom, ouro escurecido. Só redefine tokens; os componentes não mudam.
+   Ativado por <html data-theme="claro"> (src/themePreference.js). Nos tons de ouro, "light" e "bright" continuam sendo os mais fortes:
+   num fundo claro isso significa mais escuros. Cada par de texto e fundo é conferido por tests/themeLight.test.js. */
+:root[data-theme="claro"]{
+  color-scheme:light;
+  --ink:#2a2118;--ink-strong:#17110b;--ink-warm:#3b2f21;--ink-soft:#54442f;--muted:#5d5343;
+  --gold:#6e521a;--gold-light:#5b4210;--gold-bright:#6a4e14;--gold-deep:#735a24;--gold-shadow:#b9a36b;
+  --accent:#8a3a36;--red:#7a2a32;--line:rgba(122,91,28,.34);--line-strong:#b9a679;
+  --surface-0:#e7dec9;--surface-1:#eee6d2;--surface-2:#e0d6bd;
+  --paper-0:#f3ebd8;--paper-1:#ebe1c9;--paper-2:#ddd1b3;
+  --rule-soft:#d9cdad;--rule:#c8b891;--rule-strong:#a89368;
+  --danger-ink:#6e1f27;--black:#2f2314;--ok-ink:#3b5a35;--on-red:#fbf5e6;
+  --wine-deep:#ecd3cd;--wine-line:#a65058;--fog:#6c7875;--fog-deep:#d9ddd5;
+  /* grão escuro sobre o papel claro (o do tema sombrio é branco) */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .25 0 0 0 0 .18 0 0 0 0 .1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
+}
+/* a fumaça de fundo é vídeo com mistura "screen": clareia o escuro e estoura o claro, então some */
+:root[data-theme="claro"] .mist-theme .ambient-fog-video,:root[data-theme="claro"] .mist-theme .ambient-fog-still{display:none}

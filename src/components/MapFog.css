@@ -1,4 +1,4 @@
-.mist-theme .map-fog-controls{--fog-ink:#e7d6b1;--fog-edge:#80663d;min-width:0;margin:16px 0;padding:10px;border:1px solid var(--fog-edge);background:var(--paper-1);color:var(--fog-ink)}
+.mist-theme .map-fog-controls{--fog-ink:var(--ink-warm);--fog-edge:var(--gold-shadow);min-width:0;margin:16px 0;padding:10px;border:1px solid var(--fog-edge);background:var(--paper-1);color:var(--fog-ink)}
 .map-fog-controls legend{padding:0 6px;font:600 13px var(--font-display)}
 .map-fog-controls p{margin:0 0 10px;font:14px/1.4 var(--font-body);color:var(--ink-warm)}
 .mist-theme .map-fog-controls button{min-height:44px;white-space:normal;margin:0 0 8px;width:100%;font:14px var(--font-body);border:1px solid var(--fog-edge)}
