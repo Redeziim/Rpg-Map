@@ -62,6 +62,15 @@
 .mist-theme .notebook-library-list .note-more[open]>summary::after{transform:rotate(-135deg)}
 .mist-theme .notebook-library-list .note-more>summary:focus-visible{outline:var(--focus-ring);outline-offset:calc(var(--focus-offset) * -1)}
 .mist-theme .notebook-library-list .note-more[open]{display:grid;gap:6px}
+/* Janela de nota: uma nota nova abre só com título e texto. "Mapa mental" e "Buscar" ficam como botões discretos à direita;
+   quando a nota já tem um mapa mental, ou ele está aberto, o seletor completo (Texto, Mapa mental, Buscar) volta. */
+.note-window .note-view-switch.is-lite{display:flex;justify-content:flex-end;gap:var(--space-2);grid-template-columns:none}
+.note-window .note-view-switch.is-lite>button[aria-pressed="true"]{display:none}
+.note-window .note-view-switch.is-lite>button{flex:0 0 auto;min-height:var(--target);padding:0 var(--space-3);background:transparent;border-color:transparent;color:var(--ink-soft)}
+.note-window .note-view-switch.is-lite>button:hover{background:var(--paper-2);border-color:var(--rule-strong);color:var(--ink-strong)}
+/* Bandeja de dados da ficha: diz na tela quem vê a rolagem. */
+.mist-theme .tray-option{flex-wrap:wrap}
+.mist-theme .tray-option small{flex:1 0 100%;padding-left:26px;color:var(--muted);font-size:var(--fs-small);line-height:1.35}
 @media(prefers-reduced-motion:reduce){
   .mist-theme .header,.mist-theme .header-controls,.mist-theme .logo>div:last-child{transition:none}
 }

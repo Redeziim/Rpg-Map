@@ -18,9 +18,7 @@ import MapFog,{MapFogOverlay} from './MapFog.jsx';
 import MapMeasurement,{MapGrid,MapRuler,loadMapMeasurementPrefs} from './MapMeasurement.jsx';
 import MapPositions,{MapPositionMarkers} from './MapPositions.jsx';
 import MapImageUpload from './MapImageUpload.jsx';
-import MapExploration,{MapLegendEditor,MapRouteOverlay,MapLegend} from './MapExploration.jsx';
-import MapViewExport from './MapViewExport.jsx';
-import {defaultMapLegend,visibleMapRoutes} from '../shared/mapExploration.js';
+import {defaultMapLegend} from '../shared/mapExploration.js';
 import {readMapImageFile,openMapBitmap} from './mapImagePreparation.js';
 import {fitMapImage,resizedMapPoints} from '../shared/mapImages.js';
 import {canShareMapPosition,visibleMapPositions} from '../shared/mapPositions.js';
@@ -69,14 +67,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [mapViewportSize,setMapViewportSize]=useState({width:0,height:0});
   const [mapImageError,setMapImageError]=useState(false),[mapImageRetry,setMapImageRetry]=useState(0);
   const [imageUpload,setImageUpload]=useState(null);
-  const [routeDraft,setRouteDraft]=useState(null),[routeCursor,setRouteCursor]=useState(null),[legendDraft,setLegendDraft]=useState(null);
-  const explorationPrefsKey=`grimorio-map-exploration-v1:${room.id}:${user.id}`;
-  const [explorationPrefs,setExplorationPrefs]=useState(()=>{try{const stored=JSON.parse(localStorage.getItem(explorationPrefsKey));return {routes:stored?.routes!==false,legend:stored?.legend===true};}catch{return {routes:true,legend:false};}});
-  const changeExplorationPrefs=next=>{setExplorationPrefs(next);try{localStorage.setItem(explorationPrefsKey,JSON.stringify(next));}catch{}};
   const {masterNotes='',mapImage,points:allPoints,mapStrokes=[],mapFog=emptyMapFog(),sheetFields,sheetFont,playerSheets,statusBarsData}=room.state;
   const points=canManageMap2D?allPoints:allPoints.filter(point=>isMapPointRevealed(mapFog,point));
-  const mapLegend=room.state.mapLegend||defaultMapLegend(),mapRoutes=visibleMapRoutes(room.state.mapRoutes,canManageMap2D,mapFog);
-  const displayedRoutes=explorationPrefs.routes?mapRoutes.filter(route=>!route.archived):[];
+  const mapLegend=room.state.mapLegend||defaultMapLegend();
   const mapScale=room.state.mapScale||null,measurementPrefsKey=`grimorio-map-measure-v1:${room.id}:${user.id}`;
   const [measurementPrefs,setMeasurementPrefs]=useState(()=>loadMapMeasurementPrefs(measurementPrefsKey));
   const [measureRecord,setMeasureRecord]=useState(null);
@@ -102,7 +95,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [newPoint,setNewPoint]=useState({x:0,y:0,name:'',description:'',type:'cidade'});
   const [selectedMapTool,setMapTool]=useState('pan'),[strokeColor,setStrokeColor]=useState('#d9b777'),[drawError,setDrawError]=useState(''),[mapBusy,setMapBusy]=useState(false),[markingsShown,setMarkingsShown]=useState(40),[,setHistoryTick]=useState(0);
   useEffect(()=>{if(!drawError||drawError.startsWith('Não foi possível'))return;const timer=setTimeout(()=>setDrawError(''),6000);return()=>clearTimeout(timer);},[drawError]);
-  const mapTool=['reveal','cover'].includes(selectedMapTool)&&(!canManageMap2D||!mapFog.enabled)||selectedMapTool==='position'&&(!canSharePosition||!positionsEnabled)||selectedMapTool==='route'&&(!canManageMap2D||!routeDraft||routeDraft.imageVersion!==room.mapImageVersion)?'pan':selectedMapTool;
+  const mapTool=['reveal','cover'].includes(selectedMapTool)&&(!canManageMap2D||!mapFog.enabled)||selectedMapTool==='position'&&(!canSharePosition||!positionsEnabled)?'pan':selectedMapTool;
   const [scale,setScale]=useState(1);
   const [pointQuery,setPointQuery]=useState(''),[pointType,setPointType]=useState(POINT_TYPE_ALL),[foundPointId,setFoundPointId]=useState(null);
   const [position,setPosition]=useState({x:0,y:0});
@@ -112,7 +105,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const fogGesture=useRef(null),fogPreviewRef=useRef(null),fogStartRef=useRef(null);
   const rulerRef=useRef(null);
   const canvasRef=useRef(null),canvasWrapperRef=useRef(null),mapRef=useRef(null),pointDialogRef=useRef(null),pointNameRef=useRef(null);
-  useEffect(()=>{const warn=event=>{if(routeDraft||legendDraft){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[routeDraft,legendDraft]);
   useEffect(()=>{
     if(!showPointModal){setPointSaveError(false);return;}
     const dialog=pointDialogRef.current,opener=document.activeElement;
@@ -259,21 +251,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
     setDrawError('');setMapTool(tool);
   };
   const beginPositionChoice=()=>{if(!mapCanvasSize.width||mapImageError){setDrawError('Aguarde o mapa terminar de abrir. Se a imagem falhar, use Tentar novamente.');return;}selectMapTool('position');setMap2dToolsOpen(false);canvasRef.current?.focus({preventScroll:true});};
-  const stopRouteChoice=()=>{selectMapTool('pan');setMap2dToolsOpen(true);};
-  const chooseRouteWaypoint=point=>{
-    if(!canManageMap2D||!routeDraft||routeDraft.imageVersion!==room.mapImageVersion)return;
-    if(routeDraft.fields.waypoints.length>=100){setDrawError('A rota atingiu 100 paradas. Volte aos detalhes para remover uma.');return;}
-    const next={x:Math.round(Math.max(0,Math.min(mapCanvasSize.width-1,point.x))),y:Math.round(Math.max(0,Math.min(mapCanvasSize.height-1,point.y)))};
-    if(routeDraft.fields.waypoints.at(-1)?.x===next.x&&routeDraft.fields.waypoints.at(-1)?.y===next.y){setDrawError('Escolha uma parada diferente da anterior.');return;}
-    setRouteCursor(next);setRouteDraft(current=>({...current,fields:{...current.fields,waypoints:[...current.fields.waypoints,next]}}));setDrawError('Parada adicionada à prévia. Volte aos detalhes para salvar a rota.');
-  };
-  const beginRouteChoice=()=>{if(!mapCanvasSize.width||mapImageError){setDrawError('Aguarde o mapa terminar de abrir.');return;}selectMapTool('route');setRouteCursor(routeDraft?.fields.waypoints.at(-1)||{x:Math.floor(mapCanvasSize.width/2),y:Math.floor(mapCanvasSize.height/2)});setMap2dToolsOpen(false);canvasRef.current?.focus({preventScroll:true});};
-  const saveRoute=async draft=>{
-    const result=await mutate(mapRequestPath(`/map-routes${draft.version?'/'+encodeURIComponent(draft.id):''}`),{...draft.fields,name:draft.fields.name.trim(),...(draft.version?{version:draft.version}:{id:draft.id}),imageVersion:draft.imageVersion},draft.version?'PATCH':'POST');
-    if(result){setRouteDraft(null);setRouteCursor(null);selectMapTool('pan');setDrawError('Rota salva na mesa.');}return result;
-  };
-  const archiveRoute=(route,archived)=>mutate(mapRequestPath(`/map-routes/${encodeURIComponent(route.id)}/archive`),{archived,version:room.mapRouteVersions[route.id],imageVersion:room.mapImageVersion},'PATCH');
-  const saveLegend=(legend,version)=>mutate(mapRequestPath('/map-legend'),{legend,version},'PATCH');
   const cancelPositionChoice=()=>{setPositionChoice(null);selectMapTool('pan');};
   const choosePosition=point=>{
     const next={x:Math.round(Math.max(0,Math.min(mapCanvasSize.width-1,point.x))),y:Math.round(Math.max(0,Math.min(mapCanvasSize.height-1,point.y)))};
@@ -335,7 +312,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
     canvas.focus();
     const rect=canvas.getBoundingClientRect();
     const {x,y}=mapCoordinates(e.clientX,e.clientY,rect,mapCanvasSize.width,mapCanvasSize.height);
-    if(mapTool==='route'){chooseRouteWaypoint({x,y});return;}
+    
     if(mapTool==='position'){choosePosition({x,y});return;}
     if(mapTool==='erase'){
       const radius=12*mapCanvasSize.width/rect.width;
@@ -395,13 +372,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
   const handleCanvasKeyDown=e=>{
     if(!mapCanvasSize.width||mapImageError)return;
-    if(mapTool==='route'){
-      if(e.key==='Escape'){e.preventDefault();stopRouteChoice();return;}
-      const cursor=routeCursor||{x:Math.floor(mapCanvasSize.width/2),y:Math.floor(mapCanvasSize.height/2)};
-      if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseRouteWaypoint(cursor);return;}
-      const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
-      if(delta){e.preventDefault();const step=e.shiftKey?5:20;setRouteCursor({x:Math.max(0,Math.min(mapCanvasSize.width-1,cursor.x+delta[0]*step)),y:Math.max(0,Math.min(mapCanvasSize.height-1,cursor.y+delta[1]*step))});return;}
-    }
     if(mapTool==='position'){
       if(e.key==='Escape'){e.preventDefault();cancelPositionChoice();return;}
       if(e.key==='Enter'||e.key===' '){e.preventDefault();if(positionDraft){if(!positionConflict)saveOwnPosition();else setDrawError('Revise sua escolha nas ferramentas antes de compartilhar.');}else choosePosition({x:Math.floor(mapCanvasSize.width/2),y:Math.floor(mapCanvasSize.height/2)});return;}
@@ -454,7 +424,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
     if (e.button !== 0 || !e.isPrimary) return;
     if(!mapCanvasSize.width||mapImageError)return;
     suppressCanvasClick.current=false;
-    if(mapTool==='erase'||mapTool==='position'||mapTool==='route')return;
+    if(mapTool==='erase'||mapTool==='position')return;
     if(mapTool==='measure'){
       const canvas=canvasRef.current,rect=canvas?.getBoundingClientRect();
       if(!rect||e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)return;
@@ -568,7 +538,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
   const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
   const groupEntries=room.groupBars;
-  const instruments=instrumentStatuses({mapImage:!!mapImage,pointCount:points.length,scale,gridVisible:!!measurementPrefs.grid,hasScale:!!mapScale,fogEnabled:!!mapFog.enabled,positionsEnabled:!!positionsEnabled,routeCount:mapRoutes.length,legendVisible:!!explorationPrefs.legend,strokeCount:readableStrokes.length,mapTool,routeDraft:!!routeDraft}),inUse=activeInstruments(instruments);
+  const instruments=instrumentStatuses({mapImage:!!mapImage,pointCount:points.length,scale,gridVisible:!!measurementPrefs.grid,hasScale:!!mapScale,fogEnabled:!!mapFog.enabled,positionsEnabled:!!positionsEnabled,strokeCount:readableStrokes.length,mapTool}),inUse=activeInstruments(instruments);
   return (
     <div className={`rpg-container mist-theme ${activeTab==='mapa'&&mapFocus?'map-focus':''}`}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -591,7 +561,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             </div>
           </div>
         </div>
-        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-pressed={activeTab==='mesa'} onClick={()=>setActiveTab('mesa')}><Users size={18}/>Mesa</button>
+        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-pressed={activeTab==='mesa'} onClick={()=>setActiveTab('mesa')}><Users size={18}/><span className="tab-label-full">Participantes</span><span className="tab-label-short">Pessoas</span></button>
           <button
             className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
             aria-pressed={activeTab === 'mapa'}
@@ -640,8 +610,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
               <button type="button" onClick={()=>applyStrokeHistory('redo')} disabled={mapBusy||!canApplyStrokeHistory('redo')} title="Ctrl+Shift+Z"><Redo2 size={16} aria-hidden="true"/>Refazer</button>
             </div>}
             <div className="map-messages">
-            {mapMode==='2d'&&mapImage&&mapTool!=='pan'&&<p className="map-draw-help">{mapTool==='route'?'Clique ou toque para marcar paradas. Enter adiciona, setas movem e Escape volta aos detalhes. A rota só será publicada ao salvar.':mapTool==='position'?'Escolha no mapa e use Compartilhar posição nas ferramentas. Pelo teclado: Enter inicia, setas escolhem, Enter compartilha e Escape cancela.':mapTool==='measure'?'Arraste ou toque em dois pontos para medir. Enter inicia, setas movem o destino, Alt+setas movem o trecho, Enter fixa e Esc limpa.':['reveal','cover'].includes(mapTool)?`Arraste para ${mapTool==='reveal'?'revelar':'cobrir'} uma área · Teclado: foque o mapa, Enter inicia, setas ajustam, Enter salva e Esc cancela.`:mapTool==='draw'?'Arraste para desenhar · Teclado: foque o mapa, Enter inicia e salva, setas traçam, Esc cancela. Ctrl+Z desfaz · Ctrl+Shift+Z refaz.':'Clique ou toque num traço para apagá-lo. Cada jogador apaga os próprios traços; o mestre pode apagar todos. Ctrl+Z desfaz · Ctrl+Shift+Z refaz.'}</p>}
-            {mapMode==='2d'&&mapTool==='route'&&<div className="map-route-choice-bar"><span>{routeDraft.fields.waypoints.length} paradas na prévia</span><button type="button" onClick={stopRouteChoice}>Voltar aos detalhes da rota</button></div>}
+            {mapMode==='2d'&&mapImage&&mapTool!=='pan'&&<p className="map-draw-help">{mapTool==='position'?'Escolha no mapa e use Compartilhar posição nas ferramentas. Pelo teclado: Enter inicia, setas escolhem, Enter compartilha e Escape cancela.':mapTool==='measure'?'Arraste ou toque em dois pontos para medir. Enter inicia, setas movem o destino, Alt+setas movem o trecho, Enter fixa e Esc limpa.':['reveal','cover'].includes(mapTool)?`Arraste para ${mapTool==='reveal'?'revelar':'cobrir'} uma área · Teclado: foque o mapa, Enter inicia, setas ajustam, Enter salva e Esc cancela.`:mapTool==='draw'?'Arraste para desenhar · Teclado: foque o mapa, Enter inicia e salva, setas traçam, Esc cancela. Ctrl+Z desfaz · Ctrl+Shift+Z refaz.':'Clique ou toque num traço para apagá-lo. Cada jogador apaga os próprios traços; o mestre pode apagar todos. Ctrl+Z desfaz · Ctrl+Shift+Z refaz.'}</p>}
             {drawError&&<p className={drawError.startsWith('Não foi possível')?'map-draw-error':'map-draw-notice'} role="status">{drawError}</p>}
             {mapMode==='2d'&&mapTool==='position'&&<div className="map-position-actions" role="group" aria-label="Sua posição no mapa">{positionConflict&&<p role="alert">{positionConflict}</p>}{positionCovered&&<p role="alert">A escolha está em uma área oculta. Mova para uma área revelada.</p>}{positionDraft&&<button type="button" disabled={mapBusy||saving||!!positionConflict||positionCovered} onClick={()=>saveOwnPosition()}>Compartilhar posição</button>}{positionConflict&&<button type="button" onClick={()=>setMap2dToolsOpen(true)}>Abrir revisão da posição</button>}<button type="button" disabled={mapBusy||saving} onClick={cancelPositionChoice}>Cancelar escolha</button></div>}
             {mapMode==='2d'&&mapImageError&&<p className="map-draw-error" role="alert">{mapImageError} <button type="button" onClick={()=>setMapImageRetry(value=>value+1)}>Tentar novamente</button></p>}
@@ -675,17 +644,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
               {canManageMap2D&&<ToolSection id="imagem" title="Imagem do mapa" icon={<Upload size={16} aria-hidden="true"/>} status={instruments.imagem.status}>
                 <label className="upload-btn"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleImageUpload} disabled={saving||!!imageUpload} aria-label={mapImage?'Trocar imagem':'Selecionar imagem'}/>{mapImage?'Trocar imagem':'Selecionar imagem'}</label>
               </ToolSection>}
-              <details className="tools-more" open={moreToolsOpen||mapTool==='position'||mapTool==='route'||!!routeDraft||!!legendDraft} onToggle={event=>setMoreToolsOpen(event.currentTarget.open)}><summary>Mais ferramentas<small>posições, rotas, legenda, exportar e traços</small></summary>
+              <details className="tools-more" open={moreToolsOpen||mapTool==='position'} onToggle={event=>setMoreToolsOpen(event.currentTarget.open)}><summary>Mais ferramentas<small>posições dos jogadores e traços</small></summary>
               <ToolSection id="posicoes" status={instruments.posicoes.status} active={instruments.posicoes.active} title="Posições dos jogadores" icon={<Users size={16} aria-hidden="true"/>} forceOpen={mapTool==='position'}><MapPositions key={room.mapPositionSettingsVersion} enabled={positionsEnabled} canManage={canManageMap2D} canShare={canSharePosition} hasOwn={room.hasOwnMapPosition} markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} conflict={positionConflict} covered={positionCovered} onEnable={changePositionSettings} onChoose={beginPositionChoice} onShare={()=>saveOwnPosition()} onClear={()=>saveOwnPosition(null,room.ownMapPositionVersion,room.mapPositionSettingsVersion)} onCancel={cancelPositionChoice} onRebase={()=>setPositionChoice(current=>({...current,version:room.ownMapPositionVersion,settingsVersion:room.mapPositionSettingsVersion}))} tool={mapTool} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
-              <ToolSection id="rotas" status={instruments.rotas.status} active={instruments.rotas.active} title="Rotas de exploração" icon={<RouteIcon size={16} aria-hidden="true"/>} forceOpen={!!routeDraft}><MapExploration routes={mapRoutes} versions={room.mapRouteVersions||{}} imageVersion={room.mapImageVersion} scale={mapScale} canManage={canManageMap2D} draft={routeDraft} onDraft={setRouteDraft} onChoose={beginRouteChoice} choosing={mapTool==='route'} onStop={stopRouteChoice} onSave={saveRoute} onArchive={archiveRoute} busy={mapBusy||saving} hasImage={!!mapImage} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} error={error}/></ToolSection>
-              <ToolSection id="legenda" status={instruments.legenda.status} active={instruments.legenda.active} title="Legenda do mapa" icon={<TagIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLegendEditor legend={mapLegend} version={room.mapLegendVersion} canManage={canManageMap2D} onSave={saveLegend} busy={mapBusy||saving} prefs={explorationPrefs} onPrefs={changeExplorationPrefs} draft={legendDraft} onDraft={setLegendDraft}/></ToolSection>
-              <ToolSection id="exportar" status={instruments.exportar.status} active={instruments.exportar.active} title="Exportar vista" icon={<DownloadIcon size={16} aria-hidden="true"/>}><MapViewExport ready={!!mapImage&&!!mapCanvasSize.width&&!mapImageError} master={canManageMap2D} capture={()=>({
-                canvas:canvasRef.current,viewport:canvasWrapperRef.current,dimensions:mapCanvasSize,points,
-                pointLabels:Object.fromEntries(points.map(point=>[point.id,pointLinkLabel(pointLinks.get(point.id))])),
-                legend:mapLegend,showLegend:explorationPrefs.legend,strokes:displayedStrokes,routes:displayedRoutes,
-                fog:mapFog,master:canManageMap2D,markers:playerMarkers,members:room.members,userId:user.id,scale:mapScale,
-                grid:measurementPrefs.grid,measurement,screenRatio:mapFit*scale,markerUnit,roomName:room.name
-              })}/></ToolSection>
               <ToolSection id="tracos" status={instruments.tracos.status} active={instruments.tracos.active} title="Mostrar traços" icon={<LayersIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLayers strokes={readableStrokes} username={user.username} settings={layerSettings} onChange={changeLayerSettings}/></ToolSection>
               {!!readableStrokes.length&&<details className="map-markings"><summary>Traços do mapa ({readableStrokes.length})</summary><ol>{readableStrokes.slice(-markingsShown).map((stroke,visibleIndex)=>{const index=readableStrokes.length-Math.min(markingsShown,readableStrokes.length)+visibleIndex;return <li key={stroke.id}><span>Traço {index+1} · {stroke.author}{strokeVisibility(stroke)==='master'?' · Só mestres':''}{!displayedStrokes.includes(stroke)?' · Oculto nesta visão':''}</span>{canEraseStroke(stroke)&&<button type="button" onClick={()=>eraseStroke(stroke)} disabled={mapBusy} aria-label={`Apagar traço ${index+1} de ${stroke.author}`}>Apagar</button>}{canManageMap2D&&<label className="map-marking-audience">Visibilidade do traço {index+1}<select name={`map-marking-audience-${stroke.id}`} autoComplete="off" value={strokeVisibility(stroke)} disabled={mapBusy} onChange={event=>changeStrokeVisibility(stroke,event.target.value)}><option value="table">Todos</option><option value="master">Só mestres</option></select></label>}</li>;})}</ol>{readableStrokes.length>markingsShown&&<button type="button" className="map-markings-more" onClick={()=>setMarkingsShown(count=>count+40)}>Mostrar traços anteriores</button>}</details>}
               </details>
@@ -711,13 +671,13 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                   onPointerCancel={handleMapPointerEnd}
                   onPointerLeave={handleMapPointerEnd}
                 >
-                  <div className="map-artwork" style={{width:mapCanvasSize.width*mapFit||undefined,height:mapCanvasSize.height*mapFit||undefined,transform:`translate(${position.x}px, ${position.y}px) scale(${scale})`,cursor:['draw','reveal','cover','measure','position','route'].includes(mapTool)?'crosshair':mapTool==='erase'?'cell':dragging?'grabbing':'grab'}}>
+                  <div className="map-artwork" style={{width:mapCanvasSize.width*mapFit||undefined,height:mapCanvasSize.height*mapFit||undefined,transform:`translate(${position.x}px, ${position.y}px) scale(${scale})`,cursor:['draw','reveal','cover','measure','position'].includes(mapTool)?'crosshair':mapTool==='erase'?'cell':dragging?'grabbing':'grab'}}>
                   <canvas
                     ref={canvasRef}
                     className="map-canvas"
                     tabIndex={0}
                     role="group"
-                    aria-label={mapTool==='route'?'Mapa 2D para escolher paradas da rota. Enter adiciona, setas movem, Escape volta aos detalhes.':mapTool==='position'?'Mapa 2D para escolher sua posição. Enter inicia, setas escolhem, Enter compartilha e Escape cancela.':mapTool==='measure'?'Mapa 2D para medir distância. Arraste ou toque em dois pontos. Enter inicia, setas movem o destino, Alt+setas movem o trecho, Enter fixa e Escape limpa.':['reveal','cover'].includes(mapTool)?`Mapa 2D para ${mapTool==='reveal'?'revelar':'cobrir'} áreas. Enter inicia ou salva; setas ajustam; Escape cancela.`:mapTool==='draw'?'Mapa 2D para desenho. Enter inicia ou salva um traço; setas desenham; Escape cancela.':mapTool==='erase'?'Mapa 2D para apagar traços. Clique ou toque num traço, ou use a lista de traços nas ferramentas.':'Mapa 2D. Setas movem, mais e menos ajustam zoom, Home centraliza. Abra pontos na lista das ferramentas.'}
+                    aria-label={mapTool==='position'?'Mapa 2D para escolher sua posição. Enter inicia, setas escolhem, Enter compartilha e Escape cancela.':mapTool==='measure'?'Mapa 2D para medir distância. Arraste ou toque em dois pontos. Enter inicia, setas movem o destino, Alt+setas movem o trecho, Enter fixa e Escape limpa.':['reveal','cover'].includes(mapTool)?`Mapa 2D para ${mapTool==='reveal'?'revelar':'cobrir'} áreas. Enter inicia ou salva; setas ajustam; Escape cancela.`:mapTool==='draw'?'Mapa 2D para desenho. Enter inicia ou salva um traço; setas desenham; Escape cancela.':mapTool==='erase'?'Mapa 2D para apagar traços. Clique ou toque num traço, ou use a lista de traços nas ferramentas.':'Mapa 2D. Setas movem, mais e menos ajustam zoom, Home centraliza. Abra pontos na lista das ferramentas.'}
                     onClick={handleCanvasClick}
                     onKeyDown={handleCanvasKeyDown}
                     style={{
@@ -729,7 +689,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                     <MapFogOverlay fog={mapFog} master={canManageMap2D} id={`map-fog-${room.id}`}/>
                     <g fill="none" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">{displayedStrokes.map(stroke=><path key={stroke.id} data-stroke-id={stroke.id} d={stroke.path} stroke={stroke.color}/>)}</g>
                     <path ref={strokePreviewRef} fill="none" stroke={strokeColor} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-                    <MapRouteOverlay routes={displayedRoutes} draft={canManageMap2D&&routeDraft?.imageVersion===room.mapImageVersion?routeDraft:null} cursor={mapTool==='route'?routeCursor:null} screenRatio={mapFit*scale} scale={mapScale}/>
                     <g className="map-point-markers">{points.map(point=>{const type=pointTypes.find(item=>item.value===point.type),label=pointLinkLabel(pointLinks.get(point.id));return <g key={point.id} data-point-id={point.id} className={foundPointId===point.id?'is-found':pointFilterIds&&!pointFilterIds.has(point.id)?'is-dimmed':undefined} transform={`translate(${point.x} ${point.y}) scale(${markerUnit})`}><circle r="12" fill={type?.color||'#c7ab76'} stroke="#fff1cf" strokeWidth="2"/><text x="0" y="-21" textAnchor="middle">{point.name.length>28?point.name.slice(0,27)+'…':point.name}</text>{label&&<g className="map-point-link-badge"><rect x="18" y="-9" width={label.length*6.5+12} height="22"/><text x="24" y="6">{label}</text></g>}</g>;})}</g>
                     <MapPositionMarkers markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} screenRatio={mapFit*scale}/>
                     <rect ref={fogPreviewRef} visibility="hidden" fill={mapTool==='cover'?'#a84d51':'#d9b777'} fillOpacity=".2" stroke={mapTool==='cover'?'#eea4a7':'#f0d391'} strokeWidth="2" strokeDasharray="8 5" vectorEffect="non-scaling-stroke"/>
@@ -737,7 +696,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                     <MapRuler key={room.mapImageVersion} ref={rulerRef} measurement={measurement} onChange={changeMeasurement} onNotice={setDrawError} scale={mapScale} dimensions={mapCanvasSize} screenRatio={mapFit*scale} fog={mapFog} canManage={canManageMap2D}/>
                   </svg>
                   </div>
-                  {explorationPrefs.legend&&<MapLegend legend={mapLegend}/>}
                   {mapScale&&<div className="map-scale-caption">{measurementPrefs.grid?`${formatDistance(mapScale.cellDistance*gridStride(mapScale,mapFit*scale),mapScale.unit)} por quadrado`:`Régua em ${mapScale.unit} · linha reta`}</div>}
                 </div>
               )}

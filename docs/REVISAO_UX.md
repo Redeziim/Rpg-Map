@@ -19,11 +19,22 @@ Feita em 2026-10-08, a pedido do usuário: achar o que é redundante ou pesado, 
 
 - **Barra lateral só de ícones** (`src/CompactShell.css`). Ocupa 64 px; ao passar o mouse ou navegar por teclado abre para 220 px, por cima do conteúdo, sem empurrá-lo. Depois de clicar, fecha quando o mouse sai (o foco do mouse não a mantém aberta, só o do teclado). Abaixo de 761 px a navegação continua em grade no topo.
 - **Faixa de cima compacta**: turnos numa linha e os três cadernos como botões pequenos; a contagem de notas só aparece quando há notas. De cerca de 135 px para cerca de 58 px.
-- **Ferramentas do mapa**: ficam à vista Pontos, Controles e zoom, Grade e régua, Névoa de guerra e Imagem do mapa. Posições, Rotas, Legenda, Exportar e Traços vão para "Mais ferramentas", que abre sozinho quando uma delas está em uso. A lista de traços entrou no mesmo grupo e o texto de ajuda caiu de cinco parágrafos para três linhas.
+- **Ferramentas do mapa**: ficam à vista Pontos, Controles e zoom, Grade e régua, Névoa de guerra e Imagem do mapa. Posições e Traços vão para "Mais ferramentas", que abre sozinho quando uma delas está em uso (as outras três foram removidas, ver abaixo). A lista de traços entrou no mesmo grupo e o texto de ajuda caiu de cinco parágrafos para três linhas.
 - **Notas**: "Recuperar rascunhos" e "Reunir janelas" foram para "Mais opções" dentro do menu de cada caderno. Nada foi removido.
 
 Nenhuma função foi apagada. Tudo continua acessível, só menos à vista.
 
-## Decisões em aberto
+## Decisões do usuário (2026-10-08) e o que foi feito com elas
 
-Estão no relatório da sessão: quais ferramentas do mapa tirar de vez, o que fazer com o Mapa mental, as duas bandejas de dados e o nome da aba "Mesa".
+| Pergunta | Resposta | Resultado |
+| --- | --- | --- |
+| Ferramentas do mapa a remover | Rotas de exploração, Legenda do mapa e Exportar vista. Ficam Posições dos jogadores e Traços. | Interface removida: seções do painel, desenho das rotas e da legenda sobre o mapa, modo "rota" do mapa, aviso de saída e os arquivos `MapExploration.jsx/.css` e `MapViewExport.jsx/.css`, `mapViewExport.js`. |
+| Mapa mental nas notas | Manter, mas escondido | Nota nova abre só com título e texto; "Mapa mental" e "Buscar" viram botões discretos. Se a nota já tem um mapa mental, ou ele está aberto, o seletor completo volta. |
+| Duas bandejas de dados | Manter as duas | A diferença está escrita: a da ficha diz quem vê a rolagem ("Sem marcar, só você e o ADM veem. Marque para todos verem.") e a da mesa diz "Todos na mesa veem os dados rolarem aqui." |
+| Nome da aba "Mesa" | Participantes | Renomeada (no celular aparece "Pessoas"). |
+
+## O que ficou de fora de propósito
+
+- **Servidor e dados das rotas e da legenda**: rotas de mapa (`/map-routes`), legenda (`/map-legend`), seus campos no estado da mesa, na exportação e na restauração continuam, com os testes. Mesas que já tinham rotas ou legenda não perdem os dados; só deixam de ser mostradas e editadas. A legenda ainda define o nome e a cor de cada tipo de ponto (`mapLegend` em `RPGMapExplorer.jsx`), por isso ela continua sendo lida. Tirar o servidor é uma segunda etapa, com migração, se um dia valer a pena.
+- **Escolha de resolução ao enviar o mapa** ("Mais leve" ou "Mais detalhe"): não alterado; pode ficar atrás de "Opções" se atrapalhar.
+- **Janela de nota**: histórico, compartilhar, exportar e lixeira continuam na janela. Se ainda parecer pesado, o próximo passo é juntar esses quatro num menu único.

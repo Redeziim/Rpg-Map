@@ -143,7 +143,7 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
         ))}
       </div>
 
-      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja</label>}
+      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja da mesa<small>Sem marcar, só você e o ADM veem a rolagem. Marque para todos verem.</small></label>}
       {onTrayRoll&&useTray&&<label className="tray-option tray-private-option"><input type="checkbox" checked={privateRoll} disabled={rolling||trayBusy} onChange={e=>setPrivateRoll(e.target.checked)}/>Rolagem privada · só você e o ADM veem o resultado e o histórico</label>}
       {!useTray&&<div className="dice-display-area">
         {terms.length === 0 ? (
