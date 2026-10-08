@@ -29,6 +29,28 @@ export function evaluateFormula(formula,numbers){
   }catch{return 'erro';}
 }
 
+// Pareia cada atributo com a fórmula do seu modificador ("Mod. Força" -> "Força"; "Modificador de Destreza" -> "Destreza"), para a ficha
+// mostrar os dois no mesmo cartão. Devolve mods (id do atributo -> campo de fórmula) e hidden (ids de fórmula que já aparecem no cartão).
+const MODIFIER_LABEL=/^(?:mod\.?|modificador)(?:\s+de)?\s+(.+)$/i;
+export function pairModifiers(fields){
+  const mods=new Map(),hidden=new Set();
+  for(const field of fields){
+    if(field.type!=='formula')continue;
+    const match=MODIFIER_LABEL.exec(String(field.label||'').trim());
+    if(!match)continue;
+    const base=fields.find(other=>other.type==='number'&&!mods.has(other.id)&&String(other.label||'').trim().toLowerCase()===match[1].trim().toLowerCase());
+    if(base){mods.set(base.id,field);hidden.add(field.id);}
+  }
+  return {mods,hidden};
+}
+// "+2", "−1" (sinal de menos de verdade), "+0". Sem valor no atributo ou erro na fórmula, não inventa número: mostra "—".
+export function formatModifier(result,hasScore){
+  if(typeof result!=='number'||!hasScore)return '—';
+  return `${result<0?'−':'+'}${Math.abs(result)}`;
+}
+// Categoria só de números e com muitos campos (perícias, salvaguardas): a ficha mostra como lista compacta em colunas.
+export const isCompactCategory=fields=>fields.length>=5&&fields.every(field=>field.type==='number');
+
 // Computes every formula field, following references between formulas. A cycle or a broken formula yields 'erro',
 // and any formula that depends on it does too. Returns Map(field id -> number | 'erro' | null).
 export function resolveFormulas(fields,values={}){

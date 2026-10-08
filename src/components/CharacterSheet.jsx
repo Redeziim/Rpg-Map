@@ -4,8 +4,11 @@ import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 import { SHEET_SYSTEMS, buildSystemFields } from '../shared/sheetTemplates.js';
+import { pairModifiers, formatModifier, isCompactCategory } from '../shared/sheetFormulas.js';
 import './SheetGothic.css';
 const SheetImport = lazy(() => import('./SheetImport.jsx'));
+// Neste arquivo "Map" é o ícone do lucide-react; por isso o par vazio vem da própria função em vez de `new Map()`.
+const NO_PAIRS = pairModifiers([]);
 
 const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote, onShareNote, notebookMembers=[], notebookUsername='', mapPoints=[], onOpenPoint,openNoteRequest,roomId }) => {
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -135,7 +138,8 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   // Nomes de abas já usados em qualquer campo (base ou extra) — sugestões para o datalist
   const allTabNames = Array.from(new Set(allFieldsForFormulas.map(f => f.tab).filter(Boolean)));
 
-  const renderField = (f) => (
+  // modField: fórmula do modificador pareada com este atributo (ver pairModifiers); aparece dentro do mesmo cartão.
+  const renderField = (f, modField = null) => (
     <fieldset disabled={readOnly} key={f.id} className={`sheet-field sheet-field-${f.type}`}>
       <div className="sheet-field-label-row">
         <label htmlFor={`field-${f.id}`} style={{ fontFamily }}>{f.label}</label>
@@ -152,6 +156,11 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
       {f.type === 'number' && (
         <input id={`field-${f.id}`} type="number" value={draftValues[f.id] ?? ''} onChange={e => setValue(f.id, e.target.value)} placeholder="0" />
       )}
+      {f.type === 'number' && modField && (() => {
+        const raw = draftValues[f.id], hasScore = raw !== undefined && raw !== null && raw !== '';
+        const result = formulaResults.get(modField.id), text = formatModifier(result, hasScore);
+        return <div className="attribute-mod" title={modField.label}><span className="attribute-mod-name" aria-hidden="true">mod.</span><strong className={`attribute-mod-value${hasScore && typeof result === 'number' && result < 0 ? ' is-negative' : ''}`} aria-label={`${modField.label}: ${text === '—' ? 'sem valor' : text}`}>{text}</strong></div>;
+      })()}
       {f.type === 'textarea' && (
         <textarea id={`field-${f.id}`} value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui…" rows={4} />
       )}
@@ -357,10 +366,10 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
             <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : saveStatus==='error' ? 'Falha ao salvar' : 'Sua ficha'}</span></div>
             {!readOnly && categories.length > 0 && <Suspense fallback={null}><SheetImport fields={[...sheetFields, ...extraFields]} currentValues={draftValues} disabled={saveStatus === 'saving'} onApply={values => onUpdatePlayerSheet(activePlayer, { values })} /></Suspense>}
             {!categories.length && <div className="empty-state sheet-empty"><ScrollText size={36} /><h3>O modelo ainda está em branco</h3><p>{isMaster ? 'Adicione campos no modelo da campanha acima.' : 'O mestre irá definir os campos da campanha. Você já pode registrar observações abaixo.'}</p></div>}
-            <div className="category-layout">{categories.map((category,i) => <section key={category} className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''}`}>
+            <div className="category-layout">{categories.map((category,i) => { const categoryFields=[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category), pairs=category==='Atributos' ? pairModifiers(categoryFields) : NO_PAIRS; return <section key={category} className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''} ${category!=='Atributos' && isCompactCategory(categoryFields) ? 'compact-category' : ''}`}>
               <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
-              <div className="sheet-fields-grid">{[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category).map(f => renderField(f))}</div>
-            </section>)}</div>
+              <div className="sheet-fields-grid">{categoryFields.filter(f => !pairs.hidden.has(f.id)).map(f => renderField(f, pairs.mods.get(f.id)))}</div>
+            </section>; })}</div>
             <p className="sheet-notes-help">{activePlayer===notebookUsername?'Crie e abra suas anotações em Minhas notas, na faixa acima.':'As notas pessoais são privadas. Notas compartilhadas com você aparecem na faixa acima.'}</p>
           </>}
         </div>

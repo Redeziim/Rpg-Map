@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {evaluateFormula,resolveFormulas,toNumber} from '../src/shared/sheetFormulas.js';
+import {evaluateFormula,formatModifier,isCompactCategory,pairModifiers,resolveFormulas,toNumber} from '../src/shared/sheetFormulas.js';
 import {FIELD_ALIASES,SHEET_SYSTEMS,baseLabel,buildSystemFields} from '../src/shared/sheetTemplates.js';
 
 let counter=0;const makeId=()=>`f_${++counter}`;
@@ -89,4 +89,31 @@ test('D&D 5e has six abilities, six saving throws and the 18 skills, each with i
 test('every alias belongs to a field that some template actually has',()=>{
   const labels=new Set(SHEET_SYSTEMS.flatMap(system=>model(system.id).map(field=>baseLabel(field.label))));
   for(const key of FIELD_ALIASES.keys())assert.ok(labels.has(key),`apelido sem campo: ${key}`);
+});
+test('sheet layout: each D&D ability is paired with its modifier, and Ordem has nothing to pair',()=>{
+  const dnd=model('dnd5e').filter(field=>field.tab==='Atributos'),pairs=pairModifiers(dnd);
+  assert.equal(pairs.mods.size,6);assert.equal(pairs.hidden.size,6);
+  for(const [id,mod] of pairs.mods){const ability=dnd.find(field=>field.id===id);assert.equal(mod.label,`Mod. ${ability.label}`);assert.equal(ability.type,'number');}
+  const ordem=model('ordem').filter(field=>field.tab==='Atributos');
+  assert.equal(pairModifiers(ordem).mods.size,0);assert.equal(ordem.length,5);
+  // um modificador sem o atributo correspondente continua sendo um campo comum
+  assert.equal(pairModifiers([{id:'m',type:'formula',label:'Mod. Sorte',formula:'1'}]).mods.size,0);
+  // "Modificador de X" também vale, e um atributo só ganha um modificador
+  const loose=[{id:'a',type:'number',label:'Destreza'},{id:'m1',type:'formula',label:'Modificador de Destreza'},{id:'m2',type:'formula',label:'Mod. Destreza'}];
+  assert.equal(pairModifiers(loose).mods.get('a').id,'m1');assert.deepEqual([...pairModifiers(loose).hidden],['m1']);
+});
+
+test('sheet layout: modifiers are signed with a real minus and never invent a number without a score',()=>{
+  assert.equal(formatModifier(2,true),'+2');assert.equal(formatModifier(0,true),'+0');assert.equal(formatModifier(-1,true),'\u22121');
+  assert.equal(formatModifier(-5,false),'\u2014');assert.equal(formatModifier('erro',true),'\u2014');assert.equal(formatModifier(null,true),'\u2014');
+});
+
+test('sheet layout: long number-only categories are compact lists, mixed or short ones are not',()=>{
+  const tabs=system=>Object.groupBy(model(system),field=>field.tab);
+  const dnd=tabs('dnd5e');
+  assert.equal(isCompactCategory(dnd['Perícias']),true);assert.equal(dnd['Perícias'].length,18);
+  assert.equal(isCompactCategory(dnd['Salvaguardas']),true);
+  assert.equal(isCompactCategory(dnd['Combate']),false);
+  assert.equal(isCompactCategory(tabs('ordem')['Perícias']),true);assert.equal(isCompactCategory(tabs('ordem')['Recursos']),false);
+  assert.equal(isCompactCategory([{type:'number'},{type:'number'}]),false);
 });

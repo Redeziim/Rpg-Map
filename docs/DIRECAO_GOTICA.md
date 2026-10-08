@@ -30,6 +30,19 @@ Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de 
 | Ficha de personagem (piloto) | `src/components/SheetGothic.css` |
 | Fontes carregadas | `index.html` (Cormorant Garamond, Grenze Gotisch) |
 
+## Segunda rodada (2026-10-09): contraste, molduras e ficha adaptativa
+
+Pedido: mais contraste, molduras e bordas mais trabalhadas, e atributos que não pareçam quebrados (vários "−5" e texto minúsculo).
+
+- **Contraste.** Bordas, filetes e texto secundário ficaram mais claros: `--rule` #50473a, `--rule-strong` #74664a, `--gold-deep` #a38b55, `--muted` #b4aea3. A checagem automática de contraste (axe, WCAG AA) continua sem violações.
+- **Molduras.** A ficha tem moldura dupla (borda e fio interno a 5 px), cantos grossos em L, cartões de seção com borda firme e losangos dourados nos cantos de cima, e retrato com anel duplo.
+- **A ficha se adapta ao modelo** (`src/shared/sheetFormulas.js`):
+  - `pairModifiers` junta cada atributo ao seu modificador ("Mod. Força" ou "Modificador de Força") no mesmo cartão. Seis cartões grandes, três por linha, no lugar de doze blocos de 75 px.
+  - `formatModifier` mostra o sinal com um menos de verdade (+2, −1, +0). Se o atributo está vazio, mostra "—" em vez de −5.
+  - `isCompactCategory`: categoria de 5 ou mais campos, todos numéricos (perícias, salvaguardas), vira lista compacta em colunas, com o nome à esquerda e o valor à direita.
+  - Ordem Paranormal, com cinco atributos sem modificador, usa os mesmos cartões grandes, sem a faixa de modificador.
+- **Armadilha.** Em `CharacterSheet.jsx`, `Map` é o ícone do lucide-react e esconde o `Map` do JavaScript. Não use `new Map()` ali.
+
 ## Decisões que valem lembrar
 
 - **Algarismos alinhados.** A Cormorant usa números "antigos" por padrão (o 0 parece um o). Valores de jogo exigem algarismos alinhados, então `font-feature-settings:"lnum"` é forçado em todo o tema (o atalho `font:` de vários componentes zera o herdado).

@@ -8,11 +8,11 @@ Carvão com leve tom frio, papel escuro de tinta quente, ouro envelhecido como a
 
 | Papel | Tokens |
 | --- | --- |
-| Texto | `--ink` #e2dccf, `--ink-strong` #f1e8d2, `--ink-warm` #d6c8a6, `--ink-soft` #bba982, `--muted` #a39d92 |
-| Ouro (ação, seleção, foco) | `--gold-light` #dcc896, `--gold-bright` #cdb682, `--gold` #b39a63, `--gold-deep` #8d7646, `--gold-shadow` #6a5a38 |
-| Filetes e bordas | `--rule-soft` #2b2720, `--rule` #3d362b, `--rule-strong` #574c37, `--line-strong` #3a3429, `--line` (ouro a 22%) |
+| Texto | `--ink` #ebe5d8, `--ink-strong` #f1e8d2, `--ink-warm` #d6c8a6, `--ink-soft` #bba982, `--muted` #b4aea3 |
+| Ouro (ação, seleção, foco) | `--gold-light` #dcc896, `--gold-bright` #cdb682, `--gold` #bfa56b, `--gold-deep` #a38b55, `--gold-shadow` #6a5a38 |
+| Filetes e bordas | `--rule-soft` #38322a, `--rule` #50473a, `--rule-strong` #74664a, `--line-strong` #4a4133, `--line` (ouro a 22%) |
 | Superfícies neutras | `--surface-0` #0b0c0c, `--surface-1` #121313, `--surface-2` #1a1b1a |
-| Superfícies de papel | `--paper-0` #161412, `--paper-1` #1b1815, `--paper-2` #25211c |
+| Superfícies de papel | `--paper-0` #161412, `--paper-1` #1d1a16, `--paper-2` #2a251f |
 | Alerta | `--red` #6f2a32, `--accent` #a8655f, `--danger-ink` #e8c2bb |
 | Extremo | `--black` #000000 |
 | Vinho e névoa (apoio) | `--wine-deep` #32141a, `--wine-line` #7a3a42, `--fog` #7a8683, `--fog-deep` #232928 |
