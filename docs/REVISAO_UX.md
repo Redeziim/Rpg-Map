@@ -33,8 +33,17 @@ Esta primeira rodada não apagou nada: só reorganizou. As remoções vieram dep
 | Duas bandejas de dados | Manter as duas | A diferença está escrita: a da ficha diz quem vê a rolagem ("Sem marcar, só você e o ADM veem. Marque para todos verem.") e a da mesa diz "Todos na mesa veem os dados rolarem aqui." |
 | Nome da aba "Mesa" | Participantes | Renomeada (no celular aparece "Pessoas"). |
 
+## Segunda rodada (2026-10-08, mais tarde)
+
+Pedido do usuário depois de ver a primeira rodada.
+
+- **Servidor das rotas, legenda e exportação removido** (ver [ADR 036](adr/036-remocao-de-rotas-legenda-e-exportacao-de-vista.md)). Dados antigos não vazam e são limpos no próximo salvamento.
+- **Barra lateral**: alinhada em um eixo (ícones centrados em 32 px, textos à esquerda), com animação simples: abre em 240 ms, o nome aparece um instante depois e o ícone avança 3 px ao passar o mouse. Sem animação para quem pede movimento reduzido.
+- **Turnos**: somem em Cenas, Linha do tempo e Sobre (continuam montados, para não perder um comando pendente). No Mapa ficam numa linha só e menores (de 54 para 38 px).
+- **Mesa 3D**: saíram os textos que explicavam o óbvio (qualidade, movimento suave, importar terreno, luz e câmera). A instrução de teclado continua para leitor de tela, fora da vista.
+- **Notas**: o menu de cada caderno trocou o acordeão "Mais opções" por dois botões pequenos no rodapé ("Rascunhos" e "Reunir janelas"). O Mapa mental foi redesenhado: barra enxuta com contagem de cartões, o antigo "Mais opções" virou um painel flutuante "Mais" (coleção de imagens, aumentar área, filtros, conexões, atalhos) que não empurra o quadro, os detalhes do cartão e o arranjo da seleção ficam sobre o quadro, o cartão perdeu a faixa de título pesada e o fundo ganhou uma grade de pontos.
+
 ## O que ficou de fora de propósito
 
-- **Servidor e dados das rotas e da legenda**: rotas de mapa (`/map-routes`), legenda (`/map-legend`), seus campos no estado da mesa, na exportação e na restauração continuam, com os testes. Mesas que já tinham rotas ou legenda não perdem os dados; só deixam de ser mostradas e editadas. A legenda ainda define o nome e a cor de cada tipo de ponto (`mapLegend` em `RPGMapExplorer.jsx`), por isso ela continua sendo lida. Tirar o servidor é uma segunda etapa, com migração, se um dia valer a pena.
 - **Escolha de resolução ao enviar o mapa** ("Mais leve" ou "Mais detalhe"): não alterado; pode ficar atrás de "Opções" se atrapalhar.
 - **Janela de nota**: histórico, compartilhar, exportar e lixeira continuam na janela. Se ainda parecer pesado, o próximo passo é juntar esses quatro num menu único.

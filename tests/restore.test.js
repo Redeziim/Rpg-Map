@@ -10,7 +10,6 @@ import {createApplication} from '../server/app.js';
 import {DATABASE_TABLES,LEGACY_DATABASE_TABLES} from '../server/databaseSchema.js';
 import {createBackup,restoreBackup,verifyBackup,inspectDatabase} from '../scripts/databaseRecovery.js';
 import {testMapImage} from './fixtures/mapImages.js';
-import {defaultMapLegend} from '../src/shared/mapExploration.js';
 
 const password='local-recovery-test-2026';
 const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==';
@@ -55,8 +54,6 @@ test('backup WAL restaurado em banco novo preserva contas, permissões, históri
     const bundle={main:'terreno.obj',kind:'terrain',files:[{name:'terreno.obj',data:'data:text/plain;base64,'+Buffer.from('v 0 0 0\nv 1 0 0\nv 0 0 1\nf 1 2 3').toString('base64')}]};
     assert.equal((await active.request('owner',root+'/map-assets','POST',bundle)).status,201);
     const before=(await active.request('owner',root)).body;
-    assert.equal((await active.request('owner',root+'/map-routes','POST',{id:'private',name:'Rota secreta',color:'#abc123',status:'planned',visibility:'master',waypoints:[{x:10,y:10},{x:20,y:20}],imageVersion:before.mapImageVersion})).status,200);
-    assert.equal((await active.request('owner',root+'/map-legend','PATCH',{version:before.mapLegendVersion,legend:defaultMapLegend().map((entry,index)=>index?entry:{...entry,label:'Portos'})})).status,200);
     const invite=(await active.request('owner',root+'/invites','POST',{role:'player'})).body;
     const frozen=(await active.request('owner',root)).body;
     const sourceHash=hash(source),walHash=hash(source+'-wal');
@@ -80,7 +77,6 @@ test('backup WAL restaurado em banco novo preserva contas, permissões, históri
     assert.equal((await restored.request('player',root+'/note-assets/'+uploaded.id)).status,404);
     assert.equal((await restored.request('outsider',root)).status,403);
     assert.equal((await restored.request('player',root)).body.state.masterNotebooks,undefined);
-    assert.deepEqual((await restored.request('player',root)).body.state.mapRoutes,[]);
     assert.equal((await restored.request('owner',root+'/notes/@master/secret/history')).body.versions.length,2);
     assert.equal((await restored.request('owner','/auth/login','POST',{username:'owner',password})).status,200);
     assert.equal((await restored.request('outsider','/join','POST',{code:invite.code})).status,200);

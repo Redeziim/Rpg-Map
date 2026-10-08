@@ -41,7 +41,7 @@ function checkSavedData(db,tables,userVersion){
     roomStateVersions[version]=(roomStateVersions[version]||0)+1;
     if(!Array.isArray(state.points)||!Array.isArray(state.sheetFields)||!object(state.playerSheets)||!object(state.statusBarsData)||!Number.isSafeInteger(row.revision)||row.revision<0)throw Error('Estado de mesa incompatível com a aplicação.');
     for(const sheet of Object.values(state.playerSheets))if(!object(sheet))throw Error('Ficha persistida inválida.');
-    for(const key of ['masterNotebooks','mapStrokes','mapObjects','campaignScenes','mapRoutes'])if(state[key]!==undefined&&!Array.isArray(state[key]))throw Error('Lista persistida da mesa inválida.');
+    for(const key of ['masterNotebooks','mapStrokes','mapObjects','campaignScenes'])if(state[key]!==undefined&&!Array.isArray(state[key]))throw Error('Lista persistida da mesa inválida.');
   }
   for(const row of db.prepare('SELECT bundle FROM map_assets').iterate())parseJSON(row.bundle,value=>object(value)&&Array.isArray(value.files),'arquivos da mesa 3D');
   if(tables.has('map_imports'))for(const row of db.prepare('SELECT phase,result FROM map_imports').iterate()){

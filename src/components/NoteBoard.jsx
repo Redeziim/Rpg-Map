@@ -1,11 +1,12 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
-import {ImagePlus,Link2,MapPin,Pencil,Plus,Trash2,Undo2,ZoomIn,ZoomOut,Expand} from 'lucide-react';
+import {ImagePlus,Link2,MapPin,MoreHorizontal,Pencil,Plus,Trash2,Undo2,X,ZoomIn,ZoomOut,Expand} from 'lucide-react';
 import {imageSignatureMatches} from '../shared/imageSignature.js';
 import {api} from '../api.js';
 import {emptyNoteBoard} from './noteBoardDefaults.js';
 import {NoteHighlight} from './NoteFind.jsx';
 import './NoteBoard.css';
+import './NoteBoardLayout.css';
 
 const MIN_WIDTH=960,MIN_HEIGHT=620,MAX_WIDTH=3840,MAX_HEIGHT=2480,MIN_ZOOM=.05;
 const CARD_TYPES={person:'Pessoa',place:'Local',scene:'Cena',clue:'Pista'};
@@ -28,6 +29,7 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
   const board=value||emptyNoteBoard();
   const width=board.width||MIN_WIDTH,height=board.height||MIN_HEIGHT;
   const [zoom,setZoom]=useState(()=>zoomKey?readZoom(zoomKey):1);
+  const [optionsOpen,setOptionsOpen]=useState(false);
   const [drawing,setDrawing]=useState(false),[selected,setSelected]=useState(null),[selectedCards,setSelectedCards]=useState(new Set()),[editingId,setEditingId]=useState(null);
   const [linkFrom,setLinkFrom]=useState(null),[error,setError]=useState(''),[announcement,setAnnouncement]=useState('');
   const [editingEdge,setEditingEdge]=useState(null),[edgeDraft,setEdgeDraft]=useState('');
@@ -421,9 +423,16 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
         <button type="button" onClick={undo} disabled={!history.current.past.length}><Undo2 size={16} aria-hidden="true"/>Desfazer</button>
         <input ref={fileRef} className="note-board-file" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Anexar imagem ao mapa mental" tabIndex={-1} onChange={attachImage}/>
       </>}
+      <span className="note-board-count" role="status">{categoryFilter!=='all'||tagFilter!=='all'?`${visibleNodes.length} de ${board.nodes.length} cartões · filtro`:`${board.nodes.length} ${board.nodes.length===1?'cartão':'cartões'}`}</span>
+      <button type="button" className="note-board-more" aria-expanded={optionsOpen} aria-controls="note-board-drawer" onClick={()=>setOptionsOpen(open=>!open)}><MoreHorizontal size={16} aria-hidden="true"/>Mais</button>
       <div className="note-board-zoom" role="group" aria-label="Zoom do quadro"><button type="button" aria-label="Afastar quadro" disabled={zoom<=MIN_ZOOM} onClick={()=>changeZoom(zoom-(zoom<=.5?.05:.25))}><ZoomOut size={16} aria-hidden="true"/></button><output aria-live="polite">{Math.round(zoom*100)}%</output><button type="button" aria-label="Aproximar quadro" disabled={zoom>=2} onClick={()=>changeZoom(zoom+(zoom<.5?.05:.25))}><ZoomIn size={16} aria-hidden="true"/></button></div>
     </div>
     {assetUploads>0&&<p className="note-board-asset-status" role="status">Guardando {assetUploads} {assetUploads===1?'imagem':'imagens'} na coleção…</p>}
+    <p className="sr-only">Duplo clique no fundo cria um cartão. Shift+clique seleciona vários. Ctrl+C/V copia e cola. Ctrl+Z desfaz. Use as setas para mover um cartão selecionado ou percorrer o quadro. Para desenhar pelo teclado, foque o quadro, use Enter e as setas.</p>
+    <div id="note-board-drawer" className="note-board-drawer" role="region" aria-label="Mais opções do mapa mental" hidden={!optionsOpen}>
+      <header><strong>Mais opções</strong><button type="button" className="note-board-drawer-close" aria-label="Fechar mais opções" onClick={()=>setOptionsOpen(false)}><X size={16} aria-hidden="true"/></button></header>
+      <div className="note-board-drawer-body">
+      {!readOnly&&<div className="note-board-extra-tools"><button type="button" aria-expanded={libraryOpen} onClick={()=>libraryOpen?setLibraryOpen(false):void loadLibrary()}>Coleção de imagens</button><button type="button" onClick={expand} disabled={width>=MAX_WIDTH&&height>=MAX_HEIGHT}><Expand size={16} aria-hidden="true"/>Aumentar área de desenho</button></div>}
     {libraryOpen&&<section className="note-board-library" aria-label="Coleção de imagens da mesa">
       <div className="note-board-library-heading"><strong>Referências da mesa</strong><button type="button" onClick={()=>setLibraryOpen(false)}>Fechar coleção</button></div>
       <label>Encontrar imagem<input type="search" name="board-library-search" autoComplete="off" value={librarySearch} onChange={event=>setLibrarySearch(event.target.value)} placeholder="Nome da imagem"/></label>
@@ -431,39 +440,24 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
       {!libraryLoading&&assets.length>0&&matchingAssets.length===0&&<p role="status">Nenhuma imagem com este nome.</p>}
       {!libraryLoading&&matchingAssets.length>40&&<p role="status">Mostrando 40 de {matchingAssets.length} imagens. Busque pelo nome para encontrar as demais.</p>}
     </section>}
-    <details className="note-board-options"><summary>Mais opções <span>{categoryFilter!=='all'||tagFilter!=='all'?`${visibleNodes.length} de ${board.nodes.length} cartões · filtro ativo`:`${board.nodes.length} ${board.nodes.length===1?'cartão':'cartões'}`}</span></summary><div className="note-board-options-content">
-      {!readOnly&&<div className="note-board-extra-tools"><button type="button" aria-expanded={libraryOpen} onClick={()=>libraryOpen?setLibraryOpen(false):void loadLibrary()}>Coleção de imagens</button><button type="button" onClick={expand} disabled={width>=MAX_WIDTH&&height>=MAX_HEIGHT}><Expand size={16} aria-hidden="true"/>Aumentar área de desenho</button></div>}
-      <details className="note-board-shortcuts"><summary>Atalhos do teclado</summary><dl>{BOARD_SHORTCUTS.map(([keys,action])=><div key={keys}><dt>{keys}</dt><dd>{action}</dd></div>)}</dl><p>O zoom que você escolher fica guardado neste navegador, para cada nota.</p></details>
     <div className="note-board-index" role="group" aria-label="Filtrar cartões do mapa mental">
       <span className="note-board-index-title">Filtrar cartões</span>
       <label>Tipo<select name="board-category-filter" autoComplete="off" value={categoryFilter} onChange={event=>setCategoryFilter(event.target.value)}><option value="all">Todos</option><option value="none">Sem tipo</option>{Object.entries(CARD_TYPES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
       <label>Etiqueta<select name="board-tag-filter" autoComplete="off" value={tagFilter} onChange={event=>setTagFilter(event.target.value)}><option value="all">Todas</option><option value="none">Sem etiqueta</option>{availableTags.map(tag=><option key={tag.toLocaleLowerCase('pt-BR')} value={tag.toLocaleLowerCase('pt-BR')}>{tag}</option>)}</select></label>
       <output className="note-board-index-count" aria-live="polite">{visibleNodes.length} de {board.nodes.length} cartões</output>
     </div>
-    <p className="note-board-shortcuts">Duplo clique no fundo cria um cartão. Shift+clique seleciona vários. Ctrl+C/V copia e cola. Ctrl+Z desfaz. Use as setas para mover um cartão selecionado ou percorrer o quadro. Para desenhar pelo teclado, foque o quadro, use Enter e as setas.</p>
     {!!visibleEdges.length&&<details className="note-board-links"><summary>Conexões visíveis ({visibleEdges.length})</summary><ul>{visibleEdges.map(edge=>{const from=nodesById.get(edge.from)?.text||'Ideia',to=nodesById.get(edge.to)?.text||'Ideia';return <li key={edge.id} role="listitem">
       <span className="note-board-relation">{from} — {to}{edge.label&&<em> · <NoteHighlight text={edge.label} query={searchQuery} active={activeSearch?.kind==='edge'&&activeSearch.id===edge.id?activeSearch:undefined}/></em>}</span>
       {!readOnly&&<div className="note-board-link-actions"><button type="button" aria-label={`Editar rótulo da conexão entre ${from} e ${to}`} onClick={()=>{setEditingEdge(edge.id);setEdgeDraft(edge.label||'');setError('');focusEdgeEditor();}}>Rótulo</button><button type="button" aria-label={`Remover conexão entre ${from} e ${to}`} onClick={()=>{apply(previous=>({...previous,edges:previous.edges.filter(item=>item.id!==edge.id)}),true);if(editingEdge===edge.id)setEditingEdge(null);setAnnouncement('Conexão removida. Ctrl+Z desfaz.');}}><Trash2 size={14} aria-hidden="true"/></button></div>}
       {editingEdge===edge.id&&!readOnly&&<div className="note-board-label-editor"><label>Rótulo da conexão<input name="board-edge-label" autoComplete="off" type="text" value={edgeDraft} maxLength={80} onChange={event=>setEdgeDraft(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();saveEdgeLabel();}else if(event.key==='Escape'){setEditingEdge(null);setEdgeDraft('');}}}/></label><button type="button" onClick={saveEdgeLabel}>Salvar rótulo</button><button type="button" onClick={()=>{setEditingEdge(null);setEdgeDraft('');}}>Cancelar</button></div>}
     </li>;})}</ul></details>}
-    </div></details>
-    {!readOnly&&selectedCards.size>=2&&<div className="note-board-arrange" role="group" aria-label="Organizar cartões selecionados"><strong>{selectedCards.size} cartões selecionados</strong><button type="button" onClick={()=>arrangeCards('align-x')}>Alinhar à esquerda</button><button type="button" onClick={()=>arrangeCards('align-y')}>Alinhar ao topo</button><button type="button" disabled={selectedCards.size<3} onClick={()=>arrangeCards('distribute-x')}>Distribuir na horizontal</button><button type="button" disabled={selectedCards.size<3} onClick={()=>arrangeCards('distribute-y')}>Distribuir na vertical</button><button type="button" onClick={()=>selectOnly(null)}>Limpar seleção</button></div>}
-    {selectedNode&&<details key={selectedNode.id} className="note-board-card-details"><summary>Detalhes do cartão <span>{selectedNode.text.slice(0,36)||'Sem texto'}</span></summary>
-      {!readOnly&&<div className="note-board-card-actions"><button type="button" onClick={()=>startEditing(selectedNode.id)}>Editar texto</button><button type="button" aria-pressed={linkFrom===selectedNode.id} disabled={drawing} onClick={()=>chooseConnector(selectedNode.id)}><Link2 size={16} aria-hidden="true"/>{linkFrom===selectedNode.id?'Cancelar conexão':'Conectar a outro cartão'}</button><button type="button" onClick={removeSelected}><Trash2 size={16} aria-hidden="true"/>Excluir cartão</button></div>}
-    <div className="note-board-metadata" role="group" aria-label="Classificação do cartão selecionado">
-      {!readOnly?<>
-        <label>Tipo do cartão<select name="board-card-type" autoComplete="off" value={selectedNode.category||''} onChange={event=>changeCategory(event.target.value)}><option value="">Sem tipo</option>{Object.entries(CARD_TYPES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Etiquetas, separadas por vírgula<input name="board-card-tags" autoComplete="off" type="text" value={tagInput} maxLength={248} placeholder="Ex.: mistério, sessão 2…" onChange={event=>{setTagInput(event.target.value);setTagError('');}} onBlur={saveTags} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();saveTags();event.currentTarget.blur();}}}/></label>
-      </>:<><span>{selectedNode.category?CARD_TYPES[selectedNode.category]:'Sem tipo'}</span><span>{nodeTags(selectedNode).length?nodeTags(selectedNode).join(' · '):'Sem etiquetas'}</span></>}
-      {tagError&&<p className="note-board-error" role="alert">{tagError}</p>}
+      <details className="note-board-shortcuts"><summary>Atalhos do teclado</summary><dl>{BOARD_SHORTCUTS.map(([keys,action])=><div key={keys}><dt>{keys}</dt><dd>{action}</dd></div>)}</dl><p>O zoom que você escolher fica guardado neste navegador, para cada nota.</p></details>
+      </div>
     </div>
-    {!readOnly&&selectedNode?.kind==='image'&&selectedNode.src&&roomId&&<button type="button" className="note-board-collect" disabled={assetUploads>0} onClick={()=>void storeImage(selectedNode.id,selectedNode.text||'Imagem',selectedNode.src)}>Guardar esta imagem na coleção</button>}
-    {selectedNode&&<div className="note-board-point-link"><MapPin size={16} aria-hidden="true"/>{!readOnly&&<label>Vincular cartão a ponto<select name="board-card-point" autoComplete="off" aria-label="Ponto vinculado à ideia selecionada" value={selectedNode.pointId||''} onChange={event=>associatePoint(event.target.value)}><option value="">Nenhum ponto</option>{points.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}{selectedNode.pointId&&!linkedPoint&&<option value={selectedNode.pointId}>Ponto removido</option>}</select></label>}{linkedPoint?<button type="button" onClick={()=>onOpenPoint?.(linkedPoint.id)}>Abrir {linkedPoint.name} no mapa</button>:readOnly&&<span>{selectedNode.pointId?'Ponto removido':'Sem ponto vinculado'}</span>}</div>}
-    </details>}
     <p className="note-board-help">{drawing?'Desenhe no quadro. Clique em “Terminar desenho” para voltar aos cartões.':linkFrom?'Clique em outro cartão para conectar. Escape cancela.':readOnly?'Arraste o fundo ou use as barras para explorar o quadro.':'Arraste cartões para organizar. Para conectar, puxe o círculo lateral até outro cartão.'}</p>
     {error&&<p className="note-board-error" role="alert">{error}</p>}
     <span className="note-board-announcement" role="status">{announcement}</span>
-    <div ref={scrollRef} className="note-board-scroll"><div className="note-board-extent" style={{width:width*zoom,height:height*zoom}}><div ref={boardRef} className={`note-board-canvas ${drawing?'is-drawing':''}`} style={{width,height,transform:`scale(${zoom})`}} tabIndex={0} role="group" aria-label={drawing?'Quadro de desenho; Enter inicia ou termina, setas traçam, Escape cancela':'Quadro de ideias; duplo clique cria, N cria pelo teclado, Ctrl+C/V copia e cola a ideia selecionada'} onKeyDown={boardKeyDown} onCopy={copyNode} onCut={event=>{if(selected&&!isTextTarget(event.target)){copyNode(event);removeSelected();}}} onPaste={pasteNode} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onDoubleClick={event=>{if(readOnly||drawing||event.target!==event.currentTarget)return;const p=point(event);addIdeaAt(p.x-95,p.y-50);}}>
+    <div className="note-board-stage"><div ref={scrollRef} className="note-board-scroll"><div className="note-board-extent" style={{width:width*zoom,height:height*zoom}}><div ref={boardRef} className={`note-board-canvas ${drawing?'is-drawing':''}`} style={{width,height,transform:`scale(${zoom})`}} tabIndex={0} role="group" aria-label={drawing?'Quadro de desenho; Enter inicia ou termina, setas traçam, Escape cancela':'Quadro de ideias; duplo clique cria, N cria pelo teclado, Ctrl+C/V copia e cola a ideia selecionada'} onKeyDown={boardKeyDown} onCopy={copyNode} onCut={event=>{if(selected&&!isTextTarget(event.target)){copyNode(event);removeSelected();}}} onPaste={pasteNode} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={endPan} onDoubleClick={event=>{if(readOnly||drawing||event.target!==event.currentTarget)return;const p=point(event);addIdeaAt(p.x-95,p.y-50);}}>
       <svg className={`note-board-lines ${drawing?'is-drawing':''}`} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true" onPointerDown={startStroke} onPointerMove={draw} onPointerUp={finishStroke} onPointerCancel={finishStroke}>
         {visibleEdges.map(edge=>{const from=nodesById.get(edge.from),to=nodesById.get(edge.to);if(!from||!to)return null;const ends=segment(from,to);return <g key={edge.id}><line ref={element=>{if(element)edgeElements.current.set(edge.id,element);else edgeElements.current.delete(edge.id);}} className="note-board-edge" {...ends}/>{edge.label&&<text ref={element=>{if(element)edgeLabelElements.current.set(edge.id,element);else edgeLabelElements.current.delete(edge.id);}} className="note-board-edge-label" x={(ends.x1+ends.x2)/2} y={(ends.y1+ends.y2)/2-8} textAnchor="middle"><NoteHighlight text={searchQuery.trim()?edge.label:edge.label.length>28?`${edge.label.slice(0,27)}…`:edge.label} query={searchQuery} svg active={activeSearch?.kind==='edge'&&activeSearch.id===edge.id?activeSearch:undefined}/></text>}</g>;})}
         {board.strokes.map(item=><path key={item.id} d={item.path} fill="none" stroke="#e5c88d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>)}
@@ -483,5 +477,21 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
         {!readOnly&&selected===node.id&&!drawing&&<button type="button" className="note-board-node-delete" aria-label={`Excluir ${node.text||'ideia'}`} onClick={removeSelected}><Trash2 size={15} aria-hidden="true"/></button>}
       </article>)}
     </div></div></div>
+    <div className="note-board-overlays">
+    {!readOnly&&selectedCards.size>=2&&<div className="note-board-arrange" role="group" aria-label="Organizar cartões selecionados"><strong>{selectedCards.size} cartões selecionados</strong><button type="button" onClick={()=>arrangeCards('align-x')}>Alinhar à esquerda</button><button type="button" onClick={()=>arrangeCards('align-y')}>Alinhar ao topo</button><button type="button" disabled={selectedCards.size<3} onClick={()=>arrangeCards('distribute-x')}>Distribuir na horizontal</button><button type="button" disabled={selectedCards.size<3} onClick={()=>arrangeCards('distribute-y')}>Distribuir na vertical</button><button type="button" onClick={()=>selectOnly(null)}>Limpar seleção</button></div>}
+    {selectedNode&&<details key={selectedNode.id} className="note-board-card-details"><summary>Detalhes do cartão <span>{selectedNode.text.slice(0,36)||'Sem texto'}</span></summary>
+      {!readOnly&&<div className="note-board-card-actions"><button type="button" onClick={()=>startEditing(selectedNode.id)}>Editar texto</button><button type="button" aria-pressed={linkFrom===selectedNode.id} disabled={drawing} onClick={()=>chooseConnector(selectedNode.id)}><Link2 size={16} aria-hidden="true"/>{linkFrom===selectedNode.id?'Cancelar conexão':'Conectar a outro cartão'}</button><button type="button" onClick={removeSelected}><Trash2 size={16} aria-hidden="true"/>Excluir cartão</button></div>}
+    <div className="note-board-metadata" role="group" aria-label="Classificação do cartão selecionado">
+      {!readOnly?<>
+        <label>Tipo do cartão<select name="board-card-type" autoComplete="off" value={selectedNode.category||''} onChange={event=>changeCategory(event.target.value)}><option value="">Sem tipo</option>{Object.entries(CARD_TYPES).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Etiquetas, separadas por vírgula<input name="board-card-tags" autoComplete="off" type="text" value={tagInput} maxLength={248} placeholder="Ex.: mistério, sessão 2…" onChange={event=>{setTagInput(event.target.value);setTagError('');}} onBlur={saveTags} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();saveTags();event.currentTarget.blur();}}}/></label>
+      </>:<><span>{selectedNode.category?CARD_TYPES[selectedNode.category]:'Sem tipo'}</span><span>{nodeTags(selectedNode).length?nodeTags(selectedNode).join(' · '):'Sem etiquetas'}</span></>}
+      {tagError&&<p className="note-board-error" role="alert">{tagError}</p>}
+    </div>
+    {!readOnly&&selectedNode?.kind==='image'&&selectedNode.src&&roomId&&<button type="button" className="note-board-collect" disabled={assetUploads>0} onClick={()=>void storeImage(selectedNode.id,selectedNode.text||'Imagem',selectedNode.src)}>Guardar esta imagem na coleção</button>}
+    {selectedNode&&<div className="note-board-point-link"><MapPin size={16} aria-hidden="true"/>{!readOnly&&<label>Vincular cartão a ponto<select name="board-card-point" autoComplete="off" aria-label="Ponto vinculado à ideia selecionada" value={selectedNode.pointId||''} onChange={event=>associatePoint(event.target.value)}><option value="">Nenhum ponto</option>{points.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}{selectedNode.pointId&&!linkedPoint&&<option value={selectedNode.pointId}>Ponto removido</option>}</select></label>}{linkedPoint?<button type="button" onClick={()=>onOpenPoint?.(linkedPoint.id)}>Abrir {linkedPoint.name} no mapa</button>:readOnly&&<span>{selectedNode.pointId?'Ponto removido':'Sem ponto vinculado'}</span>}</div>}
+    </details>}
+    </div>
+    </div>
   </section>;
 }

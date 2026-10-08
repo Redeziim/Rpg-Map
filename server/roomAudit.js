@@ -19,7 +19,7 @@ export function assertRoomAudit(db){
 // Compare content inside the server; store only an allowlist of action types and public usernames.
 export function roomAuditChanges(before,after){
   const changes=[],changed=(a,b)=>!isDeepStrictEqual(a,b),add=(action,details={})=>changes.push({action,details});
-  for(const [field,action] of [['mapImage','map.image'],['points','map.points'],['mapFog','map.fog'],['mapScale','map.scale'],['mapLegend','map.legend'],['mapRoutes','map.routes'],['mapStrokes','map.strokes'],['mapObjects','tabletop.changed'],['campaignScenes','campaign.changed']])if(changed(before[field],after[field]))add(action);
+  for(const [field,action] of [['mapImage','map.image'],['points','map.points'],['mapFog','map.fog'],['mapScale','map.scale'],['mapStrokes','map.strokes'],['mapObjects','tabletop.changed'],['campaignScenes','campaign.changed']])if(changed(before[field],after[field]))add(action);
   if(before.tabletopLighting!==after.tabletopLighting)add('tabletop.changed');
   if(changed(before.scenePresentation,after.scenePresentation)&&!changes.some(change=>change.action==='campaign.changed'))add('campaign.changed');
   if(before.mapPositions?.enabled!==after.mapPositions?.enabled)add('map.positions');

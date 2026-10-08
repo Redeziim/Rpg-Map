@@ -56,7 +56,7 @@ test('migrações persistem legado de texto e quadros, preservam dados/privacida
         assert.deepEqual(first.playerSheets.owner.notebooks,[]);assert.deepEqual(first.statusBarsData.player,{avatar:null,bars:[]});assert.deepEqual(first.importMetadata,seed.first.importMetadata);
         assert.equal(second.masterNotebooks.length,1);assert.equal(second.masterNotebooks[0].version,7);assert.deepEqual(second.masterNotebooks[0].sharedWith,['player']);
         assert.deepEqual(second.masterNotebooks[0].board,{...seed.board,width:960,height:620});assert.equal(second.playerSheets.player.notebooks[0].version,3);
-        for(const field of ['points','mapImage','mapFog','mapScale','mapPositions','mapLegend','mapRoutes','masterNotes'])assert.deepEqual(second[field],seed.second[field],field);
+        for(const field of ['points','mapImage','mapFog','mapScale','mapPositions','masterNotes'])assert.deepEqual(second[field],seed.second[field],field);
         assert.deepEqual(second.campaignScenes,seed.second.campaignScenes.map(scene=>({...scene,mediaId:null})));assert.deepEqual(second.mapObjects,seed.second.mapObjects.map(item=>({...item,version:1,locked:false,groupId:null,references:[]})));assert.deepEqual(second.mapGroups,[]);
         assert.deepEqual(second.mapStrokes[0],{...seed.second.mapStrokes[0],visibility:'table'});assert.deepEqual(second.mapStrokes[1],seed.second.mapStrokes[1]);
         assert.equal(after.schema_migrations.length,DATABASE_USER_VERSION);assert.equal(after.room_state_migrations.length,2);assert.equal(after.note_versions.length,history?1:0);
@@ -91,7 +91,7 @@ test('versão futura, estado inválido e históricos inconsistentes impedem aber
       mutate(path,db=>db.exec(sql));rejectUnchanged(path,expected);
     }
     const missing=join(directory,'current-missing-state.sqlite');seedLegacy(missing);const app=createApplication({dbPath:missing});app.close();
-    mutate(missing,db=>{const row=db.prepare('SELECT state FROM rooms WHERE id=?').get('first'),state=JSON.parse(row.state);delete state.mapLegend;db.prepare('UPDATE rooms SET state=? WHERE id=?').run(JSON.stringify(state),'first');});rejectUnchanged(missing,/Estado de mesa inválido/);
+    mutate(missing,db=>{const row=db.prepare('SELECT state FROM rooms WHERE id=?').get('first'),state=JSON.parse(row.state);delete state.mapStrokes;db.prepare('UPDATE rooms SET state=? WHERE id=?').run(JSON.stringify(state),'first');});rejectUnchanged(missing,/Estado de mesa inválido/);
   }finally{cleanup(directory);}
 });
 
@@ -110,7 +110,7 @@ test('dois inícios aplicam uma só migração; backup antigo continua restaurá
     for(const who of ['owner','player','outsider'])assert.equal((await request(who,'/auth/login','POST',{username:who,password})).status,200);
     const player=(await request('player','/rooms/first')).body;assert.equal(player.state.stateVersion,7);assert.equal(player.state.masterNotebooks,undefined);assert.equal(player.state.playerSheets.player.notebooks[0].body,'Diário antigo do jogador');
     assert.equal((await request('outsider','/rooms/first')).status,403);
-    const second=(await request('player','/rooms/second')).body;assert.equal(second.state.sharedNotebooks[0].version,7);assert.deepEqual(second.state.mapStrokes.map(stroke=>stroke.id),['old-public']);assert.deepEqual(second.state.mapRoutes,[]);
+    const second=(await request('player','/rooms/second')).body;assert.equal(second.state.sharedNotebooks[0].version,7);assert.deepEqual(second.state.mapStrokes.map(stroke=>stroke.id),['old-public']);assert.equal('mapRoutes' in second.state,false);
     assert.deepEqual((await request('player','/rooms/second/note-assets/image')).body,imageBytes);
     const oldHistory=(await request('owner','/rooms/second/notes/@master/named/history/7')).body;assert.equal(oldHistory.board.width,undefined);
     const stream=await fetch(base+'/rooms/first/events',{headers:{Cookie:cookies.player},signal:abort.signal}),reader=stream.body.getReader(),decoder=new TextDecoder();let pending='';

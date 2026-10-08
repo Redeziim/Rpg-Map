@@ -289,12 +289,12 @@ export default function Notebook({title,hint,notes:allNotes=[],onSave,onShare,on
     {!notes.length&&<p>Nenhuma nota disponível.</p>}
     {notes.length>0&&!matches.length&&<p>Nenhuma nota encontrada neste caderno.</p>}
     {matches.map(note=><button key={noteKey({...note,scope:note.scope||scope})} disabled={!ready} onClick={event=>open(note,event.currentTarget)}><NotebookPen size={15} aria-hidden="true"/><span>{note.title}<small>{note.owner?` · ${note.owner==='@master'?'Mestre':note.owner}`:''}</small></span><small>{windows.some(windowNote=>noteKey(windowNote)===noteKey({...note,scope:note.scope||scope}))?'Aberta':'Abrir'}</small></button>)}
-    {ready&&<details className="note-more" open={!!copies||!!copyError||!!recoveryNotice||undefined}><summary>Mais opções</summary>
-    {ready&&<button type="button" disabled={copiesBusy} onClick={showCopies}><History size={16} aria-hidden="true"/>{copiesBusy?'Consultando cópias…':'Recuperar rascunhos'}</button>}
+    {ready&&<div className="note-tools">
+    {ready&&<button type="button" disabled={copiesBusy} onClick={showCopies} title="Recuperar rascunhos guardados neste navegador"><History size={16} aria-hidden="true"/>{copiesBusy?'Consultando…':'Rascunhos'}</button>}
     {copies&&<section className="note-recovery" aria-label="Cópias locais"><h3>Cópias neste navegador</h3><p>Escolha uma cópia desta mesa e deste caderno. Ela será aberta para revisão, sem salvar na mesa.</p>{!copies.length&&<p>Nenhum outro rascunho disponível.</p>}{copies.map(record=><button key={record.id} type="button" disabled={copiesBusy} onClick={()=>recoverCopy(record)}><span>{record.windows.map(note=>note.title||'Nova nota').join(', ')}<small>{new Date(record.updatedAt).toLocaleString('pt-BR')}</small><small>{record.windows.map(note=>note.body||'').join(' · ').slice(0,100)}</small></span><span>Abrir cópia</span></button>)}<button type="button" disabled={copiesBusy} onClick={()=>setCopies(null)}>Fechar lista de cópias</button></section>}
     {copyError&&<p role="alert">{copyError}</p>}{recoveryNotice&&<p role="status">{recoveryNotice}</p>}
-    {!!windows.length&&<button onClick={()=>setWindows(previous=>previous.map((windowNote,index)=>({...windowNote,position:{...windowNote.position,...clampPosition(24+index*24,80+index*24),docked:false,expanded:false}})))}><LocateFixed size={16} aria-hidden="true"/>Reunir janelas ({windows.length})</button>}
-    </details>}
+    {!!windows.length&&<button type="button" title="Trazer de volta as janelas de nota que ficaram fora da tela" onClick={()=>setWindows(previous=>previous.map((windowNote,index)=>({...windowNote,position:{...windowNote.position,...clampPosition(24+index*24,80+index*24),docked:false,expanded:false}})))}><LocateFixed size={16} aria-hidden="true"/>Reunir janelas ({windows.length})</button>}
+    </div>}
     {onTrash&&onEmptyTrash&&!readOnly&&scope!=='shared'&&trashedNotes.length>0&&<section className="note-trash" aria-label="Lixeira de notas">
       <h3><Trash2 size={15} aria-hidden="true"/>Lixeira · {trashedNotes.length} {trashedNotes.length===1?'nota':'notas'}</h3>
       <p>As notas ficam aqui até você esvaziar a lixeira. Nada é apagado sozinho.</p>

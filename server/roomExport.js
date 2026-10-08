@@ -10,7 +10,6 @@ import {canManageMap} from '../src/shared/mapPermissions.js';
 import {canReadMapStroke} from '../src/shared/mapLayers.js';
 import {isMapPointRevealed,isMapStrokeRevealed} from '../src/shared/mapFog.js';
 import {visibleMapPositions} from '../src/shared/mapPositions.js';
-import {visibleMapRoutes} from '../src/shared/mapExploration.js';
 import {visibleCampaignScenes} from '../src/shared/campaignScenes.js';
 import {projectTabletopReferences} from './tabletopReferences.js';
 import {createExportWorkspace,defaultExportRoot} from './exportWorkspace.js';
@@ -33,7 +32,7 @@ function projection(db,{roomId,user,viewMode}){
   state.points=raw.points.filter(point=>master||isMapPointRevealed(raw.mapFog,point)).map(point=>pick(point,['id','name','description','type','x','y']));
   state.mapStrokes=raw.mapStrokes.filter(stroke=>canReadMapStroke(role,viewMode,stroke)&&(master||isMapStrokeRevealed(raw.mapFog,stroke)));
   state.mapPositions={enabled:raw.mapPositions.enabled,markers:visibleMapPositions(raw.mapPositions,members,master,raw.mapFog)};
-  state.mapRoutes=visibleMapRoutes(raw.mapRoutes,master,raw.mapFog);
+  delete state.mapRoutes;delete state.mapLegend;
   state.campaignScenes=visibleCampaignScenes(raw.campaignScenes,state.points,master,raw.scenePresentation);
   state.statusBarsData=Object.fromEntries(Object.entries(raw.statusBarsData).filter(([name])=>names.has(name)));
   const groupBars=Object.fromEntries(members.map(member=>[member.username,{

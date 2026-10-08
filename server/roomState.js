@@ -1,6 +1,5 @@
 import {emptyMapFog} from '../src/shared/mapFog.js';
 import {emptyMapPositions} from '../src/shared/mapPositions.js';
-import {defaultMapLegend,isMapLegend} from '../src/shared/mapExploration.js';
 import {isTabletopReference,referenceKey} from '../src/shared/tabletopReferences.js';
 import {isLightingPreset} from '../src/shared/tabletopLighting.js';
 import {createCombat,assertCombat,reconcileCombat,migrateCombat,migrateCombatEffects} from './combat.js';
@@ -16,7 +15,7 @@ export function ensureRoomMemberState(state,username){
   if(!Object.hasOwn(state.playerSheets,username))Object.defineProperty(state.playerSheets,username,{value:newPlayerSheet(),enumerable:true,configurable:true,writable:true});
   if(!Object.hasOwn(state.statusBarsData,username))Object.defineProperty(state.statusBarsData,username,{value:newStatusProfile(),enumerable:true,configurable:true,writable:true});
 }
-export const createRoomState=()=>({stateVersion:ROOM_STATE_VERSION,points:[],mapImage:null,mapStrokes:[],mapFog:emptyMapFog(),mapScale:null,mapPositions:emptyMapPositions(),mapLegend:defaultMapLegend(),mapRoutes:[],mapObjects:[],mapGroups:[],tabletopLighting:'default',campaignScenes:[],scenePresentation:emptyScenePresentation(),sheetFields:[],sheetFont:'cinzel',masterNotes:'',masterNotebooks:[],combat:createCombat(),playerSheets:{},statusBarsData:{}});
+export const createRoomState=()=>({stateVersion:ROOM_STATE_VERSION,points:[],mapImage:null,mapStrokes:[],mapFog:emptyMapFog(),mapScale:null,mapPositions:emptyMapPositions(),mapObjects:[],mapGroups:[],tabletopLighting:'default',campaignScenes:[],scenePresentation:emptyScenePresentation(),sheetFields:[],sheetFont:'cinzel',masterNotes:'',masterNotebooks:[],combat:createCombat(),playerSheets:{},statusBarsData:{}});
 
 function assertBoard(board){
   if(!object(board)||!['nodes','edges','strokes'].every(key=>Array.isArray(board[key]))||!Number.isInteger(board.width)||board.width<960||board.width>3840||!Number.isInteger(board.height)||board.height<620||board.height>2480)invalid('quadro de nota');
@@ -33,7 +32,7 @@ export function assertRoomState(state){
   if(!object(state))invalid('documento');
   if(state.stateVersion!==ROOM_STATE_VERSION)throw Error('Versão do estado de mesa não suportada por esta aplicação.');
   if(!isLightingPreset(state.tabletopLighting))invalid('iluminação 3D');
-  for(const key of ['points','mapStrokes','mapRoutes','mapObjects','campaignScenes','sheetFields'])if(!Array.isArray(state[key]))invalid(key);
+  for(const key of ['points','mapStrokes','mapObjects','campaignScenes','sheetFields'])if(!Array.isArray(state[key]))invalid(key);
   if(['turnOrder','turnExcluded','turnNpcs','activePlayer'].some(key=>Object.hasOwn(state,key)))invalid('campos de combate antigos');
   assertCombat(state.combat);
   if(!isScenePresentation(state.scenePresentation)||state.campaignScenes.some(scene=>!object(scene)||scene.mediaId!==null&&(typeof scene.mediaId!=='string'||!/^[a-zA-Z0-9-]{1,100}$/.test(scene.mediaId))))invalid('mídia de cena');
@@ -50,7 +49,6 @@ export function assertRoomState(state){
   if(!object(state.mapFog)||typeof state.mapFog.enabled!=='boolean'||!Array.isArray(state.mapFog.areas)||!Number.isFinite(state.mapFog.width)||!Number.isFinite(state.mapFog.height))invalid('névoa');
   if(state.mapScale!==null&&!object(state.mapScale))invalid('escala');
   if(!object(state.mapPositions)||typeof state.mapPositions.enabled!=='boolean'||!object(state.mapPositions.markers)||typeof state.mapPositions.generation!=='string')invalid('posições');
-  if(!isMapLegend(state.mapLegend))invalid('legenda');
   assertNotes(state.masterNotebooks);
   for(const sheet of Object.values(state.playerSheets)){
     if(!object(sheet)||!object(sheet.values)||!Array.isArray(sheet.extraFields)||typeof sheet.observations!=='string')invalid('ficha');

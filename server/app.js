@@ -25,7 +25,6 @@ import {sceneFields,visibleCampaignScenes} from '../src/shared/campaignScenes.js
 import {readSceneMedia,mediaMetadata,changeScenePresentation,sendSceneMedia} from './sceneMedia.js';
 import {emptyScenePresentation} from '../src/shared/scenePresentation.js';
 import {createMapImageValidator} from './mapImages.js';
-import {defaultMapLegend,isMapLegend,isMapRouteFields,visibleMapRoutes} from '../src/shared/mapExploration.js';
 import { createTrayRoll } from './tray.js';
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
@@ -131,8 +130,6 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const fogVersion=state=>digest((state.mapImage||'')+JSON.stringify(state.mapFog||emptyMapFog()));
   const fogImageVersion=state=>digest((state.mapImage||'')+fogVersion(state));
   const mapScaleVersion=state=>digest(digest(state.mapImage||'')+JSON.stringify(state.mapScale||null));
-  const mapLegendVersion=state=>digest(JSON.stringify(state.mapLegend||defaultMapLegend()));
-  const mapRouteVersion=(state,route)=>digest(digest(state.mapImage||'')+JSON.stringify(route));
   const positionSettingsVersion=state=>digest(digest(state.mapImage||'')+JSON.stringify([state.mapPositions?.enabled===true,state.mapPositions?.generation||'initial']));
   const ownPositionVersion=(state,userId)=>digest(positionSettingsVersion(state)+(state.mapPositions?.markers?.[userId]?.version||'none'));
   const mapObjectsVersion=state=>digest(JSON.stringify([state.mapObjects,state.mapGroups]));
@@ -219,13 +216,13 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       state.mapImage=`/api/rooms/${roomId}/map-image?v=${fogImageVersion(state)}`;
     }
     state.campaignScenes=visibleCampaignScenes(state.campaignScenes,state.points||[],master,state.scenePresentation).map(scene=>({...scene,media:scene.mediaId?mediaMetadata(query('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? AND id=?',roomId,scene.mediaId)):null}));
-    state.mapRoutes=visibleMapRoutes(state.mapRoutes,master,state.mapFog);
+    delete state.mapRoutes;delete state.mapLegend;
     const pointIds=new Set(state.points.map(point=>point.id)),cleanNote=note=>({...note,board:projectNoteBoard(note.board,pointIds)});
     if(state.masterNotebooks)state.masterNotebooks=state.masterNotebooks.map(cleanNote);
     state.sharedNotebooks=state.sharedNotebooks.map(cleanNote);
     for(const sheet of Object.values(state.playerSheets))sheet.notebooks=sheet.notebooks.map(cleanNote);
     const diceViewer={userId,username:viewer,admin:m.role==='admin'};const history=diceHistory.page(roomId,state.campaignScenes,null,diceViewer);
-    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapLegendVersion:mapLegendVersion(state),mapRouteVersions:Object.fromEntries(state.mapRoutes.map(route=>[route.id,digest(mapImageVersion+JSON.stringify(route))])),mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId,diceViewer),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,timelineRevision:campaignTimeline.revision(roomId,master),serverTime:Date.now()};
+    return {id:room.id,name:room.name,ownerId:room.owner_id,role:m.role,revision:room.revision,mapViewMode:master?'master':'player',tabletopLightingVersion:digest(state.tabletopLighting),mapObjectsVersion:currentMapObjectsVersion,fogVersion:currentFogVersion,mapImageVersion,mapScaleVersion:currentScaleVersion,mapPositionSettingsVersion,ownMapPositionVersion,hasOwnMapPosition,pointsVersion:digest(JSON.stringify(state.points||[])),pointVersions:Object.fromEntries((state.points||[]).map(point=>[point.id,digest(JSON.stringify(point))])),members,state,groupBars,diceStructures:all('SELECT id,name FROM dice_structures WHERE room_id=?',roomId),trayRoll:diceHistory.latest(roomId,diceViewer),diceHistory:history.entries,diceHistoryHasMore:history.hasMore,timelineRevision:campaignTimeline.revision(roomId,master),serverTime:Date.now()};
   }
   function revoke(client,status){
     client.res.write(`event: revoked\ndata: ${JSON.stringify({status})}\n\n`);client.res.end();clients.delete(client);
@@ -252,7 +249,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     transaction(()=>{
       assertCombat(state.combat);
       state.combat=reconcileCombat(state.combat,all('SELECT u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=? ORDER BY u.username',roomId));
-      assertRoomState(state);
+      delete state.mapRoutes;delete state.mapLegend;assertRoomState(state);
       const json=JSON.stringify(state);if(Buffer.byteLength(json)>20*1024*1024)fail(413,'A mesa atingiu o limite de 20 MB. Reduza as imagens.');
       const before=actor?JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state):null;
       run('UPDATE rooms SET state=?,revision=revision+1 WHERE id=?',json,roomId);
@@ -487,42 +484,6 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
         if(!isMapPointRevealed(state.mapFog,position))fail(403,'Compartilhe sua posição somente em áreas reveladas.');
         state.mapPositions.markers[user.id]={...position,version:randomUUID()};
       }else delete state.mapPositions.markers[user.id];
-      saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
-    }
-    if(path[3]==='map-legend'&&path.length===4&&method==='PATCH'){
-      if(!canManageMap(m.role,mapView()))fail(403,'Editar a legenda exige o modo mestre.');
-      const {legend,version}=requestBody;
-      if(Object.keys(requestBody).some(key=>!['legend','version'].includes(key))||!isMapLegend(legend))fail(400,'Legenda inválida. Use nomes de 1 a 40 caracteres e cores para os cinco tipos.');
-      const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      if(version!==mapLegendVersion(state))fail(409,'A legenda mudou em outra tela. Revise seus ajustes antes de salvar.');
-      state.mapLegend=legend.map(entry=>({...entry,color:entry.color.toLowerCase()}));saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
-    }
-    if(path[3]==='map-routes'&&(['POST','PATCH'].includes(method))){
-      if(!canManageMap(m.role,mapView()))fail(403,'Editar rotas exige o modo mestre.');
-      limit(`map-routes:${user.id}`,60);
-      const archive=path.length===6&&path[5]==='archive'&&method==='PATCH',create=path.length===4&&method==='POST',update=path.length===5&&method==='PATCH';
-      if(!archive&&!create&&!update)fail(404,'Ação de rota não encontrada.');
-      const {id,version,imageVersion,archived,...fields}=requestBody,routeId=create?id:path[4];
-      if(typeof routeId!=='string'||!/^[a-zA-Z0-9-]{1,100}$/.test(routeId)||!create&&id!==undefined)fail(400,'Identificador de rota inválido.');
-      if(archive?Object.keys(fields).length>0||typeof archived!=='boolean':archived!==undefined||!isMapRouteFields(fields))fail(400,'Rota inválida. Use nome, cor, visibilidade e de 2 a 100 paradas diferentes.');
-      let state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-      const check=()=>{
-        if(!state.mapImage)fail(400,'Envie uma imagem antes de criar rotas.');
-        if(imageVersion!==digest(state.mapImage))fail(409,'A imagem mudou. Confira o caminho no mapa atual.');
-        const route=(state.mapRoutes||[]).find(route=>route.id===routeId);
-        if(create){if(version!==undefined&&version!==null)fail(400,'Uma rota nova não deve ter versão.');if(route)fail(409,'Esta rota já existe. Revise a versão da mesa.');if((state.mapRoutes||[]).length>=100)fail(413,'Este mapa atingiu o limite de 100 rotas, incluindo arquivadas.');}
-        else{if(!route)fail(404,'Esta rota não está mais neste mapa. Seus ajustes não foram publicados.');if(version!==mapRouteVersion(state,route))fail(409,'A rota mudou em outra tela. Revise seus ajustes antes de salvar.');if(!archive&&route.archived)fail(409,'Restaure a rota antes de editar seu caminho.');}
-        return route;
-      };
-      check();
-      if(!archive){
-        let dimensions;try{dimensions=await mapImageDimensions(state.mapImage);}catch{fail(422,'Não foi possível abrir este mapa. Confira a imagem antes de traçar a rota.');}
-        state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
-        if(!canManageMap(membership(roomId,user.id).role,mapView()))fail(403,'Seu papel na mesa mudou.');check();
-        if(fields.waypoints.some(point=>point.x>=dimensions.width||point.y>=dimensions.height))fail(400,'Todas as paradas devem ficar dentro da imagem.');
-      }
-      const previous=check(),next=archive?{...previous,archived}:{...previous,...fields,id:routeId,archived:false,color:fields.color.toLowerCase()};
-      state.mapRoutes=create?[...(state.mapRoutes||[]),next]:state.mapRoutes.map(route=>route.id===routeId?next:route);
       saveState(roomId,state,user);broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-scale'&&path.length===4&&method==='PATCH'){
@@ -960,7 +921,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       }else if(pointsVersion!==undefined)fail(400,'Versão dos pontos sem alteração de pontos.');
       transaction(()=>{
         if('masterNotes'in patch)writeLegacyText(roomId,'@master',state,patch.masterNotes,user.username);
-        saveState(roomId,{...state,...patch,...('mapImage'in patch?{mapStrokes:[],mapRoutes:[],mapFog:emptyMapFog(),mapScale:null,mapPositions:{...(state.mapPositions||emptyMapPositions()),markers:{},generation:randomUUID()}}:{})},user);
+        saveState(roomId,{...state,...patch,...('mapImage'in patch?{mapStrokes:[],mapFog:emptyMapFog(),mapScale:null,mapPositions:{...(state.mapPositions||emptyMapPositions()),markers:{},generation:randomUUID()}}:{})},user);
       });broadcast(roomId);return json(res,200,snapshot(roomId,user.id,mapView()));
     }
     if(path[3]==='map-strokes'){
