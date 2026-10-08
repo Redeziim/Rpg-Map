@@ -3,7 +3,7 @@ import { evaluateFormula, resolveFormulas } from '../shared/sheetFormulas.js';
 import { Type, ScrollText, Hash, Image as QIcon, ListPlus, Calculator, Sword, ListChecks, Heart } from 'lucide-react';
 
 const SHEET_FONTS = [
-  { id: 'cinzel', label: 'Cinzel', family: "'Cinzel', serif" },
+  { id: 'cinzel', label: 'Grimório (padrão)', family: 'var(--font-display)' },
   { id: 'medieval', label: 'MedievalSharp', family: "'MedievalSharp', cursive" },
   { id: 'uncial', label: 'Uncial Antiqua', family: "'Uncial Antiqua', cursive" },
   { id: 'fell', label: 'IM Fell English', family: "'IM Fell English', serif" },

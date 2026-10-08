@@ -1,0 +1,66 @@
+/* Ficha de personagem na direção gótica sutil (tela-piloto, 2026-10-08).
+   Moldura fina com cantos, divisórias de rachadura, barras de recurso em vinho, grão leve no papel.
+   Só tokens de theme.css e as texturas de gothic.css. Nada anima. */
+.mist-theme .character-sheet .dossier-layout{position:relative;border:1px solid var(--rule-strong);border-radius:var(--radius-m);box-shadow:inset 0 0 0 1px var(--black);background:var(--grain),var(--paper-0);background-blend-mode:soft-light,normal}
+/* quatro cantos em L a 6 px da borda, por cima dos painéis internos e sem capturar cliques */
+.mist-theme .character-sheet .dossier-layout::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:
+  linear-gradient(var(--gold-deep),var(--gold-deep)) left 6px top 6px/18px 1px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) left 6px top 6px/1px 18px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) right 6px top 6px/18px 1px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) right 6px top 6px/1px 18px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) left 6px bottom 6px/18px 1px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) left 6px bottom 6px/1px 18px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) right 6px bottom 6px/18px 1px no-repeat,
+  linear-gradient(var(--gold-deep),var(--gold-deep)) right 6px bottom 6px/1px 18px no-repeat}
+.mist-theme .character-sheet .font-choice select{min-width:11.5rem}
+.mist-theme .character-sheet .dossier-profile{background:var(--paper-1);border-right:1px solid var(--rule)}
+/* retrato: anel duplo, como um medalhão */
+.mist-theme .character-sheet .dossier-profile img,.mist-theme .character-sheet .dossier-profile [class*="portrait"],.mist-theme .character-sheet .dossier-profile [class*="avatar"]{border-radius:var(--radius-s);box-shadow:0 0 0 3px var(--paper-1),0 0 0 4px var(--wine-line)}
+.mist-theme .character-sheet .profile-footnote{color:var(--muted);border-top:1px solid var(--rule)}
+
+/* título do registro */
+.mist-theme .character-sheet .dossier-title{border-bottom:0;padding-bottom:var(--space-4);margin-bottom:var(--space-4);background:var(--crack) left bottom/320px 8px repeat-x}
+.mist-theme .character-sheet .dossier-title h3{font:600 clamp(28px,3.4vw,36px)/var(--lh-tight) var(--font-display);color:var(--ink-strong);letter-spacing:.01em}
+.mist-theme .character-sheet .eyebrow{color:var(--gold);letter-spacing:.14em;font-weight:600}
+.mist-theme .character-sheet .sheet-heading h2{font:600 clamp(26px,3.2vw,34px)/var(--lh-tight) var(--font-display);color:var(--ink-strong)}
+.mist-theme .character-sheet .sheet-seal{background:var(--wine-deep);border-color:var(--wine-line);color:var(--ink-warm);border-radius:var(--radius-s)}
+
+/* seções: rachadura no lugar da linha reta; número em vinho claro */
+.mist-theme .character-sheet .section-heading{border-bottom:0;padding-bottom:var(--space-3);margin-bottom:var(--space-3);background:var(--crack) left bottom/320px 8px repeat-x}
+.mist-theme .character-sheet .section-heading h3{font-size:var(--fs-lead);font-weight:600;color:var(--ink-strong);letter-spacing:.03em}
+.mist-theme .character-sheet .section-number{color:var(--wine-line);font:600 var(--fs-label) var(--font-body);letter-spacing:.08em}
+.mist-theme .character-sheet .section-heading>span{color:var(--gold-deep)}
+.mist-theme .character-sheet .sheet-field-label-row label{font:600 15px var(--font-display);letter-spacing:.04em;color:var(--ink-soft);text-transform:none}
+
+/* campos: escuros, borda fina; o foco usa o anel dourado do tema */
+.mist-theme .character-sheet .sheet-field input:not([type=checkbox]):not([type=file]),.mist-theme .character-sheet .sheet-field textarea{background-color:var(--surface-0);border:1px solid var(--rule);border-radius:var(--radius-s);color:var(--ink);font-family:var(--font-body)}
+.mist-theme .character-sheet .sheet-field input:focus-visible,.mist-theme .character-sheet .sheet-field textarea:focus-visible{outline:var(--focus-ring);outline-offset:1px;border-color:var(--gold)}
+.mist-theme .character-sheet .sheet-field input::placeholder,.mist-theme .character-sheet .sheet-field textarea::placeholder{color:var(--muted);opacity:.8}
+
+/* atributos: arco de pedra, número em ouro apagado */
+.mist-theme .character-sheet .attribute-category .sheet-field{background:linear-gradient(180deg,var(--paper-2),var(--paper-0));border:1px solid var(--rule-strong);border-radius:34px 34px var(--radius-s) var(--radius-s)}
+.mist-theme .character-sheet .attribute-category .sheet-field input:not([type=checkbox]):not([type=file]){color:var(--gold-bright);background:none;border:0;font:600 34px var(--font-display);text-align:center;padding:0}
+.mist-theme .character-sheet .attribute-category .sheet-field-label-row label{color:var(--ink-soft)}
+
+/* recursos: faixa de vinho sobre trilho escuro */
+.mist-theme .character-sheet .status-bar-track{height:8px;background:var(--surface-0);border:1px solid var(--rule);border-radius:var(--radius-s)}
+.mist-theme .character-sheet .resource-field .status-bar-fill,.mist-theme .character-sheet .status-bar-fill{background:linear-gradient(90deg,var(--red),var(--wine-line));border-radius:0}
+
+/* fórmulas: pedra escura, resultado em ouro */
+.mist-theme .character-sheet .sheet-field-formula{background:var(--surface-0);border:1px solid var(--rule);border-radius:var(--radius-s)}
+.mist-theme .character-sheet .formula-result{color:var(--gold-bright);font-family:var(--font-display);font-weight:700}
+.mist-theme .character-sheet .formula-expr{color:var(--muted)}
+.mist-theme .character-sheet .sheet-field-formula{box-shadow:inset 3px 0 0 var(--wine-line)}
+
+/* botões da ficha */
+.mist-theme .character-sheet .sheet-tool-btn,.mist-theme .character-sheet .sheet-list-add-btn,.mist-theme .character-sheet .attack-roll-btn{background:transparent;border:1px solid var(--gold-deep);border-radius:var(--radius-s);color:var(--ink-warm);transition:background-color var(--motion-fast) var(--ease-out),border-color var(--motion-fast) var(--ease-out)}
+.mist-theme .character-sheet .sheet-tool-btn:hover,.mist-theme .character-sheet .sheet-list-add-btn:hover,.mist-theme .character-sheet .attack-roll-btn:hover{background:var(--paper-2);border-color:var(--gold)}
+.mist-theme .character-sheet .sheet-tool-btn:focus-visible,.mist-theme .character-sheet .sheet-list-add-btn:focus-visible,.mist-theme .character-sheet .attack-roll-btn:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+@media(prefers-reduced-motion:reduce){
+  .mist-theme .character-sheet .sheet-tool-btn,.mist-theme .character-sheet .sheet-list-add-btn,.mist-theme .character-sheet .attack-roll-btn{transition:none}
+}
+@media(forced-colors:active){
+  .mist-theme .character-sheet .dossier-layout{background:Canvas;border-color:CanvasText}
+  .mist-theme .character-sheet .dossier-title,.mist-theme .character-sheet .section-heading{background:none;border-bottom:1px solid CanvasText}
+}

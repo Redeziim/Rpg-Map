@@ -1,0 +1,29 @@
+/* Direção gótica sutil (2026-10-08). Escurece e dessatura o visual sem trocar a estrutura.
+   Referências: névoa e lampião (Bloodborne), mármore rachado, molduras finas em vinho, brilho de vela.
+   Paleta e fontes vivem em theme.css (:root). Este arquivo só traz a textura, a marca e o fundo.
+   Para trocar de tema mais tarde, basta redefinir os tokens sob um seletor como :root[data-theme="..."]. */
+:root{
+  /* grão fino, repetido a cada 180 px; vale como textura de papel velho */
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* fio de rachadura de mármore, usado como divisória: 320 x 8 px, repete na horizontal */
+  --crack:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='8' viewBox='0 0 320 8' fill='none' stroke='rgb(141,118,70)' stroke-width='.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M0 4 30 3.2 52 4.6 88 3.4 120 4.2 150 3 190 4.4 230 3.6 270 4.5 320 3.8M88 3.4 94 1M150 3 155 6.6M230 3.6 236 1.2M270 4.5 275 7'/%3E%3C/svg%3E")
+}
+
+/* fundo: grão sobre o carvão, fumaça mais baixa e um pouco menos dourada */
+.mist-theme .parchment-bg::before{content:"";position:absolute;inset:0;background:var(--grain);opacity:.07;z-index:1;animation:none}
+.mist-theme .ambient-fog-video{opacity:.2}
+.mist-theme .parchment-bg.still-only .ambient-fog-still{opacity:.22}
+
+/* a marca: única peça em letra gótica */
+.mist-theme .logo h1,.account-brand,.account-screen h1.brand{font-family:var(--font-brand);font-weight:700;letter-spacing:.01em}
+.mist-theme .logo h1{font-size:28px;line-height:1.05}
+
+/* algarismos alinhados na linha de base: a Cormorant usa números "antigos" por padrão, ruins para valores de jogo */
+/* (o atalho "font:" de vários componentes zera o herdado, por isso o recurso é forçado em todo o tema; convive com tabular-nums) */
+.mist-theme,.mist-theme *,.mist-theme *::placeholder{font-feature-settings:"lnum" 1!important}
+/* títulos em Cormorant: letras mais finas que a fonte anterior, então ganham um pouco de corpo */
+.mist-theme h1,.mist-theme h2,.mist-theme h3,.mist-theme h4{font-weight:600}
+
+@media(forced-colors:active){
+  .mist-theme .parchment-bg::before{display:none}
+}

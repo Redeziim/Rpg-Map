@@ -4,6 +4,7 @@ import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 import { SHEET_SYSTEMS, buildSystemFields } from '../shared/sheetTemplates.js';
+import './SheetGothic.css';
 const SheetImport = lazy(() => import('./SheetImport.jsx'));
 
 const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFontChange, playerName, onPlayerNameChange, playerSheets, onUpdatePlayerSheet, selectedPlayer, onSelectPlayer, playerNames: knownPlayers, profile, canEditSelected=false, notebookKey, onSaveNote, onShareNote, notebookMembers=[], notebookUsername='', mapPoints=[], onOpenPoint,openNoteRequest,roomId }) => {

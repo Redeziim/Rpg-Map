@@ -1,13 +1,15 @@
 /* Matte black, aged gold and oxblood. Scoped above legacy component styles. */
-:root{color-scheme:dark;--ink:#eee7d9;--muted:#b8b0a4;--gold:#c8a65e;--accent:#c97770;--red:#8f3037;--line:rgba(200,166,94,.22);--panel:var(--surface-1);--fs-label:12px;--fs-small:13px;--surface-0:#101010;--surface-1:#171717;--surface-2:#1f1f1f;--line-strong:#49402e;
+:root{color-scheme:dark;--ink:#e2dccf;--muted:#a39d92;--gold:#b39a63;--accent:#a8655f;--red:#6f2a32;--line:rgba(179,154,99,.2);--panel:var(--surface-1);--fs-label:12px;--fs-small:13px;--surface-0:#0b0c0c;--surface-1:#121313;--surface-2:#1a1b1a;--line-strong:#3a3429;
   /* Cor: papel e tinta do mundo da campanha. Use estes nomes; não crie hexadecimais novos. */
-  --ink-strong:#fff1cf;--ink-warm:#e7d6b1;--ink-soft:#cbb58a;
-  --gold-light:#f0d391;--gold-bright:#e2c786;--gold-deep:#a78954;--gold-shadow:#80663d;
-  --rule-soft:#403722;--rule:#55462f;--rule-strong:#76613f;
-  --paper-0:#1c1b17;--paper-1:#211f19;--paper-2:#2c291f;
-  --danger-ink:#ffd2cb;--black:#000000;
+  --ink-strong:#f1e8d2;--ink-warm:#d6c8a6;--ink-soft:#bba982;
+  --gold-light:#dcc896;--gold-bright:#cdb682;--gold-deep:#8d7646;--gold-shadow:#6a5a38;
+  --rule-soft:#2b2720;--rule:#3d362b;--rule-strong:#574c37;
+  --paper-0:#161412;--paper-1:#1b1815;--paper-2:#25211c;
+  --danger-ink:#e8c2bb;--black:#000000;
+  /* Vinho e névoa: apoio do ouro. O vinho marca perigo e moldura; a névoa, informação secundária. */
+  --wine-deep:#32141a;--wine-line:#7a3a42;--fog:#7a8683;--fog-deep:#232928;
   /* Tipografia */
-  --font-display:Cinzel,Georgia,serif;--font-body:'Source Sans 3',system-ui,sans-serif;
+  --font-display:'Cormorant Garamond',Georgia,serif;--font-brand:'Grenze Gotisch','Cormorant Garamond',Georgia,serif;--font-body:'Source Sans 3',system-ui,sans-serif;
   --fs-body:16px;--fs-lead:18px;--fs-title:clamp(20px,2.5vw,25px);--fs-heading:clamp(26px,4vw,40px);
   --lh-body:1.6;--lh-tight:1.25;
   /* Espaço e forma */

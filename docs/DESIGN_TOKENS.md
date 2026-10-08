@@ -4,17 +4,18 @@ Fonte única: o bloco `:root` de `src/theme.css`. Código novo usa estes nomes; 
 
 ## Cor
 
-Papel escuro e tinta quente, com dourado como único acento. Valores medidos no código existente; nada foi trocado por uma cor nova.
+Carvão com leve tom frio, papel escuro de tinta quente, ouro envelhecido como acento principal e vinho como apoio (perigo e moldura). Paleta ajustada em 2026-10-08 para a direção gótica sutil (`docs/DIRECAO_GOTICA.md`); os nomes dos tokens não mudaram, só os valores.
 
 | Papel | Tokens |
 | --- | --- |
-| Texto | `--ink` #eee7d9, `--ink-strong` #fff1cf, `--ink-warm` #e7d6b1, `--ink-soft` #cbb58a, `--muted` #b8b0a4 |
-| Ouro (ação, seleção, foco) | `--gold-light` #f0d391, `--gold-bright` #e2c786, `--gold` #c8a65e, `--gold-deep` #a78954, `--gold-shadow` #80663d |
-| Filetes e bordas | `--rule-soft` #403722, `--rule` #55462f, `--rule-strong` #76613f, `--line-strong` #49402e, `--line` (ouro a 22%) |
-| Superfícies neutras | `--surface-0` #101010, `--surface-1` #171717, `--surface-2` #1f1f1f |
-| Superfícies de papel | `--paper-0` #1c1b17, `--paper-1` #211f19, `--paper-2` #2c291f |
-| Alerta | `--red` #8f3037, `--accent` #c97770, `--danger-ink` #ffd2cb |
+| Texto | `--ink` #e2dccf, `--ink-strong` #f1e8d2, `--ink-warm` #d6c8a6, `--ink-soft` #bba982, `--muted` #a39d92 |
+| Ouro (ação, seleção, foco) | `--gold-light` #dcc896, `--gold-bright` #cdb682, `--gold` #b39a63, `--gold-deep` #8d7646, `--gold-shadow` #6a5a38 |
+| Filetes e bordas | `--rule-soft` #2b2720, `--rule` #3d362b, `--rule-strong` #574c37, `--line-strong` #3a3429, `--line` (ouro a 22%) |
+| Superfícies neutras | `--surface-0` #0b0c0c, `--surface-1` #121313, `--surface-2` #1a1b1a |
+| Superfícies de papel | `--paper-0` #161412, `--paper-1` #1b1815, `--paper-2` #25211c |
+| Alerta | `--red` #6f2a32, `--accent` #a8655f, `--danger-ink` #e8c2bb |
 | Extremo | `--black` #000000 |
+| Vinho e névoa (apoio) | `--wine-deep` #32141a, `--wine-line` #7a3a42, `--fog` #7a8683, `--fog-deep` #232928 |
 
 Regra de uso: ouro marca o que se pode acionar ou o que está selecionado; filete separa; superfície de papel agrupa. Borda dourada cheia fica para seleção e ação principal.
 
@@ -22,7 +23,8 @@ Regra de uso: ouro marca o que se pode acionar ou o que está selecionado; filet
 
 | Token | Valor | Uso |
 | --- | --- | --- |
-| `--font-display` | Cinzel, Georgia, serif | títulos e nomes de tela |
+| `--font-display` | 'Cormorant Garamond', Georgia, serif | títulos e nomes de tela |
+| `--font-brand` | 'Grenze Gotisch', Cormorant Garamond, serif | só a marca "Grimório" |
 | `--font-body` | Source Sans 3, system-ui, sans-serif | texto, formulários, rótulos |
 | `--fs-label` / `--fs-small` | 12 px / 13 px | rótulos e apoio; nada abaixo de 12 px |
 | `--fs-body` / `--fs-lead` | 16 px / 18 px | texto e abertura de seção |
