@@ -105,12 +105,18 @@ test('timeouts, cancellation and incompatible old packages keep confirmed data r
     assert.equal((await f.call(f.root+'/map-assets','POST',bundle([file('small.obj',triangle)]))).status,201,'worker slot becomes reusable');
     const master=await f.call('/auth/register','POST',{username:'master',password:'model-validation-local'},undefined,{},'master');
     assert.equal((await f.call(f.root+'/members','POST',{username:'master',role:'master'})).status,200);
+    // Revoke only once the server is validating (early access checks already passed), so the
+    // commit-time check is what must refuse. The larger model keeps validation running well past
+    // the two requests that follow, instead of racing a fixed sleep.
+    const slow='v 0 0 0\nv 1 0 0\nv 0 0 1\n'+'f 1 2 3\n'.repeat(400000);
+    const prepared=(await f.call(f.root+'/map-imports','POST',{},undefined,{},'master')).data,preparedPath=f.root+'/map-imports/'+prepared.id;
     let masterFinished=false;
-    const publishing=f.call(f.root+'/map-assets','POST',bundle([file('master-heavy.obj',heavy)]),undefined,{},'master').finally(()=>{masterFinished=true;});
-    await new Promise(done=>setTimeout(done,50));assert.equal(masterFinished,false);
+    const publishing=f.call(f.root+'/map-assets?importId='+prepared.id,'POST',bundle([file('master-heavy.obj',slow)]),undefined,{},'master').finally(()=>{masterFinished=true;});
+    for(const deadline=Date.now()+10000;(await f.call(preparedPath,'GET',undefined,undefined,{},'master')).data.phase!=='checking';await new Promise(done=>setTimeout(done,5)))assert.ok(Date.now()<deadline,'import reached validation');
+    assert.equal((await f.call(f.root+'/members/'+master.data.id,'PATCH',{role:'player'})).status,200);
+    assert.equal(masterFinished,false,'validation was still running when access was revoked');
     const object=(await f.call(f.root)).data.state.mapObjects[0];
     assert.equal((await f.call(f.root+'/map-objects/'+object.id,'PATCH',{position:[9,0,9]})).status,200);
-    assert.equal((await f.call(f.root+'/members/'+master.data.id,'PATCH',{role:'player'})).status,200);
     assert.equal((await publishing).status,403,'revoked editor cannot publish after validation');
     const current=(await f.call(f.root)).data;assert.equal(current.state.mapObjects.length,1);assert.deepEqual(current.state.mapObjects[0].position,[9,0,9]);
     const sharedId='shared-validation',sharedBundle=bundle([file('shared.obj',triangle)]);
