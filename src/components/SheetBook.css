@@ -1,0 +1,83 @@
+/* Ficha em formato de livro: livro aberto com duas páginas (uma no celular), viradas em 3D e abas de seção.
+   Só tokens de theme.css e texturas de gothic.css, então funciona nos dois temas. A virada respeita movimento reduzido
+   (SheetBook.jsx troca de página sem animar) e some em contraste forçado. */
+.sheet-book{display:grid;gap:var(--space-3);min-width:0}
+
+/* abas das seções: texto pequeno em caixa alta, a aberta ganha filete dourado embaixo */
+.book-tabs{display:flex;gap:var(--space-1);overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.book-tab{flex:0 0 auto;min-height:var(--target);padding:var(--space-2) var(--space-4);border:1px solid transparent;border-bottom:2px solid var(--rule);background:none;color:var(--muted);font:600 var(--fs-small) var(--font-body);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:color var(--motion-fast) var(--ease-out),border-color var(--motion-fast) var(--ease-out)}
+.book-tab:hover{color:var(--gold-light);border-bottom-color:var(--rule-strong)}
+.book-tab[aria-selected="true"]{color:var(--gold-light);border-bottom-color:var(--gold)}
+.book-tab:focus-visible,.book-turn:focus-visible,.book-list:focus-visible,.book-page-body:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* palco: perspectiva para a virada; o livro ocupa a altura útil da janela */
+.book-stage{perspective:2400px;--book-height:clamp(540px,calc(100dvh - 330px),860px)}
+.book-spread{position:relative;display:grid;grid-template-columns:1fr 1fr;height:var(--book-height);border:1px solid var(--rule-strong);border-radius:var(--radius-s);background:var(--paper-2);
+  box-shadow:inset 0 0 0 1px var(--black),1px 1px 0 0 var(--paper-2),2px 2px 0 0 var(--rule-soft),3px 3px 0 0 var(--paper-2),4px 4px 0 0 var(--rule),0 22px 48px color-mix(in srgb,var(--black) 55%,transparent)}
+.is-single .book-spread{grid-template-columns:1fr}
+/* lombada: sombra suave dos dois lados do vinco central */
+.is-double .book-spread::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:64px;transform:translateX(-50%);z-index:3;pointer-events:none;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--black) 26%,transparent) 45%,color-mix(in srgb,var(--black) 38%,transparent) 50%,color-mix(in srgb,var(--black) 26%,transparent) 55%,transparent)}
+
+.book-page{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0;min-height:0;background:var(--grain),var(--paper-0);background-blend-mode:soft-light,normal;overflow:hidden}
+.book-page-left{box-shadow:inset -34px 0 38px -30px color-mix(in srgb,var(--black) 30%,transparent)}
+.book-page-right{box-shadow:inset 34px 0 38px -30px color-mix(in srgb,var(--black) 30%,transparent)}
+.book-page-blank{background:var(--grain),var(--paper-1)}
+/* fio interno a 10 px da borda, como nas molduras da ficha */
+.book-page:not(.book-page-blank)::after{content:"";position:absolute;inset:10px;z-index:2;pointer-events:none;border:1px solid var(--rule-soft)}
+.book-page-head{padding:var(--space-5) var(--space-6) var(--space-2);color:var(--gold-deep);font:600 var(--fs-small) var(--font-body);letter-spacing:.16em;text-transform:uppercase;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.book-page-body{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--space-3) var(--space-6) var(--space-4);scrollbar-width:thin;scrollbar-color:var(--gold-shadow) transparent}
+.book-page-number{padding:var(--space-2) 0 var(--space-4);text-align:center;color:var(--gold-deep);font:600 var(--fs-body) var(--font-display);letter-spacing:.2em}
+.book-page-body .category-layout{display:grid;grid-template-columns:1fr;gap:var(--space-5)}
+.book-page-body .identity-category .sheet-fields-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.book-page-body .attribute-category .sheet-fields-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.book-page-body .compact-category .sheet-fields-grid{grid-template-columns:1fr}
+
+/* capa: retrato, nome e a ajuda das notas */
+.book-cover{display:grid;gap:var(--space-4);align-content:start}
+.mist-theme .sheet-book .book-cover .dossier-profile{display:grid;gap:var(--space-3);justify-items:center;text-align:center;border:0;background:none;padding:0;min-height:0}
+.mist-theme .sheet-book .book-cover .dossier-title{display:grid;gap:var(--space-2);justify-items:center;text-align:center;border-bottom:0;padding:0;margin:0}
+.book-cover .sheet-notes-help{text-align:center;color:var(--muted)}
+
+/* controles */
+.book-controls{display:flex;align-items:center;justify-content:center;gap:var(--space-3);flex-wrap:wrap}
+.book-turn{min-width:var(--target);min-height:var(--target);justify-content:center}
+.book-turn:disabled{opacity:.4;cursor:default}
+.book-counter{min-width:11ch;text-align:center;color:var(--ink-warm);font:600 var(--fs-small) var(--font-body);letter-spacing:.06em}
+.book-list{margin-left:var(--space-4)}
+
+/* virada: a folha gira na lombada; frente e verso são páginas sem foco */
+.book-leaf{position:absolute;top:0;bottom:0;width:50%;z-index:4;transform-style:preserve-3d;animation-duration:var(--turn-ms);animation-timing-function:cubic-bezier(.45,.05,.2,1);animation-fill-mode:forwards}
+.dir-forward .book-leaf{right:0;transform-origin:left center;animation-name:leaf-forward}
+.dir-back .book-leaf{left:0;transform-origin:right center;animation-name:leaf-back}
+.book-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:grid}
+.book-face .book-page{min-height:0}
+.book-face-back{transform:rotateY(180deg)}
+/* sombra que passa pela folha no meio da virada */
+.book-face::after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;background:color-mix(in srgb,var(--black) 55%,transparent);opacity:0;animation:leaf-shade var(--turn-ms) ease-in-out forwards}
+@keyframes leaf-forward{from{transform:rotateY(0)}to{transform:rotateY(-180deg)}}
+@keyframes leaf-back{from{transform:rotateY(0)}to{transform:rotateY(180deg)}}
+@keyframes leaf-shade{0%,100%{opacity:0}50%{opacity:.35}}
+
+/* uma página só: a folha abre a partir da borda esquerda, sem verso */
+.is-single .book-leaf{width:100%;left:0;right:0;transform-origin:left center}
+.is-single .book-face-back{display:none}
+.is-single.dir-forward .book-leaf{animation-name:leaf-single-forward}
+.is-single.dir-back .book-leaf{animation-name:leaf-single-back}
+@keyframes leaf-single-forward{from{transform:rotateY(0);opacity:1}to{transform:rotateY(-100deg);opacity:0}}
+@keyframes leaf-single-back{from{transform:rotateY(-100deg);opacity:0}to{transform:rotateY(0);opacity:1}}
+
+@media(max-width:759px){.book-page-head{padding-inline:var(--space-4)}.book-page-body{padding-inline:var(--space-4)}.book-list{margin-left:0}}
+@media(prefers-reduced-motion:reduce){.book-leaf,.book-face::after{animation:none}.book-tab{transition:none}}
+@media(forced-colors:active){
+  .book-spread::before,.book-page::after{display:none}
+  .book-spread,.book-page{border:1px solid CanvasText;box-shadow:none}
+  .book-tab[aria-selected="true"]{border-bottom-color:Highlight}
+}
+.sheet-view-switch{display:flex;justify-content:flex-end;margin-bottom:var(--space-3)}
+
+/* atributos na página do livro: três por linha e cartões mais baixos, para a página não precisar rolar */
+.mist-theme .character-sheet .sheet-book .book-page-body .attribute-category .sheet-fields-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3)}
+.mist-theme .character-sheet .sheet-book .book-page-body .attribute-category .sheet-field{min-height:112px;padding:var(--space-3) var(--space-1) var(--space-2)}
+.mist-theme .character-sheet .sheet-book .book-page-body .attribute-category .sheet-field input:not([type=checkbox]):not([type=file]){font-size:32px}
+.mist-theme .character-sheet .sheet-book .book-page-body .attribute-category .sheet-field-label-row label{font-size:var(--fs-body)}
+.is-single .book-page-body .attribute-category .sheet-fields-grid{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}

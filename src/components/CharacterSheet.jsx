@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
+import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, BookOpen, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
 import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 import { SHEET_SYSTEMS, buildSystemFields } from '../shared/sheetTemplates.js';
 import { pairModifiers, formatModifier, isCompactCategory } from '../shared/sheetFormulas.js';
+import { categoryWeight } from '../shared/bookPages.js';
+import SheetBook from './SheetBook.jsx';
 import './SheetGothic.css';
 const SheetImport = lazy(() => import('./SheetImport.jsx'));
 // Neste arquivo "Map" é o ícone do lucide-react; por isso o par vazio vem da própria função em vez de `new Map()`.
@@ -308,6 +310,24 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
     onFieldsChange(fields);
   };
 
+  const VIEW_KEY='grimorio-ficha-vista';
+  const [sheetView,setSheetView]=useState(()=>{try{return window.localStorage.getItem(VIEW_KEY)==='lista'?'lista':'livro';}catch{return 'livro';}});
+  const chooseView=view=>{setSheetView(view);try{window.localStorage.setItem(VIEW_KEY,view);}catch{/* o navegador pode recusar; a escolha vale só nesta sessão */}};
+  const allFields=[...sheetFields,...extraFields];
+  const categoryItems=categories.map((category,i)=>{
+    const categoryFields=allFields.filter(f=>(f.tab||'Geral')===category),pairs=category==='Atributos'?pairModifiers(categoryFields):NO_PAIRS;
+    const kind=category==='Atributos'?'attributes':category==='Identidade'?'identity':isCompactCategory(categoryFields)?'compact':'default';
+    return {category,weight:categoryWeight(categoryFields,{kind,cards:categoryFields.length-pairs.hidden.size}),node:<section className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''} ${category!=='Atributos' && isCompactCategory(categoryFields) ? 'compact-category' : ''}`}>
+      <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
+      <div className="sheet-fields-grid">{categoryFields.filter(f => !pairs.hidden.has(f.id)).map(f => renderField(f, pairs.mods.get(f.id)))}</div>
+    </section>};
+  });
+  const profileAside=<aside className="dossier-profile" aria-label="Perfil do personagem">{profile}<div className="profile-footnote"><span>✦</span><p>Cada marca, uma escolha.<br />Cada escolha, um caminho.</p></div></aside>;
+  const titleBlock=activePlayer?<div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : saveStatus==='error' ? 'Falha ao salvar' : 'Sua ficha'}</span></div>:null;
+  const importTool=!readOnly&&categories.length>0?<Suspense fallback={null}><SheetImport fields={allFields} currentValues={draftValues} disabled={saveStatus === 'saving'} onApply={values => onUpdatePlayerSheet(activePlayer, { values })} /></Suspense>:null;
+  const notesHelp=<p className="sheet-notes-help">{activePlayer===notebookUsername?'Crie e abra suas anotações em Minhas notas, na faixa acima.':'As notas pessoais são privadas. Notas compartilhadas com você aparecem na faixa acima.'}</p>;
+  const asBook=Boolean(activePlayer)&&categories.length>0&&sheetView==='livro';
+
   return (
     <div className="character-sheet">
       <datalist id="sheet-tab-options">{Array.from(new Set([...DEFAULT_TABS, ...categories])).map(t => <option key={t} value={t} />)}</datalist>
@@ -359,21 +379,20 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         </div>)}</div>
       </section>}
       {isMaster && <label className="player-select">Consultar personagem<select value={selectedPlayer} onChange={e => onSelectPlayer(e.target.value)}><option value="">Selecione um jogador…</option>{playerNames.map(n => <option key={n}>{n}</option>)}</select><span><Eye size={14} /> {readOnly?'Somente leitura':'Acesso de ADM'}</span></label>}
+      {asBook?<SheetBook label={isMaster?'Ficha consultada':'Sua ficha'} cover={<div className="book-cover">{profileAside}{titleBlock}{notesHelp}</div>} items={categoryItems} tools={importTool} onShowList={()=>chooseView('lista')} />:<>
+      {Boolean(activePlayer)&&categories.length>0&&<div className="sheet-view-switch"><button type="button" className="sheet-tool-btn" onClick={()=>chooseView('livro')}><BookOpen size={16} aria-hidden="true" />Abrir como livro</button></div>}
       <div className="dossier-layout">
-        <aside className="dossier-profile" aria-label="Perfil do personagem">{profile}<div className="profile-footnote"><span>✦</span><p>Cada marca, uma escolha.<br />Cada escolha, um caminho.</p></div></aside>
+        {profileAside}
         <div className="dossier-content">
           {!activePlayer ? <div className="empty-state sheet-empty"><ScrollText size={42} /><h3>{isMaster ? 'Um olhar sobre a mesa' : 'Sua ficha começa aqui'}</h3><p>{isMaster ? 'Selecione um jogador para consultar seus atributos, recursos e observações.' : 'Informe seu nome ao lado para acessar a ficha da campanha.'}</p></div> : <>
-            <div className="dossier-title"><div><span className="eyebrow">Registro de personagem</span><h3>{draftValues[sheetFields.find(f => f.label.toLowerCase()==='personagem')?.id] || activePlayer}</h3></div><span className="save-status" aria-live="polite">{isMaster ? 'Consulta' : saveStatus==='saving' ? 'Salvando…' : saveStatus==='saved' ? 'Salvo' : saveStatus==='error' ? 'Falha ao salvar' : 'Sua ficha'}</span></div>
-            {!readOnly && categories.length > 0 && <Suspense fallback={null}><SheetImport fields={[...sheetFields, ...extraFields]} currentValues={draftValues} disabled={saveStatus === 'saving'} onApply={values => onUpdatePlayerSheet(activePlayer, { values })} /></Suspense>}
+            {titleBlock}
+            {importTool}
             {!categories.length && <div className="empty-state sheet-empty"><ScrollText size={36} /><h3>O modelo ainda está em branco</h3><p>{isMaster ? 'Adicione campos no modelo da campanha acima.' : 'O mestre irá definir os campos da campanha. Você já pode registrar observações abaixo.'}</p></div>}
-            <div className="category-layout">{categories.map((category,i) => { const categoryFields=[...sheetFields,...extraFields].filter(f => (f.tab||'Geral')===category), pairs=category==='Atributos' ? pairModifiers(categoryFields) : NO_PAIRS; return <section key={category} className={`sheet-category ${category==='Atributos' ? 'attribute-category' : ''} ${category==='Identidade' ? 'identity-category' : ''} ${category!=='Atributos' && isCompactCategory(categoryFields) ? 'compact-category' : ''}`}>
-              <div className="section-heading"><h3 style={{ fontFamily }}><span className="section-number">{String(i+1).padStart(2,'0')}</span>{category}</h3><span>✦</span></div>
-              <div className="sheet-fields-grid">{categoryFields.filter(f => !pairs.hidden.has(f.id)).map(f => renderField(f, pairs.mods.get(f.id)))}</div>
-            </section>; })}</div>
-            <p className="sheet-notes-help">{activePlayer===notebookUsername?'Crie e abra suas anotações em Minhas notas, na faixa acima.':'As notas pessoais são privadas. Notas compartilhadas com você aparecem na faixa acima.'}</p>
+            <div className="category-layout">{categoryItems.map(item => <React.Fragment key={item.category}>{item.node}</React.Fragment>)}</div>
+            {notesHelp}
           </>}
         </div>
-      </div>
+      </div></>}
     </div>
   );
 };
