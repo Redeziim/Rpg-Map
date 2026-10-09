@@ -1,0 +1,52 @@
+/* Editor do modelo da ficha: mesa de trabalho à esquerda (campos, modelos, novo campo) e, à direita, a ficha como o jogador a vê.
+   O container query troca as duas colunas por dois painéis alternados (Editar / Prévia) quando a área da ficha é estreita, seja
+   por causa da janela ou da barra lateral de dados. Só tokens de theme.css; nenhuma animação nova. */
+.model-editor{container-type:inline-size;display:grid;gap:var(--space-4);min-width:0}
+
+.model-editor-bar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--space-3) var(--space-5);padding-bottom:var(--space-3);border-bottom:1px solid var(--rule-strong)}
+.model-editor-title h3{margin:0;font:600 var(--fs-lead) var(--font-display);color:var(--ink-strong)}
+.model-editor-title p{margin:var(--space-1) 0 0;color:var(--muted);font-size:var(--fs-small)}
+.model-editor-switch{display:none;gap:var(--space-1);position:sticky;top:0;z-index:4;padding:var(--space-2) 0;background:var(--surface-1)}
+.model-editor-switch .sheet-tool-btn{flex:1 1 0}
+.model-editor-switch .sheet-tool-btn[aria-pressed="true"]{border-color:var(--gold);background:var(--paper-2);color:var(--ink-strong);box-shadow:inset 0 -2px 0 var(--gold)}
+
+.model-editor-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:var(--space-5);align-items:start}
+.model-editor-edit{display:grid;gap:var(--space-5);min-width:0}
+.model-editor-section{display:grid;gap:var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--rule);min-width:0}
+.model-editor-section>h4{margin:0;font:600 var(--fs-body) var(--font-display);color:var(--ink-strong)}
+.model-editor .field-type-grid,.model-editor .field-add-row{margin:0}
+.model-editor .sheet-models{margin:0}
+.model-editor .field-add-row{flex-wrap:wrap;align-items:flex-end}
+.model-editor .field-add-row label{flex:1 1 180px;min-width:0}
+
+/* lista de campos: nome e categoria crescem, os controles ficam à direita; quebra em duas linhas quando falta espaço */
+.model-editor .field-list-row{flex-wrap:wrap;row-gap:var(--space-1)}
+.model-editor .field-list-row input[aria-label^="Nome ("]{flex:2 1 150px;min-width:0}
+.model-editor .field-list-row input[aria-label^="Categoria"]{flex:1 1 110px;min-width:0}
+.model-editor .field-list-row button{inline-size:36px;block-size:36px}
+@media (pointer:coarse){.model-editor .field-list-row button{inline-size:var(--target);block-size:var(--target)}.model-editor-preview-actions .sheet-tool-btn,.model-editor-switch .sheet-tool-btn{min-height:var(--target)}}
+/* janela baixa: a prévia deixa de ficar presa e rola junto com a página, para não haver rolagem dentro de rolagem */
+@media (max-height:760px){.model-editor-preview{position:static;max-height:none;overflow:visible}}
+
+/* prévia: fica à vista enquanto a lista de campos rola; se a janela for baixa, a própria prévia rola */
+.model-editor-preview{position:sticky;top:var(--space-3);max-height:calc(100dvh - var(--space-6));overflow-y:auto;min-width:0;display:grid;gap:var(--space-3);padding:var(--space-3);border:1px solid var(--rule-strong);border-radius:var(--radius-s);background:var(--paper-1);scrollbar-width:thin}
+.model-editor-preview-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:var(--space-2) var(--space-4)}
+.model-editor-preview-head h4{margin:0;font:600 var(--fs-body) var(--font-display);color:var(--ink-strong)}
+.model-editor-preview-head p{margin:var(--space-1) 0 0;color:var(--muted);font-size:var(--fs-small)}
+.model-editor-preview-note{margin:0;padding:var(--space-2) var(--space-3);border-left:3px solid var(--gold);background:var(--paper-2);color:var(--ink-warm);font-size:var(--fs-small)}
+.model-editor-preview-actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.model-editor-preview-actions .sheet-tool-btn{min-height:36px;font-size:var(--fs-small)}
+.model-editor-preview-actions .sheet-tool-btn:disabled{opacity:.55;cursor:default}
+
+@container (max-width: 899px){
+  .model-editor-grid{grid-template-columns:minmax(0,1fr)}
+  .model-editor-switch{display:flex}
+  .model-editor[data-pane="editar"] .model-editor-preview{display:none}
+  .model-editor[data-pane="previa"] .model-editor-edit{display:none}
+  .model-editor-preview{position:static;max-height:none;overflow:visible}
+}
+
+@media (forced-colors:active){
+  .model-editor-preview{border-color:CanvasText;background:Canvas}
+  .model-editor-switch .sheet-tool-btn[aria-pressed="true"]{border-color:Highlight;outline:2px solid Highlight}
+}

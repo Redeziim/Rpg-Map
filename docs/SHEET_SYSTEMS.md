@@ -4,7 +4,7 @@ Pedido do usuário em 2026-10-07: modelos dos sistemas mais conhecidos, começan
 
 ## Modelos de sistema
 
-O mestre abre **Editar modelo da ficha** e escolhe um sistema em **Modelos de sistema**. Um modelo é só uma lista de campos do mesmo tipo que o mestre já monta à mão; nada fica fixo. Dá para **Somar campos** (mantém o que existe e não repete campos de mesmo nome), **Substituir o modelo** (com confirmação), ou editar tudo depois. O servidor aceita até 200 campos no modelo.
+O mestre abre a aba **Editor do modelo** (dentro de Ficha, ao lado de **Fichas dos jogadores**) e escolhe um sistema em **Modelos de sistema**. O editor mostra, ao lado, a ficha como o jogador a vê (ver a seção "Editor do modelo com prévia" e o ADR 038). Um modelo é só uma lista de campos do mesmo tipo que o mestre já monta à mão; nada fica fixo. Dá para **Somar campos** (mantém o que existe e não repete campos de mesmo nome), **Substituir o modelo** (com confirmação), ou editar tudo depois. O servidor aceita até 200 campos no modelo.
 
 | Sistema | Campos | O que traz |
 | --- | --- | --- |
@@ -26,9 +26,18 @@ Seis sistemas conhecidos entraram depois (ADR 037, `src/shared/sheetSystemsMore.
 
 Novos sistemas entram em `src/shared/sheetTemplates.js` ou `sheetSystemsMore.js` (a lista de campos e os apelidos de leitura).
 
+## Editor do modelo com prévia (ADR 038)
+
+A aba **Editor do modelo** divide a tela em duas partes: à esquerda, os modelos de sistema, **Meus modelos**, o novo campo e a lista de campos; à direita, **Como o jogador vê**, uma ficha de jogador de verdade (o mesmo livro que o jogador abre) montada com o modelo atual.
+
+- Cada mudança (nome, categoria, ordem, campo novo ou removido, tipografia) aparece na prévia na hora. Editar um campo abre na prévia a página da categoria dele.
+- A prévia é testável: dá para digitar nos campos para ver fórmulas e barras. **Preencher com exemplo** põe valores de exemplo e **Limpar** zera. Nada da prévia é salvo ou enviado ao servidor.
+- Ao criar um modelo de um arquivo, a prévia mostra o modelo lido (com as linhas que estão marcadas) antes de guardar; ao clicar em **Somar campos** ou **Substituir o modelo**, mostra como a mesa ficaria antes de confirmar. Cancelar volta ao modelo atual da mesa.
+- Em área estreita (menos de 900 px na área da ficha), as duas partes viram dois painéis alternados, **Editar** e **Prévia**.
+
 ## Meus modelos e modelo gerado de um arquivo (ADR 037)
 
-Em **Editar modelo da ficha → Modelos de sistema**, o mestre ou ADM tem:
+Em **Editor do modelo → Modelos de sistema**, o mestre ou ADM tem:
 
 - **Meus modelos**: os modelos guardados na sua conta (tabela `sheet_models`). Só você os vê, em qualquer mesa. Cada um pode ser somado à mesa, substituir o modelo da mesa ou ser apagado. Limite de 30 por conta.
 - **Criar modelo de um arquivo**: escolha um PDF, uma imagem ou um TXT. A leitura acontece no navegador (o arquivo não vai ao servidor). O app propõe os campos; você marca, renomeia, troca tipo e categoria, dá um nome e guarda, ou guarda e já soma à mesa.

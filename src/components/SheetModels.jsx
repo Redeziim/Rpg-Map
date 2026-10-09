@@ -13,7 +13,8 @@ const systemItems=SHEET_SYSTEMS.map(system=>({key:system.id,name:system.name,sum
 
 // Biblioteca de modelos da ficha: sistemas famosos já prontos, os modelos guardados na sua conta e a criação de um modelo novo a partir de
 // um PDF, uma imagem ou um TXT. Um modelo é só uma lista de campos; ele nunca fica fixo na mesa (ADR 037).
-export default function SheetModels({sheetFields,onFieldsChange,makeId}){
+// onPreview({label,fields}|null): o editor mostra na prévia o modelo lido de um arquivo, ou como a mesa ficaria ao somar/substituir, antes de aplicar.
+export default function SheetModels({sheetFields,onFieldsChange,makeId,onPreview}){
   const [mine,setMine]=useState(null),[loadError,setLoadError]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const [pending,setPending]=useState(null),[systemError,setSystemError]=useState(''),[deleting,setDeleting]=useState(null),[busy,setBusy]=useState(false);
   const [phase,setPhase]=useState('idle'),[message,setMessage]=useState(''),[draft,setDraft]=useState(null),[saveOwn,setSaveOwn]=useState(null);
@@ -26,13 +27,14 @@ export default function SheetModels({sheetFields,onFieldsChange,makeId}){
   useEffect(()=>{if(phase==='review')heading.current?.focus();},[phase]);
 
   // Somar mantém o que já existe e só traz os campos de nome novo; substituir troca o modelo inteiro.
-  const plan=pending&&(()=>{
+  const plan=useMemo(()=>{
+    if(!pending)return null;
     const created=pending.fields.map(field=>({id:makeId(),...field}));
     if(pending.mode==='replace')return {fields:created,added:created.length};
     const have=new Set(sheetFields.map(field=>field.label.trim().toLowerCase()));
     const extra=created.filter(field=>!have.has(field.label.trim().toLowerCase()));
     return {fields:[...sheetFields,...extra],added:extra.length};
-  })();
+  },[pending,sheetFields,makeId]);
   function apply(){
     if(!plan)return;
     if(plan.fields.length>SHEET_MODEL_LIMITS.fields){setSystemError(`O modelo ficaria com mais de ${SHEET_MODEL_LIMITS.fields} campos. Remova campos antes de somar este modelo.`);return;}
@@ -90,6 +92,14 @@ export default function SheetModels({sheetFields,onFieldsChange,makeId}){
     try{cleanModelName(draft.name);return {fields:cleanSheetFields(chosen.map(({type,label,tab,formula})=>({type,label,tab,...(type==='formula'?{formula}:{})}))),problem:''};}
     catch(cause){return {fields:null,problem:cause instanceof SheetModelError?cause.message:'Revise os campos.'};}
   },[draft,chosen]);
+  // A prévia do editor segue o que está em revisão ou à espera de confirmação; sem nada disso, volta ao modelo da mesa.
+  useEffect(()=>{
+    if(!onPreview)return;
+    if(draft&&checked.fields)onPreview({label:`Modelo lido de ${draft.fileName}`,fields:checked.fields.map((field,index)=>({id:`rascunho_${chosen[index]?.key??index}`,...field}))});
+    else if(pending&&plan)onPreview({label:pending.mode==='replace'?`A mesa ficaria com o modelo “${pending.name}”`:`A mesa ficaria com os campos de “${pending.name}” somados`,fields:plan.fields});
+    else onPreview(null);
+  },[draft,checked,pending,plan,onPreview]);
+  useEffect(()=>()=>onPreview?.(null),[onPreview]);
   async function finish(alsoUse){
     if(!checked.fields)return;
     const model=await save(cleanModelName(draft.name),checked.fields,'file');

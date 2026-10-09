@@ -23,7 +23,8 @@ function Page({page,number,side,ghost=false}){
 
 // Ficha como livro: capa com o perfil, uma página por grupo de categorias e, no fim, as ferramentas.
 // Só as páginas à vista ficam montadas. Durante a virada, as faces do papel em movimento são cópias sem foco (inert).
-export default function SheetBook({cover,items,tools,onShowList,label='Ficha do personagem'}){
+// quiet: sem anúncio de página (a prévia do editor vira de página sozinha enquanto o mestre edita). focusCategory ({name,token}): abre a página que contém a categoria; o editor do modelo usa para mostrar o que o mestre está mexendo.
+export default function SheetBook({cover,items,tools,onShowList,label='Ficha do personagem',focusCategory=null,quiet=false}){
   const hostRef=useRef(null),spreadRef=useRef(null),touch=useRef(null);
   const [perView,setPerView]=useState(2),[capacity,setCapacity]=useState(410),[start,setStart]=useState(0),[turn,setTurn]=useState(null);
 
@@ -44,7 +45,7 @@ export default function SheetBook({cover,items,tools,onShowList,label='Ficha do 
     for(const [index,group] of paginate(items.map(item=>({category:item.category,weight:item.weight})),capacity).entries()){
       const nodes=group.categories.map(category=>items.find(item=>item.category===category));
       const title=group.categories.join(' · ');
-      list.push({key:`grupo-${index}`,title,tab:group.categories.length>1?`${group.categories[0]} +${group.categories.length-1}`:group.categories[0],node:<div className="category-layout">{nodes.map(item=><React.Fragment key={item.category}>{item.node}</React.Fragment>)}</div>});
+      list.push({key:`grupo-${index}`,title,categories:group.categories,tab:group.categories.length>1?`${group.categories[0]} +${group.categories.length-1}`:group.categories[0],node:<div className="category-layout">{nodes.map(item=><React.Fragment key={item.category}>{item.node}</React.Fragment>)}</div>});
     }
     if(tools)list.push({key:'ferramentas',title:'Ferramentas',tab:'Importar ficha',node:tools});
     return list;
@@ -59,6 +60,17 @@ export default function SheetBook({cover,items,tools,onShowList,label='Ficha do 
     if(turn||to===current)return;
     if(reduced())setStart(to);else setTurn({from:current,to,dir:to>current?'forward':'back'});
   },[turn,total,perView,current]);
+
+  // vai para a categoria pedida uma vez por pedido (token); mudanças de layout não repetem o salto
+  const lastFocus=useRef(null);
+  useEffect(()=>{
+    // prévia escondida (largura 0) guarda o pedido até aparecer; com o livro medido, o efeito roda de novo
+    if(!focusCategory||lastFocus.current===focusCategory.token||turn||!hostRef.current?.clientWidth)return;
+    const index=pages.findIndex(page=>page.categories?.includes(focusCategory.name));
+    if(index<0)return;
+    lastFocus.current=focusCategory.token;
+    go(viewStart(index,perView));
+  },[focusCategory,pages,turn,go,perView]);
 
   const settled=turn?turn.to:current,visible=pagesInView(settled,total,perView);
   const onKeyDown=event=>{
@@ -101,7 +113,7 @@ export default function SheetBook({cover,items,tools,onShowList,label='Ficha do 
     </div>
     <div className="book-controls">
       <button type="button" className="sheet-tool-btn book-turn" onClick={()=>go(settled-perView)} disabled={first||!!turn} aria-label="Página anterior"><ChevronLeft size={18} aria-hidden="true"/></button>
-      <span className="book-counter" role="status" aria-live="polite">{viewLabel(settled,total,perView)}</span>
+      <span className="book-counter" role={quiet?undefined:'status'} aria-live={quiet?undefined:'polite'}>{viewLabel(settled,total,perView)}</span>
       <button type="button" className="sheet-tool-btn book-turn" onClick={()=>go(settled+perView)} disabled={last||!!turn} aria-label="Próxima página"><ChevronRight size={18} aria-hidden="true"/></button>
       <button type="button" className="sheet-tool-btn book-list" onClick={onShowList}><List size={16} aria-hidden="true"/>Ver como lista</button>
     </div>

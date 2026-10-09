@@ -61,6 +61,7 @@ Se um comando perder a resposta, **Verificar resultado** confere o estado antes 
 
 - `src/components/RPGMapExplorer.jsx`: estado principal, mapa e navegação.
 - `src/components/CharacterSheet.jsx`: ficha de personagem e campos configuráveis.
+- `src/components/SheetModelEditor.jsx`: aba **Editor do modelo** (campos à esquerda, prévia ao vivo da ficha do jogador à direita); ver `docs/SHEET_SYSTEMS.md` e o ADR 038.
 - `src/components/SheetModels.jsx`: biblioteca de modelos de ficha (sistemas conhecidos, **Meus modelos** guardados na conta e criação de modelo a partir de PDF, imagem ou TXT); ver `docs/SHEET_SYSTEMS.md` e o ADR 037. O servidor guarda os modelos na tabela `sheet_models`, só visível ao dono.
 - `src/components/StatusBars.jsx`: identidade do jogador e barras individuais.
 - `src/components/GroupStatus.jsx`: visão consolidada do grupo.
