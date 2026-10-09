@@ -3,11 +3,9 @@
 
 /* faixa de sessão: ordem de jogo em linha própria quando a área útil é estreita, cadernos lado a lado abaixo */
 .mist-theme .session-strip{flex-wrap:wrap}
-.mist-theme .session-strip .turn-tracker{flex:1 1 360px}
 .mist-theme .turn-heading-copy{flex:1 1 160px}
 .mist-theme .turn-heading p{white-space:normal;overflow:visible}
 .mist-theme .session-strip .notebook-library{flex:1 1 150px;max-width:none}
-@media(max-width:1180px){.mist-theme .session-strip .turn-tracker{flex-basis:100%}}
 
 /* legenda de seção em ouro envelhecido: o vinho de --accent dava 4,4:1 sobre o carvão */
 .mist-theme .eyebrow{color:var(--gold-deep);letter-spacing:.16em;font-weight:600}

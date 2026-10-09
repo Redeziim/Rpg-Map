@@ -1,16 +1,19 @@
-/* Casca compacta (2026-10-08): a barra lateral vira uma faixa de ícones e só mostra os nomes com o mouse em cima ou com o foco dentro.
-   Técnica: o conteúdo da barra continua montado na largura aberta (220 px) e o cabeçalho recorta em 64 px. Assim nada muda de
-   lugar quando ela abre: só se revela, por cima do conteúdo, sem empurrá-lo.
-   Vale a partir de 761 px; abaixo disso a navegação já é uma grade no topo (workspace.css). */
+/* Casca compacta (2026-10-08): barra lateral em ícones, faixa de turnos e notas no canto, ferramentas do mapa em "Mais" e menus das notas.
+   Este arquivo é carregado depois dos outros e, para não depender da ordem em que as folhas lentas (notas, turnos) chegam, os seletores
+   da faixa de cima usam .mist-theme.rpg-container, que tem mais força que as regras antigas de mesmo nome. */
+
+/* ---------- 1. Barra lateral só de ícones (a partir de 761 px) ----------
+   O conteúdo da barra fica sempre montado na largura aberta (220 px) e o cabeçalho recorta em 64 px. Assim nada muda de lugar quando ela
+   abre: só se revela, por cima do conteúdo, sem empurrá-lo. Abaixo de 761 px a navegação já é uma grade no topo (workspace.css). */
 @media(min-width:761px){
-  .mist-theme.rpg-container,.mist-theme.rpg-container.mist-theme{grid-template-columns:var(--rail-width) minmax(0,1fr)}
-  .mist-theme.rpg-container{--rail-width:64px;--rail-open:220px}
+  /* a classe repetida é de propósito: ganha do 184 px de workspace.css e do 166 px de @media(max-width:1150px) */
+  .mist-theme.rpg-container.mist-theme{--rail-width:64px;--rail-open:220px;grid-template-columns:var(--rail-width) minmax(0,1fr)}
   .mist-theme .header{width:var(--rail-width);min-width:0;overflow:hidden;z-index:40;
     transition:width 240ms var(--ease-out) 160ms,box-shadow 240ms var(--ease-out) 160ms}
   .mist-theme .header:hover,.mist-theme .header:has(:focus-visible){width:var(--rail-open);transition-delay:0ms;
     box-shadow:8px 0 24px color-mix(in srgb,var(--black) 55%,transparent)}
-  /* o conteúdo tem sempre a largura aberta; o que passa de 64 px fica recortado */
   .mist-theme .header>*{width:var(--rail-open);min-width:var(--rail-open);box-sizing:border-box}
+  /* alinhamento: tudo no mesmo eixo. Ícones centrados em 32 px (8 px da lista + 15 px do botão + 9 px do meio do ícone), textos à esquerda */
   .mist-theme .header-content{padding:18px 14px 12px 14px;gap:14px}
   .mist-theme .brand-mark{width:36px;height:42px}
   .mist-theme .header-controls{align-items:stretch;text-align:left}
@@ -18,15 +21,14 @@
   .mist-theme .room-title-nav,.mist-theme .sync-status{margin-left:2px}
   .mist-theme .user-indicator{justify-content:flex-start;padding-left:2px}
   .mist-theme .header :where(button,summary,.mode-btn,.sync-status,.room-title-nav){white-space:nowrap}
-  .mist-theme .tab-nav{padding:0 8px 0 8px}
-  /* ícone no centro dos 64 px: 8 px da lista + 14 px do botão + 9 px do meio do ícone = 31 px */
+  .mist-theme .tab-nav{padding:0 8px}
   .mist-theme .tab-btn,.mist-theme .nav-about-button{padding-left:15px;overflow:hidden}
   .mist-theme .nav-footer{padding:8px}
-  /* o que não é navegação some na faixa fechada, mas continua focável: ao receber foco, a barra abre e tudo reaparece */
+  /* o que não é navegação some na faixa fechada, mas continua focável: ao receber foco do teclado a barra abre e tudo reaparece */
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) .header-controls,
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) .logo>div:last-child{opacity:0;pointer-events:none}
   .mist-theme .header-controls,.mist-theme .logo>div:last-child{transition:opacity var(--motion-base) var(--ease-out) 80ms}
-  /* faixa fechada: o nome some (continua no HTML para leitor de tela) e só o ícone aparece; o aberto repinta o texto ao abrir */
+  /* faixa fechada: o nome some (continua no HTML para leitor de tela) e só o ícone aparece; ao abrir, o texto é repintado */
   .mist-theme .tab-btn,.mist-theme .nav-about-button{transition:color var(--motion-base) var(--ease-out) 70ms,background-color var(--motion-fast) var(--ease-out)}
   .mist-theme .tab-btn svg,.mist-theme .nav-about-button svg{transition:transform var(--motion-fast) var(--ease-out)}
   .mist-theme .tab-btn:hover svg,.mist-theme .nav-about-button:hover svg{transform:translateX(3px)}
@@ -35,17 +37,35 @@
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) .tab-btn.active{box-shadow:inset 3px 0 0 var(--gold)}
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) .tab-btn.active svg{color:var(--gold-bright)}
 }
-/* Faixa de cima: turnos e cadernos de notas formam um grupo compacto no canto superior direito de toda aba (acima de 760 px),
-   sem esticar. Em Cenas, Linha do tempo e Sobre os turnos somem; em Linha do tempo e Sobre os cadernos também. */
-@media(min-width:761px){
-  .mist-theme .session-strip{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px;margin:8px 16px 0}
-  .mist-theme .session-strip .notebook-library summary{min-height:36px;padding:2px 10px;font-size:var(--fs-small)}
-  .mist-theme .session-strip .notebook-library-list{left:auto;right:0}
-  /* os três cadernos formam um grupo unido */
-  .mist-theme .session-strip .notebook-library+.notebook-library{margin-left:-7px}
+/* Alto contraste: o navegador ignora "color:transparent", então o nome ficaria cortado pela metade. A barra fica aberta. */
+@media(forced-colors:active) and (min-width:761px){
+  .mist-theme.rpg-container.mist-theme{--rail-width:var(--rail-open)}
+  .mist-theme .header{transition:none}
 }
-/* Turnos: um botão minimizado, como os cadernos. Abre um painel com o bloco completo (ordem, controles e gerenciar). O bloco continua
-   montado por dentro, então não perde o que estava sendo feito ao fechar. */
+/* "Minhas mesas" e "Sair da conta" só entram no rodapé da faixa de ícones; no celular continuam no menu da conta. */
+@media(max-width:760px){.mist-theme .rail-only{display:none}}
+
+/* ---------- 2. Faixa de cima: turnos e cadernos de notas ----------
+   Um grupo compacto no canto superior direito de toda aba (acima de 760 px), sem esticar. Em Cenas, Linha do tempo e Sobre o botão de
+   turnos some; em Linha do tempo e Sobre os cadernos também (só o botão: as janelas de nota abertas continuam onde estão). */
+.mist-theme.rpg-container .session-strip{z-index:12}
+@media(min-width:761px){
+  .mist-theme.rpg-container .session-strip{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px;margin:8px 16px 0}
+  .mist-theme.rpg-container .session-strip .notebook-library summary{min-height:36px;padding:2px 10px;font-size:var(--fs-small)}
+  .mist-theme.rpg-container .session-strip .notebook-library-list{left:auto;right:0}
+  /* os três cadernos formam um grupo unido */
+  .mist-theme.rpg-container .session-strip .notebook-library+.notebook-library{margin-left:-7px}
+}
+.mist-theme.rpg-container .session-strip .notebook-library{flex:0 0 auto;width:auto;max-width:none}
+.mist-theme.rpg-container .session-strip .notebook-library summary{gap:8px;white-space:nowrap}
+.mist-theme.rpg-container .session-strip .notebook-library summary>svg{flex:none}
+.mist-theme.rpg-container .session-strip .notebook-library summary span{display:flex;flex-direction:row;align-items:baseline;gap:6px}
+.mist-theme.rpg-container .session-strip .notebook-library summary small{margin:0}
+.mist-theme.rpg-container .session-strip:is(.strip-cenas,.strip-linha,.strip-sobre) .turns-pill{display:none}
+.mist-theme.rpg-container .session-strip:is(.strip-linha,.strip-sobre) .notebook-library{display:none}
+.mist-theme.rpg-container .session-strip:is(.strip-linha,.strip-sobre){margin:0}
+
+/* Botão "Turnos": minimizado, como os cadernos. Abre um painel com o bloco completo (ordem, controles e gerenciar). */
 .mist-theme .turns-pill{flex:0 0 auto;margin-right:var(--space-2)}
 .mist-theme .turns-pill-button{display:flex;align-items:center;gap:8px;min-height:36px;padding:2px 10px;border:1px solid var(--rule-strong);background:var(--paper-1);color:var(--gold-bright);font:600 var(--fs-small) var(--font-body);cursor:pointer;white-space:nowrap}
 .mist-theme .turns-pill-button:hover,.mist-theme .turns-pill.is-open .turns-pill-button{background:var(--paper-2);border-color:var(--gold)}
@@ -53,60 +73,54 @@
 .mist-theme .turns-pill-button small{color:var(--muted);font-size:var(--fs-small);font-weight:400}
 .mist-theme .turns-pill.is-my-turn .turns-pill-button{border-color:var(--gold-bright);background:var(--wine-deep)}
 .mist-theme .turns-pill.is-my-turn .turns-pill-button small{color:var(--ink-strong);font-weight:600}
+/* comando sem confirmação ou aviso do bloco de turnos: o botão chama a atenção mesmo com o painel fechado */
+.mist-theme .turns-pill.needs-attention .turns-pill-button{border-color:var(--wine-line);background:var(--wine-deep);color:var(--ink-strong)}
+.mist-theme .turns-pill.needs-attention .turns-pill-button small{color:var(--ink-strong);font-weight:600}
+/* o painel se ancora na faixa (e não no botão), então nunca passa da borda da tela */
 .mist-theme .turns-popover{position:absolute;top:calc(100% + 4px);right:0;z-index:30;width:min(560px,100%);max-height:min(70dvh,560px);overflow:auto;overscroll-behavior:contain;background:var(--paper-0);border:1px solid var(--rule-strong);box-shadow:0 14px 28px color-mix(in srgb,var(--black) 65%,transparent),inset 0 0 0 1px var(--black)}
 .mist-theme .turns-popover[hidden]{display:none}
 .mist-theme .turns-popover .turn-tracker{border:0;background:transparent;padding:var(--space-2) var(--space-3)}
-.mist-theme .session-strip .notebook-library{flex:0 0 auto;width:auto;max-width:none}
-.mist-theme .session-strip .notebook-library summary{gap:8px;white-space:nowrap}
-.mist-theme .session-strip .notebook-library summary span{display:flex;flex-direction:row;align-items:baseline;gap:6px}
-.mist-theme .session-strip .notebook-library summary small{margin:0}
-/* Os cadernos só escondem o botão; as janelas de nota abertas continuam onde estão. */
-.mist-theme .session-strip:is(.strip-cenas,.strip-linha,.strip-sobre) .turns-pill{display:none}
-.mist-theme .session-strip:is(.strip-linha,.strip-sobre) .notebook-library{display:none}
-.mist-theme .session-strip:is(.strip-linha,.strip-sobre){margin:0}
+/* dentro do painel, "Gerenciar" abre no fluxo, sem uma segunda caixa com rolagem própria */
+.mist-theme .turns-popover .turn-editor-panel{position:static;width:auto;max-height:none;margin-top:var(--space-2);box-shadow:none}
 
-/* Ferramentas do mapa: as de uso frequente ficam à vista; as raras ficam atrás de "Mais ferramentas". */
+/* ---------- 3. Ferramentas do mapa: as raras ficam atrás de "Mais ferramentas" ---------- */
 .mist-theme #map-2d-tools .tools-more{border-bottom:1px solid var(--rule-soft)}
 .mist-theme #map-2d-tools .tools-more>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--space-3);min-height:var(--target);padding:var(--space-2) 0;color:var(--ink-soft);font:600 var(--fs-small) var(--font-display);letter-spacing:.05em;cursor:pointer;list-style:none}
 .mist-theme #map-2d-tools .tools-more>summary::-webkit-details-marker{display:none}
 .mist-theme #map-2d-tools .tools-more>summary::after{content:"";margin-left:auto;align-self:center;width:7px;height:7px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(45deg)}
 .mist-theme #map-2d-tools .tools-more[open]>summary::after{transform:rotate(-135deg)}
-.mist-theme #map-2d-tools .tools-more>summary small{flex-basis:100%;order:3;color:var(--muted);font:var(--fs-small) var(--font-body);letter-spacing:0}
+.mist-theme #map-2d-tools .tools-more>summary>small{flex-basis:100%;order:3;color:var(--muted);font:var(--fs-small) var(--font-body);letter-spacing:0}
 .mist-theme #map-2d-tools .tools-more>summary:focus-visible{outline:var(--focus-ring);outline-offset:calc(var(--focus-offset) * -1)}
 .mist-theme #map-2d-tools .tools-more>.tool-section:last-of-type{border-bottom:0}
-.mist-theme #map-2d-tools .tools-more>summary>small{color:var(--muted)}
-.mist-theme .session-strip .notebook-library summary>svg{flex:none}
 
-/* Menu de cada caderno de notas: o comum à vista; "Rascunhos" e "Reunir janelas" são botões pequenos no rodapé. */
+/* ---------- 4. Notas ----------
+   A janela de nota é desenhada fora do .mist-theme (no corpo da página), por isso os seletores começam em .note-window. */
+/* menu de cada caderno: o comum à vista; "Rascunhos" e "Reunir janelas" são botões pequenos no rodapé */
 .mist-theme .notebook-library-list .note-tools{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-1);padding-top:var(--space-2);border-top:1px solid var(--rule-soft)}
 .mist-theme .notebook-library-list .note-tools>button{flex:1 1 auto;justify-content:center;min-height:var(--target);border-color:transparent;background:transparent;color:var(--ink-soft);font:var(--fs-small) var(--font-body)}
 .mist-theme .notebook-library-list .note-tools>button:hover{background:var(--paper-2);border-color:var(--rule-strong);color:var(--ink-strong)}
 .mist-theme .notebook-library-list .note-tools>.note-recovery,.mist-theme .notebook-library-list .note-tools>p{flex:1 1 100%}
-
-/* Janela de nota: uma nota nova abre só com título e texto. "Mapa mental" e "Buscar" ficam como botões discretos à direita;
-   quando a nota já tem um mapa mental, ou ele está aberto, o seletor completo (Texto, Mapa mental, Buscar) volta. */
+/* uma nota nova abre só com título e texto; "Mapa mental" e "Buscar" são botões discretos. Com mapa mental, o seletor completo volta. */
 .note-window .note-view-switch.is-lite{display:flex;justify-content:flex-end;gap:var(--space-2);grid-template-columns:none}
 .note-window .note-view-switch.is-lite>button[aria-pressed="true"]{display:none}
 .note-window .note-view-switch.is-lite>button{flex:0 0 auto;min-height:var(--target);padding:0 var(--space-3);background:transparent;border-color:transparent;color:var(--ink-soft)}
 .note-window .note-view-switch.is-lite>button:hover{background:var(--paper-2);border-color:var(--rule-strong);color:var(--ink-strong)}
-/* Bandeja de dados da ficha: diz na tela quem vê a rolagem. */
+/* menu "Mais" do rodapé da nota: compartilhar, histórico, exportar e lixeira num lugar só */
+.note-window .note-menu>div button{display:flex;align-items:center;gap:var(--space-2);width:100%;justify-content:flex-start}
+.note-window .note-menu-label{margin:var(--space-1) 0 0;padding:var(--space-2) var(--space-3) 0;border-top:1px solid var(--rule-soft);color:var(--muted);font:var(--fs-small) var(--font-body)}
+.note-window .note-menu-danger{margin-top:var(--space-1);color:var(--danger-ink)}
+/* bandeja de dados da ficha: diz na tela quem vê a rolagem */
 .mist-theme .tray-option{flex-wrap:wrap}
 .mist-theme .tray-option small{flex:1 0 100%;padding-left:26px;color:var(--muted);font-size:var(--fs-small);line-height:1.35}
+
+/* ---------- 5. Toque e movimento ---------- */
+/* No computador os controles novos são mais baixos (36 a 40 px) para a tela respirar; em tela de toque voltam aos 44 px do projeto. */
+@media(pointer:coarse){
+  .mist-theme .turns-pill-button,.mist-theme.rpg-container .session-strip .notebook-library summary{min-height:var(--target)}
+  .note-window .note-board-tools button,.note-window .note-board-zoom button,.note-window .note-board-drawer-close{min-height:var(--target);min-width:var(--target)}
+  .note-window .note-board-node-grip{min-height:var(--target)}
+}
 @media(prefers-reduced-motion:reduce){
   .mist-theme .header,.mist-theme .header-controls,.mist-theme .logo>div:last-child,.mist-theme .tab-btn,.mist-theme .nav-about-button,.mist-theme .tab-btn svg,.mist-theme .nav-about-button svg{transition:none}
   .mist-theme .tab-btn:hover svg,.mist-theme .nav-about-button:hover svg{transform:none}
 }
-
-/* Menu "Mais" da janela de nota: compartilhar, histórico, exportar e lixeira num lugar só. */
-.note-window .note-menu>div button{display:flex;align-items:center;gap:var(--space-2);width:100%;justify-content:flex-start}
-.note-window .note-menu-label{margin:var(--space-1) 0 0;padding:var(--space-2) var(--space-3) 0;border-top:1px solid var(--rule-soft);color:var(--muted);font:var(--fs-small) var(--font-body)}
-.note-window .note-menu-danger{margin-top:var(--space-1);color:var(--danger-ink)}
-
-/* Em tela de toque os controles novos voltam aos 44 px do projeto. */
-@media(pointer:coarse){
-  .mist-theme .turns-pill-button,.mist-theme .session-strip .notebook-library summary{min-height:var(--target)}
-  .note-window .note-board-tools button,.note-window .note-board-zoom button,.note-window .note-board-drawer-close{min-height:var(--target);min-width:var(--target)}
-  .note-window .note-board-node-grip{min-height:var(--target)}
-}
-/* "Minhas mesas" e "Sair da conta" só entram no rodapé da faixa de ícones; no celular continuam no menu da conta. */
-@media(max-width:760px){.mist-theme .rail-only{display:none}}

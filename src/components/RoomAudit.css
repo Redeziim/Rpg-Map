@@ -5,12 +5,12 @@
 .room-audit[open]>summary::after{content:'−'}
 .room-audit>summary:hover,.room-audit button:hover:not(:disabled):not([aria-disabled="true"]){background:var(--paper-1)}
 .room-audit :is(summary,button,select):focus-visible{outline:2px solid var(--audit-accent);outline-offset:3px}
-.room-audit-content{padding:0 var(--audit-space) var(--audit-space);font:15px/1.6 'IM Fell English',Georgia,serif}
+.room-audit-content{padding:0 var(--audit-space) var(--audit-space);font:15px/1.6 var(--font-body)}
 .room-audit-hint,.room-audit-footnote{color:var(--audit-muted);margin:0 0 16px}
 .room-audit-tools{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin-bottom:20px}
 .room-audit-tools label{flex:1;max-width:300px;min-width:160px;color:var(--audit-ink);font-size:14px}
-.room-management .room-audit select{min-height:44px;padding:9px 12px;border:1px solid var(--audit-rule);border-radius:0;color:var(--audit-ink);background:var(--paper-1);font:15px/1.4 'IM Fell English',Georgia,serif}
-.room-audit button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid var(--audit-rule);border-radius:0;background:var(--paper-1);color:var(--audit-accent);font:14px/1.4 'IM Fell English',Georgia,serif;cursor:pointer}
+.room-management .room-audit select{min-height:44px;padding:9px 12px;border:1px solid var(--audit-rule);border-radius:0;color:var(--audit-ink);background:var(--paper-1);font:15px/1.4 var(--font-body)}
+.room-audit button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid var(--audit-rule);border-radius:0;background:var(--paper-1);color:var(--audit-accent);font:14px/1.4 var(--font-body);cursor:pointer}
 .room-audit button:disabled,.room-audit button[aria-disabled="true"]{opacity:.6;cursor:default}
 .room-audit-list{list-style:none;padding:0;margin:0;border-left:1px solid var(--audit-rule)}
 .room-audit-list>li{display:grid;grid-template-columns:135px minmax(0,1fr) minmax(100px,180px);align-items:start;gap:12px;padding:16px 0 16px 16px;border-top:1px solid color-mix(in srgb,var(--gold-shadow) 50%,transparent);content-visibility:auto;contain-intrinsic-size:auto 90px}

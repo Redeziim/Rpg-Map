@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useEffect,useId,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
 import {ImagePlus,Link2,MapPin,MoreHorizontal,Pencil,Plus,Trash2,Undo2,X,ZoomIn,ZoomOut,Expand} from 'lucide-react';
 import {imageSignatureMatches} from '../shared/imageSignature.js';
@@ -29,7 +29,17 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
   const board=value||emptyNoteBoard();
   const width=board.width||MIN_WIDTH,height=board.height||MIN_HEIGHT;
   const [zoom,setZoom]=useState(()=>zoomKey?readZoom(zoomKey):1);
-  const [optionsOpen,setOptionsOpen]=useState(false);
+  const [optionsOpen,setOptionsOpen]=useState(false),drawerId=useId(),moreButton=useRef(null),drawer=useRef(null);
+  useEffect(()=>{
+    if(!optionsOpen)return undefined;
+    const escape=event=>{
+      if(event.key!=='Escape')return;
+      if(drawer.current?.contains(document.activeElement))moreButton.current?.focus();
+      setOptionsOpen(false);
+    };
+    document.addEventListener('keydown',escape);
+    return()=>document.removeEventListener('keydown',escape);
+  },[optionsOpen]);
   const [drawing,setDrawing]=useState(false),[selected,setSelected]=useState(null),[selectedCards,setSelectedCards]=useState(new Set()),[editingId,setEditingId]=useState(null);
   const [linkFrom,setLinkFrom]=useState(null),[error,setError]=useState(''),[announcement,setAnnouncement]=useState('');
   const [editingEdge,setEditingEdge]=useState(null),[edgeDraft,setEdgeDraft]=useState('');
@@ -424,12 +434,12 @@ export default function NoteBoard({value,onChange,readOnly=false,points=[],onOpe
         <input ref={fileRef} className="note-board-file" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Anexar imagem ao mapa mental" tabIndex={-1} onChange={attachImage}/>
       </>}
       <span className="note-board-count" role="status">{categoryFilter!=='all'||tagFilter!=='all'?`${visibleNodes.length} de ${board.nodes.length} cartões · filtro`:`${board.nodes.length} ${board.nodes.length===1?'cartão':'cartões'}`}</span>
-      <button type="button" className="note-board-more" aria-expanded={optionsOpen} aria-controls="note-board-drawer" onClick={()=>setOptionsOpen(open=>!open)}><MoreHorizontal size={16} aria-hidden="true"/>Mais</button>
+      <button type="button" ref={moreButton} className="note-board-more" aria-expanded={optionsOpen} aria-controls={drawerId} onClick={()=>setOptionsOpen(open=>!open)}><MoreHorizontal size={16} aria-hidden="true"/>Mais</button>
       <div className="note-board-zoom" role="group" aria-label="Zoom do quadro"><button type="button" aria-label="Afastar quadro" disabled={zoom<=MIN_ZOOM} onClick={()=>changeZoom(zoom-(zoom<=.5?.05:.25))}><ZoomOut size={16} aria-hidden="true"/></button><output aria-live="polite">{Math.round(zoom*100)}%</output><button type="button" aria-label="Aproximar quadro" disabled={zoom>=2} onClick={()=>changeZoom(zoom+(zoom<.5?.05:.25))}><ZoomIn size={16} aria-hidden="true"/></button></div>
     </div>
     {assetUploads>0&&<p className="note-board-asset-status" role="status">Guardando {assetUploads} {assetUploads===1?'imagem':'imagens'} na coleção…</p>}
     <p className="sr-only">Duplo clique no fundo cria um cartão. Shift+clique seleciona vários. Ctrl+C/V copia e cola. Ctrl+Z desfaz. Use as setas para mover um cartão selecionado ou percorrer o quadro. Para desenhar pelo teclado, foque o quadro, use Enter e as setas.</p>
-    <div id="note-board-drawer" className="note-board-drawer" role="region" aria-label="Mais opções do mapa mental" hidden={!optionsOpen}>
+    <div id={drawerId} ref={drawer} className="note-board-drawer" role="region" aria-label="Mais opções do mapa mental" hidden={!optionsOpen}>
       <header><strong>Mais opções</strong><button type="button" className="note-board-drawer-close" aria-label="Fechar mais opções" onClick={()=>setOptionsOpen(false)}><X size={16} aria-hidden="true"/></button></header>
       <div className="note-board-drawer-body">
       {!readOnly&&<div className="note-board-extra-tools"><button type="button" aria-expanded={libraryOpen} onClick={()=>libraryOpen?setLibraryOpen(false):void loadLibrary()}>Coleção de imagens</button><button type="button" onClick={expand} disabled={width>=MAX_WIDTH&&height>=MAX_HEIGHT}><Expand size={16} aria-hidden="true"/>Aumentar área de desenho</button></div>}

@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {ArrowDown,ArrowUp,ChevronDown,ChevronUp,Skull,Users,X} from 'lucide-react';
 import './TurnTracker.css';
 import useCombatRecovery from './useCombatRecovery.js';
+import {turnAttention} from '../shared/turnAttention.js';
 import CombatEffects,{emptyEffectDraft,matchesEffectDraft} from './CombatEffects.jsx';
 
 function InitiativeField({actor,value,version,saving,act}){
@@ -16,7 +17,7 @@ function InitiativeField({actor,value,version,saving,act}){
   </form>;
 }
 
-export default function TurnTracker({alwaysExpanded=false,room,username,userId,editable,saving,connection,mutate}){
+export default function TurnTracker({alwaysExpanded=false,onAttention,room,username,userId,editable,saving,connection,mutate}){
   const [npcName,setNpcName]=useState(''),[npcKind,setNpcKind]=useState('enemy');
   const [error,setError]=useState('');
   const [effectDraft,setEffectDraft]=useState(emptyEffectDraft);
@@ -25,6 +26,10 @@ export default function TurnTracker({alwaysExpanded=false,room,username,userId,e
     if(command.action==='add')setNpcName(previous=>previous===command.name?'':previous);
     if(command.action==='effect-add')setEffectDraft(previous=>matchesEffectDraft(previous,command)?emptyEffectDraft():previous);
   }});
+  // o que o botão "Turnos" precisa mostrar quando o painel está fechado: conferindo, comando sem confirmação ou aviso
+  const attention=turnAttention(recovery,error);
+  // depende só de kind e key: o objeto é novo a cada renderização e geraria um laço de atualizações
+  useEffect(()=>{onAttention?.({kind:attention.kind,key:attention.key});},[attention.kind,attention.key,onAttention]);
   const busy=saving||!!recovery.pending||connection!=='online';
   const combat=room.state.combat,order=combat.order,npcs=combat.npcs,excluded=combat.excluded;
   const actors=order.map(id=>{

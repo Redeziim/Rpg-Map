@@ -1,15 +1,8 @@
 import React from 'react';
 import { evaluateFormula, resolveFormulas } from '../shared/sheetFormulas.js';
+import { SHEET_FONTS, loadSheetFont } from '../shared/sheetFonts.js';
 import { Type, ScrollText, Hash, Image as QIcon, ListPlus, Calculator, Sword, ListChecks, Heart } from 'lucide-react';
 
-const SHEET_FONTS = [
-  { id: 'cinzel', label: 'Grimório (padrão)', family: 'var(--font-display)' },
-  { id: 'medieval', label: 'MedievalSharp', family: "'MedievalSharp', cursive" },
-  { id: 'uncial', label: 'Uncial Antiqua', family: "'Uncial Antiqua', cursive" },
-  { id: 'fell', label: 'IM Fell English', family: "'IM Fell English', serif" },
-  { id: 'metamorphous', label: 'Metamorphous', family: "'Metamorphous', cursive" },
-  { id: 'grenze', label: 'Grenze', family: "'Grenze', serif" },
-];
 
 // Tipos de campo que o Mestre (ou o jogador, nos seus campos extras) pode adicionar à ficha
 const FIELD_TYPES = [
@@ -53,4 +46,4 @@ export function suggestTab(label) {
 // Lista de abas padrão em ordem
 export const DEFAULT_TABS = ['Atributos', 'Status', 'Habilidades', 'Equipamento', 'Aparência', 'Notas', 'Geral'];
 
-export { SHEET_FONTS, FIELD_TYPES, evaluateFormula, resolveFormulas };
+export { SHEET_FONTS, loadSheetFont, FIELD_TYPES, evaluateFormula, resolveFormulas };

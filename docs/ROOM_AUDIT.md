@@ -9,7 +9,7 @@ O registro ajuda a conferir quem alterou a mesa. Ele não desfaz alterações ne
 | Assunto | O que gera registro |
 | --- | --- |
 | Acesso | Criação da mesa, adição/entrada de participante, mudança de papel, remoção e criação/revogação de convite |
-| Mapa 2D | Imagem, pontos, traços, névoa, escala, legenda, rotas e opção que libera posições compartilhadas |
+| Mapa 2D | Imagem, pontos, traços, névoa, escala e opção que libera posições compartilhadas (entradas antigas de legenda e rotas continuam legíveis, mas novas não são geradas) |
 | Fichas | Modelo/fonte da ficha, valores dos campos, avatar e barras do perfil |
 | Notas | Conteúdo de notas do mestre ou compartilhadas e alterações no seu compartilhamento |
 | Mesa 3D | Importação, transformação e remoção de objetos |

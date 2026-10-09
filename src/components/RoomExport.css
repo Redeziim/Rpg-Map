@@ -3,7 +3,7 @@
 .room-export>summary::-webkit-details-marker{display:none}
 .room-export>summary::after{content:'+';margin-left:auto;font:24px/1 Georgia,serif}
 .room-export[open]>summary::after{content:'−'}
-.room-export-content{padding:0 var(--export-space) var(--export-space);font:16px/1.6 'IM Fell English',Georgia,serif}
+.room-export-content{padding:0 var(--export-space) var(--export-space);font:16px/1.6 var(--font-body)}
 .room-export-content>p:first-child{margin-top:0}
 .room-export-included{padding-left:22px;margin:12px 0 20px}
 .room-export-included li{padding:3px 0}
@@ -15,7 +15,7 @@
 .room-export-ready dd{margin:0;color:var(--export-accent);font-variant-numeric:tabular-nums}
 .room-export-ready p{margin:8px 0 0;color:var(--export-muted);font-size:14px}
 .room-export-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
-.room-export button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid var(--export-rule);border-radius:0;background:var(--paper-1);color:var(--export-accent);font:15px/1.4 'IM Fell English',Georgia,serif;cursor:pointer}
+.room-export button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid var(--export-rule);border-radius:0;background:var(--paper-1);color:var(--export-accent);font:15px/1.4 var(--font-body);cursor:pointer}
 .room-export :is(summary,button):hover:not([aria-disabled="true"]){background:var(--paper-1)}
 .room-export :is(summary,button):focus-visible{outline:2px solid var(--export-accent);outline-offset:3px}
 .room-export button[aria-disabled="true"]{opacity:.6;cursor:default}

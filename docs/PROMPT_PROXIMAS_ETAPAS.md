@@ -8,13 +8,13 @@ Itens 16, 17, 18, 23 (opção A), 53, 57, 58, 59, 63, 65 e 66, e a primeira roda
 
 ## Falta decidir
 
-1. **Item 64 — direção visual.** Em 2026-10-08 e 09 o usuário escolheu a direção gótica sutil (`docs/DIRECAO_GOTICA.md`): carvão, ouro envelhecido dominante e vinho de apoio, Cormorant nos títulos, grão leve e rachadura. As telas-piloto Ferramentas de mestre e Ficha de personagem estão aplicadas, com paleta e fontes em `src/theme.css` e texturas em `src/gothic.css`. Falta o usuário aprovar o contraste e as molduras da ficha, e então levar a mesma linguagem às demais telas (entrada, Mapa 2D e Mesa 3D, notas), migrar as cerca de 700 cores literais para tokens (pré-requisito do seletor de tema) e, por fim, o seletor de tema. Também restam os estilos antigos embutidos em `RPGMapExplorer.jsx` (bloco `<style>`).
+1. **Item 64 — direção visual.** A direção gótica sutil (`docs/DIRECAO_GOTICA.md`) está aplicada em todas as telas (entrada, mapa, notas, linha do tempo, ficha e ficha em livro), com tema sombrio e claro e todas as cores em tokens; a revisão de usabilidade (`docs/REVISAO_UX.md`) enxugou a barra lateral, os turnos, as notas e as ferramentas do mapa. Falta o usuário aprovar tela por tela. Em aberto: arte própria (ilustração de fundo e retratos); hospedar as fontes localmente (hoje dependem do Google Fonts); teste automatizado de interface (a casca nova só é verificada à mão com `playwright-cli` e axe-core); e a escolha de resolução ao enviar o mapa, que ainda aparece antes de publicar.
 
 ## Falta fazer
 
 2. **Importação de fichas (item 58).** Testar com fichas reais e oficiais de D&D e da Ordem Paranormal (as dos testes foram feitas à mão); testar um PDF preenchível de verdade (hoje os campos de formulário só passaram no interpretador); acrescentar mais sistemas em `src/shared/sheetTemplates.js`.
 3. **Acessibilidade (itens 60 a 62).** Teste com leitor de tela real (NVDA ou equivalente); contraste do texto sobre a imagem do mapa e sobre cenas 3D; teclado dentro do canvas do mapa 2D e do mapa mental além dos atalhos documentados.
-4. **Tokens de design (item 63).** Restam 710 cores literais, a maioria em `workspace.css`, `NoteBoard.css`, `Notebook.css`, `account.css` e `TurnTracker.css`. O limite em `tests/designTokens.test.js` só pode descer.
+4. **Tokens de design (item 63).** Concluído: o limite de cores literais em `tests/designTokens.test.js` é 0, com uma única exceção declarada (a roda de cores do traço do mapa). Código novo só usa tokens, e o tema claro precisa redefinir todo token de cor.
 5. **Desempenho (item 66).** Textura `public/assets/tray/base.png` (2,4 MB); `three` carregado ao entrar na mesa por causa da bandeja de dados; `base.obj` ainda com 3,5 MB comprimido.
 6. **Pontos do mapa (item 23, opção B).** Região e etiquetas só se uma mesa passar de uns 30 pontos.
 7. **Testes em paralelo.** `npm test` roda em série porque `diceHistory` e `transactions` falham com `ECONNRESET` quando os arquivos rodam juntos. Uma tarefa à parte foi aberta para achar a causa; o resultado dela não foi incorporado aqui.

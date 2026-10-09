@@ -35,9 +35,11 @@ Regra de uso: ouro marca o que se pode acionar ou o que está selecionado; filet
 
 Texto corrido fica em no máximo 72 caracteres por linha.
 
+As fontes decorativas da ficha (MedievalSharp, Uncial Antiqua, IM Fell English, Metamorphous e Grenze) não vêm com a página: `src/shared/sheetFonts.js` pede cada uma ao Google Fonts quando o mestre a escolhe, e `tests/sheetFonts.test.js` confere que o nome pedido é o nome usado.
+
 ## Espaço, forma e alvo
 
-`--space-1` 4 px, `--space-2` 8, `--space-3` 12, `--space-4` 16, `--space-5` 24, `--space-6` 32. Raios `--radius-s` 2 px e `--radius-m` 4 px; não usar raios maiores. `--target` 44 px é a altura mínima de qualquer controle tocável.
+`--space-1` 4 px, `--space-2` 8, `--space-3` 12, `--space-4` 16, `--space-5` 24, `--space-6` 32. Raios `--radius-s` 2 px e `--radius-m` 4 px; não usar raios maiores. A única exceção é `--radius-arch` (48 px), o arco de pedra do cartão de atributo da ficha. `--target` 44 px é a altura mínima de qualquer controle tocável.
 
 ## Movimento e foco
 

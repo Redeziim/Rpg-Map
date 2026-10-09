@@ -1,25 +1,25 @@
 import '../legacy.css';
 import ThemeToggle from './ThemeToggle.jsx';
 import Notebook from './Notebook.jsx';
-import TurnTracker from './TurnTracker.jsx';
+import TurnsPill from './TurnsPill.jsx';
 import ToolSection from './ToolSection.jsx';
 import PointFinder from './PointFinder.jsx';
 import {activeInstruments,instrumentStatuses} from '../shared/mapInstruments.js';
 import './MasterTools.css';
 import {POINT_TYPE_ALL,centerOnPoint,filterPoints} from '../shared/pointSearch.js';
-import {CloudFog as FogIcon,Download as DownloadIcon,Tag as TagIcon,Ruler as RulerIcon,Route as RouteIcon,Layers as LayersIcon} from 'lucide-react';
+import {CloudFog as FogIcon,Ruler as RulerIcon,Layers as LayersIcon} from 'lucide-react';
 import {AboutPanel,ScenesPanel} from './CampaignPages.jsx';
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks, Clapperboard, Info, Pencil, Undo2, Redo2, Eraser, Hand, Ruler, BookOpen } from 'lucide-react';
 import PointDetails from './PointDetails.jsx';
 import MapStrokeColor from './MapStrokeColor.jsx';
-import {DoorOpen,LogOut,Swords} from 'lucide-react';
+import {DoorOpen,LogOut} from 'lucide-react';
 import MapLayers,{MapStrokeAudience,loadMapLayers} from './MapLayers.jsx';
 import MapFog,{MapFogOverlay} from './MapFog.jsx';
 import MapMeasurement,{MapGrid,MapRuler,loadMapMeasurementPrefs} from './MapMeasurement.jsx';
 import MapPositions,{MapPositionMarkers} from './MapPositions.jsx';
 import MapImageUpload from './MapImageUpload.jsx';
-import {defaultMapLegend} from '../shared/mapExploration.js';
+import {defaultPointTypes} from '../shared/pointTypes.js';
 import {readMapImageFile,openMapBitmap} from './mapImagePreparation.js';
 import {fitMapImage,resizedMapPoints} from '../shared/mapImages.js';
 import {canShareMapPosition,visibleMapPositions} from '../shared/mapPositions.js';
@@ -64,21 +64,12 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [mapFocus,setMapFocus]=useState(false);
   const [map2dToolsOpen,setMap2dToolsOpen]=useState(false);
   const [moreToolsOpen,setMoreToolsOpen]=useState(false);
-  const [turnsOpen,setTurnsOpen]=useState(false);
-  useEffect(()=>{
-    if(!turnsOpen)return undefined;
-    const outside=event=>{if(!event.target.closest?.('.turns-pill'))setTurnsOpen(false);};
-    const escape=event=>{if(event.key!=='Escape')return;const panel=document.getElementById('turns-popover');if(panel?.contains(document.activeElement))document.querySelector('.turns-pill-button')?.focus();setTurnsOpen(false);};
-    document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
-    return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};
-  },[turnsOpen]);
   const [mapCanvasSize,setMapCanvasSize]=useState({width:0,height:0});
   const [mapViewportSize,setMapViewportSize]=useState({width:0,height:0});
   const [mapImageError,setMapImageError]=useState(false),[mapImageRetry,setMapImageRetry]=useState(0);
   const [imageUpload,setImageUpload]=useState(null);
   const {masterNotes='',mapImage,points:allPoints,mapStrokes=[],mapFog=emptyMapFog(),sheetFields,sheetFont,playerSheets,statusBarsData}=room.state;
   const points=canManageMap2D?allPoints:allPoints.filter(point=>isMapPointRevealed(mapFog,point));
-  const mapLegend=defaultMapLegend();
   const mapScale=room.state.mapScale||null,measurementPrefsKey=`grimorio-map-measure-v1:${room.id}:${user.id}`;
   const [measurementPrefs,setMeasurementPrefs]=useState(()=>loadMapMeasurementPrefs(measurementPrefsKey));
   const [measureRecord,setMeasureRecord]=useState(null);
@@ -105,6 +96,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const [selectedMapTool,setMapTool]=useState('pan'),[strokeColor,setStrokeColor]=useState('#d9b777'),[drawError,setDrawError]=useState(''),[mapBusy,setMapBusy]=useState(false),[markingsShown,setMarkingsShown]=useState(40),[,setHistoryTick]=useState(0);
   useEffect(()=>{if(!drawError||drawError.startsWith('Não foi possível'))return;const timer=setTimeout(()=>setDrawError(''),6000);return()=>clearTimeout(timer);},[drawError]);
   const mapTool=['reveal','cover'].includes(selectedMapTool)&&(!canManageMap2D||!mapFog.enabled)||selectedMapTool==='position'&&(!canSharePosition||!positionsEnabled)?'pan':selectedMapTool;
+  useEffect(()=>{if(mapTool==='position')setMoreToolsOpen(true);},[mapTool]);
   const [scale,setScale]=useState(1);
   const [pointQuery,setPointQuery]=useState(''),[pointType,setPointType]=useState(POINT_TYPE_ALL),[foundPointId,setFoundPointId]=useState(null);
   const [position,setPosition]=useState({x:0,y:0});
@@ -299,13 +291,8 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
     return result;
   };
 
-  const pointTypes = [
-    { value: 'cidade', label: 'Cidade', icon: Castle, color: '#c7ab76' },
-    { value: 'dungeon', label: 'Dungeon', icon: Skull, color: '#8b0000' },
-    { value: 'taverna', label: 'Taverna', icon: Scroll, color: '#cd853f' },
-    { value: 'floresta', label: 'Floresta', icon: Grid, color: '#228b22' },
-    { value: 'evento', label: 'Evento', icon: Sword, color: '#ff4500' },
-  ].map(type=>({...type,...mapLegend.find(entry=>entry.type===type.value)}));
+  const POINT_TYPE_ICONS = { cidade: Castle, dungeon: Skull, taverna: Scroll, floresta: Grid, evento: Sword };
+  const pointTypes = defaultPointTypes().map(entry=>({ value: entry.type, label: entry.label, color: entry.color, icon: POINT_TYPE_ICONS[entry.type] }));
   // With a search or a type chosen, markers outside the result fade on the map; with none, every marker stays as it is.
   const pointFilterIds=pointQuery.trim()||pointType!==POINT_TYPE_ALL?new Set(filterPoints(points,{query:pointQuery,type:pointType,typeLabels:Object.fromEntries(pointTypes.map(type=>[type.value,type.label]))}).map(point=>point.id)):null;
 
@@ -547,7 +534,6 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
 
   const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
   const groupEntries=room.groupBars;
-  const combatState=room.state.combat,turnActiveId=combatState?.activeId,myTurn=!!turnActiveId&&turnActiveId===user.username,turnLabel=turnActiveId?(myTurn?'Seu turno':combatState.npcs?.find(entry=>entry.id===turnActiveId)?.name||turnActiveId):'';
   const instruments=instrumentStatuses({mapImage:!!mapImage,pointCount:points.length,scale,gridVisible:!!measurementPrefs.grid,hasScale:!!mapScale,fogEnabled:!!mapFog.enabled,positionsEnabled:!!positionsEnabled,strokeCount:readableStrokes.length,mapTool}),inUse=activeInstruments(instruments);
   return (
     <div className={`rpg-container mist-theme ${activeTab==='mapa'&&mapFocus?'map-focus':''}`}>
@@ -571,11 +557,11 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             </div>
           </div>
         </div>
-        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-current={activeTab==='mesa'?'page':undefined} onClick={()=>setActiveTab('mesa')}><Users size={18}/><span className="tab-label-full">Participantes</span><span className="tab-label-short">Pessoas</span></button>
+        <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-current={activeTab==='mesa'?'page':undefined} title={'Participantes'} onClick={()=>setActiveTab('mesa')}><Users size={18}/><span className="tab-label-full">Participantes</span><span className="tab-label-short">Pessoas</span></button>
           <button
             className={`tab-btn ${activeTab === 'mapa' ? 'active' : ''}`}
             aria-current={activeTab==='mapa'?'page':undefined}
-            onClick={() => setActiveTab('mapa')}
+            title={'Mapa'} onClick={() => setActiveTab('mapa')}
           >
             <Map size={18} />
             Mapa
@@ -583,7 +569,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           <button
             className={`tab-btn ${activeTab === 'ficha' ? 'active' : ''}`}
             aria-current={activeTab==='ficha'?'page':undefined}
-            onClick={() => setActiveTab('ficha')}
+            title={viewMode==='master'?'Mestre · fichas':'Jogador · ficha'} onClick={() => setActiveTab('ficha')}
           >
             <ScrollText size={18} />
             <span className="tab-label-full">{viewMode==='master'?'Mestre · fichas':'Jogador · ficha'}</span><span className="tab-label-short">Ficha</span>
@@ -591,18 +577,18 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
           <button
             className={`tab-btn ${activeTab === 'grupo' ? 'active' : ''}`}
             aria-current={activeTab==='grupo'?'page':undefined}
-            onClick={() => setActiveTab('grupo')}
+            title={'Status do Grupo'} onClick={() => setActiveTab('grupo')}
           >
             <Heart size={18} />
             <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short">Grupo</span>
           </button>
-          <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-current={activeTab==='cenas'?'page':undefined} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
-          <button className={`tab-btn ${activeTab==='linha'?'active':''}`} aria-current={activeTab==='linha'?'page':undefined} onClick={()=>setActiveTab('linha')}><BookOpen size={18} aria-hidden="true"/><span className="tab-label-full">Linha do tempo</span><span className="tab-label-short">Diário</span></button>
+          <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-current={activeTab==='cenas'?'page':undefined} title={'Cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
+          <button className={`tab-btn ${activeTab==='linha'?'active':''}`} aria-current={activeTab==='linha'?'page':undefined} title={'Linha do tempo'} onClick={()=>setActiveTab('linha')}><BookOpen size={18} aria-hidden="true"/><span className="tab-label-full">Linha do tempo</span><span className="tab-label-short">Diário</span></button>
         </nav>
-        <div className="nav-footer"><button type="button" className="nav-about-button rail-only" onClick={onExit}><DoorOpen size={18} aria-hidden="true"/>Minhas mesas</button><ThemeToggle className="nav-about-button"/><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-current={activeTab==='sobre'?'page':undefined} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button><button type="button" className="nav-about-button rail-only" onClick={onLogout}><LogOut size={18} aria-hidden="true"/>Sair da conta</button></div>
+        <div className="nav-footer"><button type="button" className="nav-about-button rail-only" title="Minhas mesas" onClick={onExit}><DoorOpen size={18} aria-hidden="true"/>Minhas mesas</button><ThemeToggle className="nav-about-button"/><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-current={activeTab==='sobre'?'page':undefined} title={'Sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button><button type="button" className="nav-about-button rail-only" title="Sair da conta" onClick={onLogout}><LogOut size={18} aria-hidden="true"/>Sair da conta</button></div>
       </header>
 
-      <div className="room-content">{connection!=='online'&&connection!=='connecting'&&<p className="connection-banner" role="status">Sem conexão com o servidor. Suas alterações só serão enviadas quando a conexão voltar; o que você está vendo pode estar desatualizado.</p>}<div className={`session-strip strip-${activeTab}`}><div className={`turns-pill${turnsOpen?' is-open':''}${myTurn?' is-my-turn':''}`}><button type="button" className="turns-pill-button" aria-expanded={turnsOpen} aria-controls="turns-popover" onClick={()=>setTurnsOpen(open=>!open)}><Swords size={16} aria-hidden="true"/><span>Turnos{combatState?.round?` · rodada ${combatState.round}`:''}</span>{turnLabel&&<small role="status">{turnLabel}</small>}</button><div id="turns-popover" className="turns-popover" hidden={!turnsOpen}><TurnTracker alwaysExpanded key={`${room.id}:${user.id}`} room={room} username={user.username} userId={user.id} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/></div></div><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')} onTrash={(scope,id,trashed,version)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/trash`,{trashed,version},'PATCH')} onEmptyTrash={scope=>mutate(`/notes/${encodeURIComponent(scope)}/trash`,undefined,'DELETE')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')} onTrash={(_,id,trashed,version)=>mutate('/notes/@master/'+id+'/trash',{trashed,version},'PATCH')} onEmptyTrash={()=>mutate('/notes/@master/trash',undefined,'DELETE')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
+      <div className="room-content">{connection!=='online'&&connection!=='connecting'&&<p className="connection-banner" role="status">Sem conexão com o servidor. Suas alterações só serão enviadas quando a conexão voltar; o que você está vendo pode estar desatualizado.</p>}<div className={`session-strip strip-${activeTab}`}><TurnsPill key={`${room.id}:${user.id}`} room={room} user={user} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')} onTrash={(scope,id,trashed,version)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/trash`,{trashed,version},'PATCH')} onEmptyTrash={scope=>mutate(`/notes/${encodeURIComponent(scope)}/trash`,undefined,'DELETE')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')} onTrash={(_,id,trashed,version)=>mutate('/notes/@master/'+id+'/trash',{trashed,version},'PATCH')} onEmptyTrash={()=>mutate('/notes/@master/trash',undefined,'DELETE')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>
       <main id="main-content" className={`main-content view-${activeTab}`} tabIndex={-1} onKeyDown={handleMapShortcut}>
         {activeTab==='mesa'?<RoomManagement room={room} mutate={mutate} viewMode={viewMode}/>:activeTab === 'mapa' ? (
           <>
@@ -654,7 +640,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
               {canManageMap2D&&<ToolSection id="imagem" title="Imagem do mapa" icon={<Upload size={16} aria-hidden="true"/>} status={instruments.imagem.status}>
                 <label className="upload-btn"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleImageUpload} disabled={saving||!!imageUpload} aria-label={mapImage?'Trocar imagem':'Selecionar imagem'}/>{mapImage?'Trocar imagem':'Selecionar imagem'}</label>
               </ToolSection>}
-              <details className="tools-more" open={moreToolsOpen||mapTool==='position'} onToggle={event=>setMoreToolsOpen(event.currentTarget.open)}><summary>Mais ferramentas<small>posições dos jogadores e traços</small></summary>
+              <details className="tools-more" open={moreToolsOpen} onToggle={event=>setMoreToolsOpen(event.currentTarget.open)}><summary>Mais ferramentas<small>posições dos jogadores e traços</small></summary>
               <ToolSection id="posicoes" status={instruments.posicoes.status} active={instruments.posicoes.active} title="Posições dos jogadores" icon={<Users size={16} aria-hidden="true"/>} forceOpen={mapTool==='position'}><MapPositions key={room.mapPositionSettingsVersion} enabled={positionsEnabled} canManage={canManageMap2D} canShare={canSharePosition} hasOwn={room.hasOwnMapPosition} markers={playerMarkers} members={room.members} userId={user.id} draft={positionDraft} conflict={positionConflict} covered={positionCovered} onEnable={changePositionSettings} onChoose={beginPositionChoice} onShare={()=>saveOwnPosition()} onClear={()=>saveOwnPosition(null,room.ownMapPositionVersion,room.mapPositionSettingsVersion)} onCancel={cancelPositionChoice} onRebase={()=>setPositionChoice(current=>({...current,version:room.ownMapPositionVersion,settingsVersion:room.mapPositionSettingsVersion}))} tool={mapTool} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
               <ToolSection id="tracos" status={instruments.tracos.status} active={instruments.tracos.active} title="Mostrar traços" icon={<LayersIcon size={16} aria-hidden="true"/>} forceOpen={false}><MapLayers strokes={readableStrokes} username={user.username} settings={layerSettings} onChange={changeLayerSettings}/></ToolSection>
               {!!readableStrokes.length&&<details className="map-markings"><summary>Traços do mapa ({readableStrokes.length})</summary><ol>{readableStrokes.slice(-markingsShown).map((stroke,visibleIndex)=>{const index=readableStrokes.length-Math.min(markingsShown,readableStrokes.length)+visibleIndex;return <li key={stroke.id}><span>Traço {index+1} · {stroke.author}{strokeVisibility(stroke)==='master'?' · Só mestres':''}{!displayedStrokes.includes(stroke)?' · Oculto nesta visão':''}</span>{canEraseStroke(stroke)&&<button type="button" onClick={()=>eraseStroke(stroke)} disabled={mapBusy} aria-label={`Apagar traço ${index+1} de ${stroke.author}`}>Apagar</button>}{canManageMap2D&&<label className="map-marking-audience">Visibilidade do traço {index+1}<select name={`map-marking-audience-${stroke.id}`} autoComplete="off" value={strokeVisibility(stroke)} disabled={mapBusy} onChange={event=>changeStrokeVisibility(stroke,event.target.value)}><option value="table">Todos</option><option value="master">Só mestres</option></select></label>}</li>;})}</ol>{readableStrokes.length>markingsShown&&<button type="button" className="map-markings-more" onClick={()=>setMarkingsShown(count=>count+40)}>Mostrar traços anteriores</button>}</details>}
@@ -667,7 +653,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
                 <div className="empty-state">
                   <Map size={40} aria-hidden="true" />
                   <h2>Nenhum mapa carregado</h2>
-                  <p>{canManageMap2D ? 'Envie a imagem do mapa em Ferramentas 2D para começar a exploração. Pontos, rotas e névoa dependem dela.' : 'O mestre ainda não revelou o mapa desta jornada.'}</p>
+                  <p>{canManageMap2D ? 'Envie a imagem do mapa em Ferramentas 2D para começar a exploração. Pontos e névoa dependem dela.' : 'O mestre ainda não revelou o mapa desta jornada.'}</p>
                   {canManageMap2D&&!map2dToolsOpen&&<button type="button" className="map-empty-action" onClick={()=>setMap2dToolsOpen(true)}>Abrir Ferramentas 2D</button>}
                 </div>
               ) : (

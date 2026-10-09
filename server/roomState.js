@@ -6,6 +6,10 @@ import {createCombat,assertCombat,reconcileCombat,migrateCombat,migrateCombatEff
 import {emptyScenePresentation,isScenePresentation} from '../src/shared/scenePresentation.js';
 
 export const ROOM_STATE_VERSION=7;
+// Campos que já existiram no estado da mesa e saíram do aplicativo (rotas de exploração e legenda editável, ADR 036). Mesas antigas ainda
+// podem tê-los guardados: eles nunca saem do servidor (visão, SSE e exportação) e são apagados no próximo salvamento da mesa.
+export const REMOVED_STATE_FIELDS=Object.freeze(['mapRoutes','mapLegend']);
+export function stripRemovedFields(state){for(const key of REMOVED_STATE_FIELDS)delete state[key];return state;}
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const invalid=label=>{throw Error(`Estado de mesa inválido: ${label}. A migração não foi aplicada.`);};
 export const emptyNoteBoard=()=>({nodes:[],edges:[],strokes:[],width:960,height:620});

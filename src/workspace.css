@@ -48,7 +48,6 @@
 
 /* One session strip, with a small notebook that opens over the workspace. */
 .mist-theme .session-strip{display:flex;align-items:flex-start;gap:12px;margin:20px 20px 0;position:relative;z-index:6}
-.mist-theme .session-strip .turn-tracker{width:auto;flex:1;min-width:0;margin:0;padding:10px 14px;background:var(--paper-0);border-color:var(--workspace-edge);border-left-width:2px}
 .mist-theme .turn-heading{gap:8px}
 .mist-theme .turn-heading p{margin:0;font-size:14px}
 .mist-theme .turn-heading .eyebrow{font-size:var(--fs-label);margin:0 0 2px}
@@ -195,7 +194,6 @@
   .mist-theme .tab-label-short{display:inline}
   .mist-theme .header-controls{max-width:180px}
   .mist-theme .session-strip{margin:14px 14px 0;gap:8px}
-  .mist-theme .session-strip .turn-tracker{padding:10px;flex-basis:100%}
   .mist-theme .turn-actions button{min-height:44px;min-width:44px}
   .mist-theme .turn-tracker summary{min-height:44px;padding-top:12px}
   .mist-theme .master-notebook summary{padding:8px 10px}

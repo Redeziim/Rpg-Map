@@ -87,9 +87,9 @@ Abra `http://127.0.0.1:3102/` e confira:
 1. `/api/health` responde `{"ok":true}`; uma conta existente consegue entrar.
 2. Mesas e participantes têm os nomes e papéis esperados.
 3. Uma nota abre com texto, mapa mental, imagens e histórico.
-4. O mapa 2D mantém imagem, pontos, rotas, legenda e áreas reveladas.
+4. O mapa 2D mantém imagem, pontos e áreas reveladas. Um backup feito antes de 2026-10-08 pode ainda trazer rotas e legenda; elas restauram sem erro, mas nunca são mostradas nem exportadas (ADR 036).
 5. A Mesa 3D carrega um arquivo importado e sua transformação.
-6. Uma conta de jogador continua sem acesso a notas e rotas privadas do mestre; duas telas recebem mudanças ao vivo.
+6. Uma conta de jogador continua sem acesso a notas privadas do mestre; duas telas recebem mudanças ao vivo.
 7. Em desktop e celular, a mesa abre e os controles continuam operáveis.
 
 Ao abrir um legado, o servidor migra as tabelas e os estados na **cópia**, em uma única transação, antes de abrir a API. O backup original continua intacto. Cada mesa atualizada recebe uma revisão adicional, uma única vez; o relatório `.restore.json` descreve a cópia antes dessa migração. Sessões/convites conservam a expiração original: se tiverem vencido, entre novamente ou crie um convite pela conta autorizada. Não confunda expiração com falha de restauração.

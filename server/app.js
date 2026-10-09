@@ -3,6 +3,7 @@ import {validateStructure} from './structures.js';
 import {validateMapAsset,validateMapTransform} from './mapAssets.js';
 import {readMapAssetRequest,sendMapAsset} from './mapAssetTransfer.js';
 import {MAP_ASSET_MEDIA,mapAssetPlacement} from '../src/shared/mapAssetTransfer.js';
+import {SHEET_FONT_IDS} from '../src/shared/sheetFonts.js';
 import {createModelValidator} from './modelValidation.js';
 import {createMapImports} from './mapImports.js';
 import {createDiceHistory,isPrivateRoll} from './diceHistory.js';
@@ -29,7 +30,7 @@ import { createTrayRoll } from './tray.js';
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { initializeDatabase } from './databaseMigrations.js';
-import {createRoomState,newPlayerSheet,ensureRoomMemberState,emptyNoteBoard,assertRoomState} from './roomState.js';
+import {createRoomState,newPlayerSheet,ensureRoomMemberState,emptyNoteBoard,assertRoomState,stripRemovedFields} from './roomState.js';
 import {createRoomMediaTransfer,roomImageSources} from './roomMedia.js';
 import {isRoomImageReference,mapNoteBoardImages} from '../src/shared/roomMedia.js';
 import {createRoomAuditStore,roomAuditChanges} from './roomAudit.js';
@@ -216,7 +217,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       state.mapImage=`/api/rooms/${roomId}/map-image?v=${fogImageVersion(state)}`;
     }
     state.campaignScenes=visibleCampaignScenes(state.campaignScenes,state.points||[],master,state.scenePresentation).map(scene=>({...scene,media:scene.mediaId?mediaMetadata(query('SELECT id,name,mime,bytes FROM scene_media WHERE room_id=? AND id=?',roomId,scene.mediaId)):null}));
-    delete state.mapRoutes;delete state.mapLegend;
+    stripRemovedFields(state);
     const pointIds=new Set(state.points.map(point=>point.id)),cleanNote=note=>({...note,board:projectNoteBoard(note.board,pointIds)});
     if(state.masterNotebooks)state.masterNotebooks=state.masterNotebooks.map(cleanNote);
     state.sharedNotebooks=state.sharedNotebooks.map(cleanNote);
@@ -249,7 +250,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
     transaction(()=>{
       assertCombat(state.combat);
       state.combat=reconcileCombat(state.combat,all('SELECT u.username,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.room_id=? ORDER BY u.username',roomId));
-      delete state.mapRoutes;delete state.mapLegend;assertRoomState(state);
+      stripRemovedFields(state);assertRoomState(state);
       const json=JSON.stringify(state);if(Buffer.byteLength(json)>20*1024*1024)fail(413,'A mesa atingiu o limite de 20 MB. Reduza as imagens.');
       const before=actor?JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state):null;
       run('UPDATE rooms SET state=?,revision=revision+1 WHERE id=?',json,roomId);
@@ -913,7 +914,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
           if(field.type==='formula')string(field.formula,1000,'Fórmula');
         }
       }
-      if('sheetFont'in patch&&!['cinzel','medieval','uncial','fell','metamorphous','grenze'].includes(patch.sheetFont))fail(400,'Fonte inválida.');
+      if('sheetFont'in patch&&!SHEET_FONT_IDS.includes(patch.sheetFont))fail(400,'Fonte inválida.');
       if('masterNotes'in patch)string(patch.masterNotes,50000,'Notas');
       const state=JSON.parse(query('SELECT state FROM rooms WHERE id=?',roomId).state);
       if('points'in patch){

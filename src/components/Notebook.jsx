@@ -44,6 +44,12 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onTrash,onClos
   const rect=noteWindowRect(position,viewport,{wide,docked});
   const panel=useRef(null),drag=useRef(null),resizing=useRef(null),persisted=useRef(!note.isNew);
   const findToggle=useRef(null),exportMenu=useRef(null);
+  useEffect(()=>{
+    const close=event=>{const menu=exportMenu.current;if(menu?.open&&!menu.contains(event.target))menu.removeAttribute('open');};
+    const escape=event=>{const menu=exportMenu.current;if(event.key==='Escape'&&menu?.open){menu.removeAttribute('open');menu.querySelector('summary')?.focus();}};
+    document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
+  },[]);
   const textHistory=useRef({title:{past:[],future:[]},body:{past:[],future:[]}});
   useEffect(()=>{panel.current?.querySelector('.note-drag')?.focus();},[]);
   useEffect(()=>{if(openRequest?.id!==note.id||openRequest?.scope!==note.scope)return;if(!openRequest.view||openRequest.view==='board')setBoardOpen(true);else if(openRequest.view==='text')setBoardOpen(false);},[openRequest?.token]);

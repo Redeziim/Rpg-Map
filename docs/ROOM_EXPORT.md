@@ -8,7 +8,7 @@ O resultado é um JSON UTF-8 com `format: "grimorio-room"` e `formatVersion: 1`.
 
 | Conteúdo | Jogador e ADM no modo jogador | Mestre e ADM no modo mestre |
 | --- | --- | --- |
-| Mapa 2D e exploração | Imagem com cobertura opaca, pontos, traços, rotas, cenas e posições permitidos | Estado completo do mapa, incluindo conteúdo privado e arquivado |
+| Mapa 2D e exploração | Imagem com cobertura opaca, pontos, traços, cenas e posições permitidos | Estado completo do mapa, incluindo conteúdo privado e arquivado |
 | Fichas | A própria ficha, modelo de campos e status públicos do grupo | Fichas disponíveis de participantes atuais e status do grupo |
 | Notas individuais | Próprias e explicitamente compartilhadas com a conta | Próprias e explicitamente compartilhadas com a conta; o papel administrativo não inclui notas privadas de outras pessoas nesta exportação |
 | Caderno do mestre | Notas explicitamente compartilhadas | Caderno completo |

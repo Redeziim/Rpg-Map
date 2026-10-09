@@ -21,8 +21,8 @@ Uma operação que precisa alterar várias tabelas usa `BEGIN IMMEDIATE` e só c
 | Enviar imagem à coleção de notas | BLOB e metadados de uma imagem | Inserção independente e atômica; imagem enviada com sucesso continua na coleção se salvar a nota falhar |
 | Salvar ou compartilhar nota | Estado/versão/acesso, histórico anterior/novo e retenção de versões | Transação existente confirmada por falhas na gravação e na limpeza do histórico |
 | Texto legado do mestre ou observações da ficha | Texto espelhado, nota `legacy`, histórico e revisão | Transação existente confirmada; falha não altera somente uma das representações |
-| Trocar imagem do mapa e reposicionar pontos | Imagem/pontos, limpeza de traços/rotas/névoa/escala/posições e revisão | Um estado JSON; decodificação ocorre antes, com nova conferência de acesso/versões após a espera |
-| Pontos, traços, névoa, escala, posições, legenda, rotas, cenas, turnos, ficha e perfil | Campos relacionados no mesmo JSON e revisão | Uma atualização SQLite indivisível; as operações com histórico usam transação explícita |
+| Trocar imagem do mapa e reposicionar pontos | Imagem/pontos, limpeza de traços/névoa/escala/posições e revisão | Um estado JSON; decodificação ocorre antes, com nova conferência de acesso/versões após a espera |
+| Pontos, traços, névoa, escala, posições, cenas, turnos, ficha e perfil | Campos relacionados no mesmo JSON e revisão | Uma atualização SQLite indivisível; as operações com histórico usam transação explícita |
 | Feedback, criação/revogação de convite, logout e limpeza de sessões | Uma inserção/remoção independente | Sem estado/arquivo complementar a confirmar; efeitos de conexão ocorrem depois da escrita |
 | Migração de banco e mesas | SQL, marcadores, ledgers e estados | Transação de início já verificada no item 32 |
 

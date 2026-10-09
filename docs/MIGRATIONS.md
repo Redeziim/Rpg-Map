@@ -65,7 +65,7 @@ A etapa 001 em `server/roomState.js` transforma os documentos antigos de texto/q
 - Textos antigos sem caderno viram a nota `legacy`, com o mesmo conteúdo e acesso privado. O texto original permanece no campo de compatibilidade.
 - Notas existentes mantêm identificadores, nomes, corpos, versões, compartilhamento, imagens, vínculos e ordem. Quadros recebem explicitamente largura/altura e listas antes implícitas.
 - Fichas e perfis dos participantes recebem os campos ausentes, sem substituir valores existentes. Cadernos de usuários que saíram da mesa permanecem armazenados; os filtros de acesso continuam em vigor.
-- Campos ausentes de mapa, névoa, posições, legenda, rotas, cenas, objetos 3D e turnos recebem os padrões já usados pela aplicação.
+- Campos ausentes de mapa, névoa, posições, cenas, objetos 3D e turnos recebem os padrões já usados pela aplicação. Os campos antigos `mapRoutes` e `mapLegend` deixaram de existir em 2026-10-08 (ADR 036): não recebem padrão e são apagados no próximo salvamento da mesa.
 - Traços antigos sem indicação de acesso ficam explicitamente em `table`, mantendo seu comportamento público anterior; traços `master` continuam privados.
 - Imagens e arquivos não são decodificados, redimensionados ou publicados de novo. Campos extras de uma importação são preservados.
 

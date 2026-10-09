@@ -49,6 +49,22 @@ Pedido do usuário depois de ver a primeira rodada.
 - **Turnos e cadernos no canto superior direito**: nas abas em que aparecem, formam um grupo compacto alinhado à direita, sem esticar (acima de 760 px). Os três cadernos viram um grupo unido. Sem combate, o rótulo \""Ordem de jogo\"" some; com combate, \""Rodada N\"" continua. \""Gerenciar turnos\"" virou \""Gerenciar\"". O bloco de turnos caiu de cerca de 650 px para cerca de 490 px.
 - **Grade do Mapa mental**: no lugar dos pontos, uma grade de linhas translúcidas (a cada 28 px, e uma mais marcada a cada 140 px).
 
+## Quarta rodada (2026-10-08, depois da avaliação)
+
+Dois agentes (QA e revisor) e a skill de auditoria de interface avaliaram o resultado; os agentes só tinham ferramentas de leitura, então as notas deles (6,2 e 6,4 de 10) vêm de leitura de código, não de uso. O que se confirmou foi corrigido:
+
+- **Painel de Turnos fora da tela** (confirmado no navegador: borda esquerda em −258 px a 900 px e −289 px a 420 px). O painel agora se ancora na faixa, com `width:min(560px,100%)`, e fica dentro da tela nos três tamanhos.
+- **Avisos de turno escondidos.** O botão "Turnos" mostra "Confirmar comando", "Conferindo comando…" ou "Ver aviso" (`src/shared/turnAttention.js`, com teste), abre o painel sozinho quando há comando pendente e anuncia o estado para leitor de tela. Um aviso já visto não marca o botão de novo. O Esc devolve o foco ao botão. Dentro do painel o bloco já abre expandido, sem o segundo botão de recolher.
+- **Fontes da ficha.** Cinco das seis opções de "Tipografia" tinham parado de carregar. Agora cada uma é pedida ao Google Fonts quando escolhida (`src/shared/sheetFonts.js`); os painéis de exportação e auditoria usam a fonte do tema.
+- **Tela de erro** (`src/ErrorBoundary.js`) no lugar da página em branco quando algo quebra ao desenhar.
+- **Servidor.** A lista dos campos removidos fica num só lugar (`REMOVED_STATE_FIELDS`), e há testes do SSE e de um backup com os campos antigos (`tests/removedMapTools.test.js`). A limpeza é definitiva; ver o [ADR 036](adr/036-remocao-de-rotas-legenda-e-exportacao-de-vista.md) sobre backup antes de atualizar.
+- **Barra lateral:** "Minhas mesas" e "Sair da conta" no rodapé da faixa de ícones, títulos nos botões, `aria-current` na navegação, barra aberta em alto contraste. **Faixa de cima:** camada acima das mensagens do mapa e seletores mais fortes, para não dependerem da ordem em que as folhas lentas chegam (conferido no build de produção).
+- **Notas:** o painel "Mais" do Mapa mental tem id único, fecha com Esc e devolve o foco; o menu "Mais" da nota fecha ao clicar fora e com Esc; "Notas compartilhadas" vazio explica como compartilhar; o modificador de atributo é lido por leitor de tela sem depender de `aria-label` em `<strong>`.
+- **Código e documentação:** ícones, estados e regras de CSS que a remoção deixou sem uso saíram; `src/shared/mapExploration.js` virou `pointTypes.js`; README, ONLINE, DESIGN, PLANO, ADR 004 e os documentos de backup, exportação e auditoria deixaram de descrever as funções removidas.
+- **Alvos de toque:** 44 px em tela de toque (`pointer:coarse`); no computador os controles novos seguem em 36 a 40 px, decisão registrada em `DIRECAO_GOTICA.md`.
+
+Não corrigido, por ser maior: hospedar as fontes localmente, e um teste automatizado de interface (hoje a casca nova só é verificada à mão).
+
 ## O que ficou de fora de propósito
 
 - **Escolha de resolução ao enviar o mapa** ("Mais leve" ou "Mais detalhe"): não alterado; pode ficar atrás de "Opções" se atrapalhar.

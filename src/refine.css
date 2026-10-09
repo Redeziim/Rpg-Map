@@ -125,7 +125,6 @@ body .note-window .note-text-editor textarea{height:100%;min-height:0}
 .mist-theme .view-mapa .map-messages:empty{display:none}
 .mist-theme .view-mapa .map-messages>*{pointer-events:auto;position:relative;inset:auto;top:auto;right:auto;max-width:none;margin:0;background:color-mix(in srgb,var(--paper-1) 95%,transparent);border:1px solid var(--gold-shadow);border-left-width:3px;box-shadow:0 8px 24px color-mix(in srgb,var(--black) 67%,transparent)}
 .mist-theme .view-mapa .map-messages>.map-draw-error{background:color-mix(in srgb,var(--paper-2) 95%,transparent);border-color:var(--accent)}
-.mist-theme .view-mapa .map-messages .map-route-choice-bar{padding:8px 10px}
 
 /* Mapa mental: "Mais opções" aberto não pode consumir o quadro; o painel rola por dentro. */
 body .note-board-options-content{max-height:170px;overflow:auto}

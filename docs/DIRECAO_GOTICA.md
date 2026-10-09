@@ -1,10 +1,10 @@
 # Direção gótica sutil
 
-Decidida em 2026-10-08 a partir de nove imagens de referência e quatro respostas do dono do projeto. Este documento diz o que foi escolhido, onde vive no código e o que ainda falta.
+Decidida em 2026-10-08 a partir de nove imagens de referência e quatro respostas do dono do projeto. Este documento diz o que foi escolhido, onde vive no código, o que mudou em cada rodada e o que ainda falta.
 
 ## O que foi pedido
 
-Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de tema fica para depois. Respostas:
+Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de tema ficou para depois (e já existe: ver [DESIGN_TOKENS.md](DESIGN_TOKENS.md#temas)). Respostas:
 
 | Pergunta | Escolha |
 | --- | --- |
@@ -15,7 +15,7 @@ Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de 
 
 ## O que as referências ensinaram
 
-- Vermelho profundo e ouro envelhecido (guerreiro de capuz, tinta vermelha com flocos de ouro): entram como vinho `#6f2a32` e ouro `#b39a63`, sem saturação alta.
+- Vermelho profundo e ouro envelhecido (guerreiro de capuz, tinta vermelha com flocos de ouro): entram como vinho e ouro dessaturados, sem saturação alta.
 - Névoa fria com uma luz quente só (lampião, velas): cinza esverdeado `--fog` para informação secundária; calor reservado ao ouro.
 - Molduras finas e cantos decorados (pacote gótico vermelho, retratos de Darkest Dungeon): cantos em L e anel duplo no retrato da ficha.
 - Mármore rachado e parede desgastada: fio de rachadura como divisória (`--crack`) e grão no fundo (`--grain`).
@@ -25,34 +25,43 @@ Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de 
 
 | O quê | Arquivo |
 | --- | --- |
-| Paleta, fontes e tokens | `src/theme.css` (`:root`) |
+| Paleta, fontes e tokens (tema sombrio) | `src/theme.css` (`:root`) |
+| Tema claro | `src/themeLight.css` |
 | Grão, rachadura, marca, fundo, algarismos | `src/gothic.css` |
-| Ficha de personagem (piloto) | `src/components/SheetGothic.css` |
-| Fontes carregadas | `index.html` (Cormorant Garamond, Grenze Gotisch) |
+| Navegação lateral e páginas comuns | `src/ShellGothic.css` |
+| Entrada e "Minhas mesas" | `src/AccountGothic.css` |
+| Ficha de personagem e ficha em livro | `src/components/SheetGothic.css`, `SheetBook.css` |
+| Barra lateral de ícones, faixa de turnos e notas, ferramentas do mapa | `src/CompactShell.css` |
+| Mapa mental das notas | `src/components/NoteBoardLayout.css` |
+| Tela de erro | `src/ErrorBoundary.css` |
+| Fontes do tema | `index.html` (Cormorant Garamond, Grenze Gotisch, Source Sans 3, Cinzel) |
+| Fontes decorativas da ficha | `src/shared/sheetFonts.js` (carregadas sob demanda) |
 
-## Segunda rodada (2026-10-09): contraste, molduras e ficha adaptativa
+## Rodadas
 
-Pedido: mais contraste, molduras e bordas mais trabalhadas, e atributos que não pareçam quebrados (vários "−5" e texto minúsculo).
-
-- **Contraste.** Bordas, filetes e texto secundário ficaram mais claros: `--rule` #50473a, `--rule-strong` #74664a, `--gold-deep` #a38b55, `--muted` #b4aea3. A checagem automática de contraste (axe, WCAG AA) continua sem violações.
-- **Molduras.** A ficha tem moldura dupla (borda e fio interno a 5 px), cantos grossos em L, cartões de seção com borda firme e losangos dourados nos cantos de cima, e retrato com anel duplo.
-- **A ficha se adapta ao modelo** (`src/shared/sheetFormulas.js`):
-  - `pairModifiers` junta cada atributo ao seu modificador ("Mod. Força" ou "Modificador de Força") no mesmo cartão. Seis cartões grandes, três por linha, no lugar de doze blocos de 75 px.
-  - `formatModifier` mostra o sinal com um menos de verdade (+2, −1, +0). Se o atributo está vazio, mostra "—" em vez de −5.
-  - `isCompactCategory`: categoria de 5 ou mais campos, todos numéricos (perícias, salvaguardas), vira lista compacta em colunas, com o nome à esquerda e o valor à direita.
-  - Ordem Paranormal, com cinco atributos sem modificador, usa os mesmos cartões grandes, sem a faixa de modificador.
-- **Armadilha.** Em `CharacterSheet.jsx`, `Map` é o ícone do lucide-react e esconde o `Map` do JavaScript. Não use `new Map()` ali.
+1. **Paleta e piloto (2026-10-08).** Carvão, ouro envelhecido e vinho nos tokens; Cormorant nos títulos e Grenze Gotisch na marca; grão e rachadura; a ficha como tela piloto, com cantos em L, cartões de seção com losangos e retrato com anel duplo.
+2. **Contraste, molduras e ficha adaptativa (2026-10-08).** Bordas, filetes e texto secundário mais claros (`--rule`, `--rule-strong`, `--gold-deep`, `--muted`); moldura dupla na ficha. A ficha passou a se adaptar ao modelo (`src/shared/sheetFormulas.js`):
+   - `pairModifiers` junta cada atributo ao seu modificador ("Mod. Força" ou "Modificador de Força") no mesmo cartão;
+   - `formatModifier` mostra o sinal com um menos de verdade (+2, −1, +0) e "—" quando o atributo está vazio, em vez de −5;
+   - `isCompactCategory`: categoria de 5 ou mais campos, todos numéricos (perícias, salvaguardas), vira lista compacta em colunas;
+   - a Ordem Paranormal, com cinco atributos sem modificador, usa os mesmos cartões grandes, sem a faixa de modificador.
+3. **Demais telas, tema claro e ficha em livro.** A direção chegou à entrada, ao mapa, às notas e à linha do tempo; todas as cores literais viraram token (o teste limita em 0, com a roda de cores do traço do mapa como única exceção); entrou o seletor de tema claro e sombrio; a ficha ganhou o formato de livro (`docs/SHEET_BOOK.md`).
+4. **Revisão de usabilidade.** Barra lateral só de ícones, turnos e cadernos de notas em botões minimizados, ferramentas do mapa reduzidas, Mapa mental redesenhado. Ver [REVISAO_UX.md](REVISAO_UX.md).
 
 ## Decisões que valem lembrar
 
-- **Algarismos alinhados.** A Cormorant usa números "antigos" por padrão (o 0 parece um o). Valores de jogo exigem algarismos alinhados, então `font-feature-settings:"lnum"` é forçado em todo o tema (o atalho `font:` de vários componentes zera o herdado).
-- **Fonte padrão da ficha.** O id salvo `cinzel` continua válido (servidor e salas antigas), mas agora mostra "Grimório (padrão)" e usa `--font-display`.
-- **Troca de tema no futuro.** Tudo que é cor e fonte passa por tokens. Um tema novo deve redefinir os tokens sob `:root[data-theme="..."]`, sem tocar nos componentes. Para isso funcionar, as 700 cores literais restantes precisam migrar para tokens.
-- **Movimento.** A direção não adiciona animação. A seta de instrumento em uso das Ferramentas de mestre respeita `prefers-reduced-motion`.
+- **Algarismos alinhados.** A Cormorant usa números "antigos" por padrão (o 0 parece um o). Valores de jogo exigem algarismos alinhados, então `font-feature-settings:"lnum"` é forçado em todo o tema e também nas janelas de nota, que ficam fora do `.mist-theme` (o atalho `font:` de vários componentes zera o herdado).
+- **Fonte padrão da ficha.** O id salvo `cinzel` continua válido (servidor e salas antigas), mas mostra "Grimório (padrão)" e usa `--font-display`. As outras cinco opções (MedievalSharp, Uncial Antiqua, IM Fell English, Metamorphous, Grenze) vêm do Google Fonts só quando alguém as escolhe, para não pesar toda abertura do app.
+- **Temas só por tokens.** Cor e fonte passam por tokens; um tema novo redefine os tokens sob `:root[data-theme="..."]` sem tocar nos componentes.
+- **Raio do arco dos atributos.** O projeto usa raios de 2 e 4 px; o cartão de atributo da ficha é um arco de pedra e usa `--radius-arch` (48 px), a única exceção, nomeada como token.
+- **Alvos de toque.** O mínimo do projeto é 44 px. No computador, os controles novos da faixa de cima e do Mapa mental ficam em 36 a 40 px para a tela respirar; em tela de toque (`pointer:coarse`) voltam a 44 px.
+- **Animação da barra lateral.** Anima a largura (240 ms) e a cor do texto; a barra é um único painel e a largura é o que dá o efeito de revelar sem deslocar o conteúdo. Sem animação para quem pede movimento reduzido, e aberta em alto contraste.
+- **Movimento.** A direção não adiciona animação ornamental. A seta de instrumento em uso das Ferramentas de mestre respeita `prefers-reduced-motion`.
+- **Checagens de acessibilidade.** O contraste dos dois temas é testado na suíte (`tests/themeLight.test.js`). A varredura com axe-core nas abas, em 1366, 900 e 420 px, é feita à mão com o navegador de teste e não faz parte da suíte.
 
 ## O que falta
 
-1. Telas ainda no visual antigo por causa de cores literais: faixa Ordem de jogo, cartões de notas, bandeja de dados, notas, conta. Elas ficam um pouco mais quentes e esverdeadas que a nova paleta.
-2. Aplicar a moldura de cantos e a rachadura às demais telas, uma por vez (entrada, mapa e mesa 3D, notas).
-3. Seletor de tema (claro/sombrio/básico), depois que as telas estiverem em tokens.
-4. Ilustração de fundo e retrato de personagem estilo ilustrado: depende de arte própria, não foi feito.
+1. Ilustração de fundo e retrato de personagem em estilo ilustrado: depende de arte própria.
+2. Hospedar as fontes localmente. Hoje o app depende do Google Fonts; sem rede, a marca e os títulos caem na fonte de reserva.
+3. Teste automatizado de interface (a casca nova, o botão de Turnos, os cadernos e as ferramentas do mapa só são verificados à mão).
+4. A escolha de resolução ao enviar o mapa ("Mais leve" ou "Mais detalhe") ainda aparece antes de publicar.

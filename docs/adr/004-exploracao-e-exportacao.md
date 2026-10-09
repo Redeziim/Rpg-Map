@@ -1,6 +1,6 @@
 # 004 — Rotas, legenda e exportação da vista
 
-Data: 2026-10-01. Estado: aceita.
+Data: 2026-10-01. Estado: substituída em parte pela [036](036-remocao-de-rotas-legenda-e-exportacao-de-vista.md): rotas, legenda editável e exportação da vista saíram do aplicativo em 2026-10-08. O texto abaixo guarda o histórico da decisão.
 
 ## Contexto
 

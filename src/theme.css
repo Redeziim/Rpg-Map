@@ -16,7 +16,7 @@
   --lh-body:1.6;--lh-tight:1.25;
   /* Espaço e forma */
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;
-  --radius-s:2px;--radius-m:4px;--target:44px;
+  --radius-s:2px;--radius-m:4px;--radius-arch:48px;--target:44px;
   /* Movimento: sempre propriedades nomeadas; theme.css zera tudo em prefers-reduced-motion */
   --motion-fast:120ms;--motion-base:200ms;--ease-out:cubic-bezier(.2,.7,.3,1);
   /* Foco visível */

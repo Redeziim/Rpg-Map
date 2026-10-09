@@ -20,7 +20,7 @@
 
 /* algarismos alinhados na linha de base: a Cormorant usa números "antigos" por padrão, ruins para valores de jogo */
 /* (o atalho "font:" de vários componentes zera o herdado, por isso o recurso é forçado em todo o tema; convive com tabular-nums) */
-.mist-theme,.mist-theme *,.mist-theme *::placeholder{font-feature-settings:"lnum" 1!important}
+.mist-theme,.mist-theme *,.mist-theme *::placeholder,.note-window,.note-window *,.note-window *::placeholder{font-feature-settings:"lnum" 1!important}
 /* títulos em Cormorant: letras mais finas que a fonte anterior, então ganham um pouco de corpo */
 .mist-theme h1,.mist-theme h2,.mist-theme h3,.mist-theme h4{font-weight:600}
 

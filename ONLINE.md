@@ -30,8 +30,6 @@ O papel é por mesa: a mesma conta pode ser ADM de uma campanha e jogador em out
 | Criar ou alterar traços entre Todos e Só mestres | Não | Sim | No modo mestre |
 | Ativar névoa, revelar e cobrir áreas | Não | Sim | No modo mestre |
 | Definir escala, unidade e alinhamento da grade | Não | Sim | No modo mestre |
-| Criar, editar, compartilhar, arquivar e restaurar rotas; editar legenda | Não | Sim | No modo mestre |
-| Consultar rotas compartilhadas e exportar a própria vista em PNG | Caminhos totalmente revelados | Sim | Conforme o modo da interface |
 | Mostrar grade e medir distância somente na própria tela | Entre pontos revelados | Sim | Entre pontos revelados no modo jogador; todos no modo mestre |
 | Liberar ou desativar posições compartilhadas na mesa | Não | Sim | No modo mestre |
 | Compartilhar, mover e remover a própria posição | Com a função liberada, em áreas reveladas | Não | No modo jogador, com a função liberada, em áreas reveladas |
@@ -53,9 +51,9 @@ Cenas começam privadas e são compartilhadas explicitamente pelo mestre. Jogado
 
 A API salva cada cena com versão própria; versões antigas são recusadas para revisão. Arquivar e restaurar também exigem a versão atual. Os rascunhos locais não são publicados automaticamente. Cenas são armazenadas no estado SQLite da mesa e entram no backup existente. Limites: 100 cenas por mesa, título de 120 caracteres, texto de 10.000 caracteres e 30 pontos por cena. Consulte [a decisão de visibilidade](docs/adr/002-cenas-e-pontos.md).
 
-### Rotas, legenda e imagens do mapa 2D
+### Imagens do mapa 2D
 
-Rotas e legenda ficam no estado SQLite e entram no backup da mesa. Rotas têm versão individual e exigem a versão da imagem em toda escrita. A API valida nome de até 120 caracteres, cor RGB, estado/visibilidade, até 100 paradas em coordenadas inteiras dentro da imagem e limite de 100 rotas (incluindo arquivadas). Reconfere permissão e versões após ler as dimensões do mapa. GET e SSE removem rotas privadas, arquivadas ou parcialmente cobertas e também retiram seus identificadores do mapa de versões enviado a jogadores. A legenda é compartilhada e versionada, com os cinco tipos existentes, nomes de até 40 caracteres e cores válidas. Trocar a imagem remove rotas e mantém a legenda. Detalhes em [exploração e exportação](docs/adr/004-exploracao-e-exportacao.md).
+Rotas de exploração, legenda editável e exportação da vista foram removidas em 2026-10-08. O servidor não as aceita mais (`/map-routes` e `/map-legend` respondem 404), e dados antigos de mesas já existentes nunca saem do servidor: não vão para a visão de ninguém, nem para o SSE, nem para uma exportação, e são apagados no próximo salvamento da mesa. Os cinco tipos de ponto têm nome e cor fixos. Detalhes na [decisão 036](docs/adr/036-remocao-de-rotas-legenda-e-exportacao-de-vista.md).
 
 A prévia prepara a imagem no navegador antes do envio, com limite de origem de 20 MB, 16.000 px por lado e 32 milhões de pixels. A API aceita imagens fixas PNG, JPEG, WebP ou GIF de até 5 MB, 4096 px por lado e 8 milhões de pixels. Verifica Base64, assinatura, dimensões e decodificação; arquivos inválidos, incompletos, animados ou acima dos limites são recusados sem alterar o mapa. A validação usa Sharp já instalado no servidor, com uma decodificação por vez e até quatro validações pendentes por aplicação; excesso de fila retorna 503 para tentar novamente.
 

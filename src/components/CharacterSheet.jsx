@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, BookOpen, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks } from 'lucide-react';
 import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
-import { SHEET_FONTS, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
+import { SHEET_FONTS, loadSheetFont, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
 import { SHEET_SYSTEMS, buildSystemFields } from '../shared/sheetTemplates.js';
 import { pairModifiers, formatModifier, isCompactCategory } from '../shared/sheetFormulas.js';
 import { categoryWeight } from '../shared/bookPages.js';
@@ -27,6 +27,8 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
   const isMaster = viewMode === 'master';
   const readOnly = isMaster && !canEditSelected;
   const fontFamily = (SHEET_FONTS.find(f => f.id === sheetFont) || SHEET_FONTS[0]).family;
+  // as fontes decorativas só são pedidas quando alguém as escolhe
+  useEffect(() => { loadSheetFont(sheetFont); }, [sheetFont]);
   const playerNames = knownPlayers;
   const activePlayer = isMaster ? masterSelectedPlayer : playerName;
   const activeEntry = (playerSheets && playerSheets[activePlayer]) || { extraFields: [], values: {} };
@@ -161,7 +163,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
       {f.type === 'number' && modField && (() => {
         const raw = draftValues[f.id], hasScore = raw !== undefined && raw !== null && raw !== '';
         const result = formulaResults.get(modField.id), text = formatModifier(result, hasScore);
-        return <div className="attribute-mod" title={modField.label}><span className="attribute-mod-name" aria-hidden="true">mod.</span><strong className={`attribute-mod-value${hasScore && typeof result === 'number' && result < 0 ? ' is-negative' : ''}`} aria-label={`${modField.label}: ${text === '—' ? 'sem valor' : text}`}>{text}</strong></div>;
+        return <div className="attribute-mod" title={modField.label}><span className="attribute-mod-name" aria-hidden="true">mod.</span><strong className={`attribute-mod-value${hasScore && typeof result === 'number' && result < 0 ? ' is-negative' : ''}`}><span className="sr-only">{`${modField.label}: ${text === '—' ? 'sem valor' : ''}`}</span><span aria-hidden={text === '—' ? 'true' : undefined}>{text}</span></strong></div>;
       })()}
       {f.type === 'textarea' && (
         <textarea id={`field-${f.id}`} value={draftValues[f.id] || ''} onChange={e => setValue(f.id, e.target.value)} placeholder="Preencha aqui…" rows={4} />
