@@ -1,16 +1,20 @@
-// Lê uma ficha de PDF ou de imagem neste navegador. O arquivo nunca sai da máquina: o PDF.js lê a camada de texto e os campos
+// Lê uma ficha de PDF, de imagem ou de arquivo de texto (TXT) neste navegador. O arquivo nunca sai da máquina: o PDF.js lê a camada de texto e os campos
 // de formulário; o Tesseract (WebAssembly, arquivos servidos por este mesmo servidor) faz o OCR de imagens e de PDFs escaneados.
 export const SHEET_FILE_LIMIT=15*1024*1024;
 export const SHEET_PAGE_LIMIT=8;
 const IMAGE_TYPES=['image/png','image/jpeg','image/webp'];
 const OCR_BASE='/vendor/ocr';
 
+const isPdf=file=>file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+const isText=file=>file.type==='text/plain'||/\.(txt|text|md)$/i.test(file.name);
+const TEXT_LIMIT=400000;
+
 export function checkSheetFile(file){
   if(!file)return 'Escolha um arquivo.';
-  const pdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
-  if(!pdf&&!IMAGE_TYPES.includes(file.type))return 'Use um PDF ou uma imagem PNG, JPEG ou WebP.';
-  if(file.size>SHEET_FILE_LIMIT)return 'O arquivo passa de 15 MB. Exporte o PDF com qualidade menor ou recorte a imagem.';
-  if(file.size<64)return 'O arquivo está vazio ou corrompido.';
+  const pdf=isPdf(file),text=isText(file);
+  if(!pdf&&!text&&!IMAGE_TYPES.includes(file.type))return 'Use um PDF, uma imagem PNG, JPEG ou WebP, ou um arquivo TXT.';
+  if(file.size>SHEET_FILE_LIMIT)return text?'O arquivo de texto passa de 15 MB.':'O arquivo passa de 15 MB. Exporte o PDF com qualidade menor ou recorte a imagem.';
+  if(file.size<(text?3:64))return 'O arquivo está vazio ou corrompido.';
   return '';
 }
 
@@ -76,7 +80,7 @@ async function readPdf(file,{onProgress,signal}){
   pdfjs.GlobalWorkerOptions.workerSrc=worker.default;
   const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false});
   const document_=await task.promise;
-  const pages=Math.min(document_.numPages,SHEET_PAGE_LIMIT),lines=[],formFields=[];
+  const pages=Math.min(document_.numPages,SHEET_PAGE_LIMIT),lines=[],formFields=[],formFieldNames=[];
   try{
     for(let number=1;number<=pages;number++){
       if(signal?.aborted)throw new DOMException('Leitura cancelada.','AbortError');
@@ -86,6 +90,7 @@ async function readPdf(file,{onProgress,signal}){
       for(const annotation of await page.getAnnotations()){
         // Check boxes and buttons carry no value worth copying.
         if(annotation.subtype!=='Widget'||!annotation.fieldName||annotation.fieldType==='Btn')continue;
+        if(!formFieldNames.includes(annotation.fieldName))formFieldNames.push(annotation.fieldName);
         const value=Array.isArray(annotation.fieldValue)?annotation.fieldValue.join(', '):annotation.fieldValue;
         if(typeof value==='string'&&value.trim())formFields.push({name:annotation.fieldName,value});
       }
@@ -104,7 +109,7 @@ async function readPdf(file,{onProgress,signal}){
       }
       text=parts.join('\n');method='OCR do PDF escaneado';scannedWords=wordSets;
     }
-    return {text,formFields,pages,method,wordSets:scannedWords,truncated:document_.numPages>pages};
+    return {text,formFields,formFieldNames,pages,method,wordSets:scannedWords,truncated:document_.numPages>pages};
   }finally{task.destroy();}
 }
 
@@ -112,14 +117,18 @@ async function readImage(file,{onProgress,signal}){
   onProgress?.('Preparando a imagem…');
   const canvas=await prepareImage(file);
   const {text,wordSets}=await ocr(canvas,{onProgress,signal});
-  return {text,wordSets,formFields:[],pages:1,method:'OCR da imagem',truncated:false};
+  return {text,wordSets,formFields:[],formFieldNames:[],pages:1,method:'OCR da imagem',truncated:false};
+}
+
+async function readText(file){
+  const raw=(await file.text()).replace(/^\uFEFF/,'');
+  return {text:raw.slice(0,TEXT_LIMIT),wordSets:[],formFields:[],formFieldNames:[],pages:1,method:'arquivo de texto',truncated:raw.length>TEXT_LIMIT};
 }
 
 export async function readSheetFile(file,options={}){
   const problem=checkSheetFile(file);
   if(problem)throw Error(problem);
-  const pdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
-  try{return pdf?await readPdf(file,options):await readImage(file,options);}
+  try{return isPdf(file)?await readPdf(file,options):isText(file)?await readText(file):await readImage(file,options);}
   catch(error){
     if(error?.name==='AbortError')throw error;
     if(error?.name==='PasswordException')throw Error('Este PDF tem senha. Abra-o, salve uma cópia sem senha e tente de novo.');

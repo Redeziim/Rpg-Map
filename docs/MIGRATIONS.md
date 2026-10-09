@@ -6,14 +6,16 @@ O servidor atualiza formatos conhecidos **antes de abrir a API**. Banco, registr
 
 | Formato | Identificação | Migração |
 | --- | --- | --- |
-| Legado | `user_version=0`, `application_id=0` e esquema conhecido | Atualiza para banco 7 e estado 7 |
+| Legado | `user_version=0`, `application_id=0` e esquema conhecido | Atualiza para o banco 9 e o estado 7 |
 | Banco 1 | `user_version=1`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta registro e índices; estado 1 recebe a migração 002 |
 | Banco 2 | `user_version=2`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta os índices de vencimento e confirmações; estado 1 recebe a migração 002 |
 | Banco 3 | `user_version=3`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta confirmações de importação 3D e índice; estado 1 recebe a migração 002 |
 | Banco 4 | `user_version=4`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta histórico, confirmação e última animação de rolagens |
 | Banco 5 | `user_version=5`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta confirmações de combate e índice de vencimento |
 | Banco 6 | `user_version=6`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta biblioteca binária de mídia das cenas |
-| Banco atual | `user_version=7`, `application_id=0x4752494d` (`GRIM`) | Conferido; não regravado se já estiver atualizado |
+| Banco 7 | `user_version=7`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta a linha do tempo da campanha (`008`) |
+| Banco 8 | `user_version=8`, identificador `GRIM` e esquema/ledger conhecidos | Acrescenta a biblioteca de modelos de ficha por conta, tabela `sheet_models` (`009`, ADR 037) |
+| Banco atual | `user_version=9`, `application_id=0x4752494d` (`GRIM`) | Conferido; não regravado se já estiver atualizado |
 | Estado 1 | `stateVersion: 1` no JSON persistido | Migração 002 acrescenta grupos, versões e bloqueios 3D |
 | Estado 2 | `stateVersion: 2` no JSON persistido | Etapa 003 acrescenta listas de vínculos aos objetos 3D |
 | Estado 3 | `stateVersion: 3` no JSON persistido | Etapa 004 acrescenta iluminação da Mesa 3D |

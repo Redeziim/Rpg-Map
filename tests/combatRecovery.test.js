@@ -55,7 +55,7 @@ test('combat command with a lost response is confirmed once and returns current 
     view=(await call('master',root+'/turns','POST',failing)).body;
     assert.equal(view.state.combat.activeId,'owner');assert.equal(view.state.combat.round,2);assert.equal(view.state.combat.version,failing.version+1);
     const backup=join(directory,'backup.sqlite'),restored=join(directory,'restored.sqlite');
-    await createBackup(dbPath,backup);assert.equal((await verifyBackup(backup)).database.userVersion,8);
+    await createBackup(dbPath,backup);assert.equal((await verifyBackup(backup)).database.userVersion,9);
     await restoreBackup(backup,restored);await stop();await start(restored);const resumed=(await call('master',receiptPath)).body;
     assert.deepEqual(resumed.state.combat,view.state.combat);assert.equal(resumed.revision,view.revision);
     assert.equal(resumed.combatOperation.phase,'confirmed');
@@ -67,13 +67,13 @@ test('combat command with a lost response is confirmed once and returns current 
     assert.equal((await call('master',receiptPath)).status,403);
     // A known v5 backup keeps its original schema/counts; only opening the restored copy migrates it.
     await stop();const previous=join(directory,'previous.sqlite');copyFileSync(backup,previous);
-    const old=new DatabaseSync(previous);try{old.exec('DROP TABLE timeline_versions; DROP TABLE timeline_entries; DROP TABLE scene_media; DROP TABLE combat_operations; DELETE FROM schema_migrations WHERE version>=6; PRAGMA user_version=5;');}finally{old.close();}
+    const old=new DatabaseSync(previous);try{old.exec('DROP TABLE sheet_models; DROP TABLE timeline_versions; DROP TABLE timeline_entries; DROP TABLE scene_media; DROP TABLE combat_operations; DELETE FROM schema_migrations WHERE version>=6; PRAGMA user_version=5;');}finally{old.close();}
     const oldBackup=join(directory,'previous-backup.sqlite'),oldRestored=join(directory,'previous-restored.sqlite');
     await createBackup(previous,oldBackup);const oldVerified=await verifyBackup(oldBackup);
     assert.equal(oldVerified.database.userVersion,5);assert.equal(Object.hasOwn(oldVerified.database.counts,'combat_operations'),false);
     await restoreBackup(oldBackup,oldRestored);await start(oldRestored);
     assert.deepEqual((await call('master',root)).body.state.combat,view.state.combat);
     const migrated=join(directory,'migrated.sqlite');await createBackup(oldRestored,migrated);
-    assert.equal((await verifyBackup(migrated)).database.userVersion,8);assert.equal((await verifyBackup(oldBackup)).database.userVersion,5);
+    assert.equal((await verifyBackup(migrated)).database.userVersion,9);assert.equal((await verifyBackup(oldBackup)).database.userVersion,5);
   }finally{if(app)await stop();assert.ok(resolve(directory).startsWith(resolve(tmpdir())+sep));rmSync(directory,{recursive:true,force:true});}
 });

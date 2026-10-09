@@ -57,8 +57,8 @@ export default function SheetImport({fields,currentValues={},onApply,disabled}){
   return <section className="sheet-import" aria-label="Importar ficha de um arquivo">
     {phase==='idle'&&<>
       <div className="sheet-import-start">
-        <div><h4><FileUp size={16} aria-hidden="true"/>Importar de um PDF ou imagem</h4><p>Escolha o PDF da ficha ou um print. A leitura acontece neste navegador: o arquivo não é enviado ao servidor nem a nenhum serviço de IA. Você revisa tudo antes de salvar.</p></div>
-        <label className="sheet-import-button"><input ref={input} type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf" disabled={disabled} onChange={choose}/>Escolher arquivo</label>
+        <div><h4><FileUp size={16} aria-hidden="true"/>Preencher a ficha com um PDF, imagem ou TXT</h4><p>Escolha o PDF da ficha, um print ou um arquivo de texto. A leitura acontece neste navegador: o arquivo não é enviado ao servidor nem a nenhum serviço de IA. Você revisa tudo antes de salvar.</p></div>
+        <label className="sheet-import-button"><input ref={input} type="file" accept="application/pdf,image/png,image/jpeg,image/webp,text/plain,.pdf,.txt" disabled={disabled} onChange={choose}/>Escolher arquivo</label>
       </div>
       {notice&&<p role="status" className="sheet-import-notice">{notice}</p>}
       {error&&<p role="alert" className="sheet-import-error">{error}</p>}

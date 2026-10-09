@@ -8,6 +8,7 @@ import {createModelValidator} from './modelValidation.js';
 import {createMapImports} from './mapImports.js';
 import {createDiceHistory,isPrivateRoll} from './diceHistory.js';
 import {createCampaignTimeline} from './campaignTimeline.js';
+import {createSheetModels} from './sheetModels.js';
 import {createStaticFiles} from './staticFiles.js';
 import {createCombatOperations} from './combatOperations.js';
 import {changeTabletopObjects} from './tabletopObjects.js';
@@ -121,6 +122,7 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
   const clients=new Set(),limits=new Map(),renderMapFog=createMapFogRenderer(),validateMapImage=createMapImageValidator(),roomMedia=createRoomMediaTransfer();
   const diceHistory=createDiceHistory(db);
   const campaignTimeline=createCampaignTimeline(db);
+  const sheetModels=createSheetModels(db);
   const staticFiles=createStaticFiles();
   const combatOperations=createCombatOperations(db);
   const roomExports=createRoomExports({db,renderMapFog,exportRoot});
@@ -370,6 +372,15 @@ export function createApplication({dbPath=resolve('data/grimorio.sqlite'),distPa
       const invite=query('SELECT * FROM invites WHERE token_hash=? AND expires>?',digest(code),Date.now());if(!invite)fail(404,'Convite inválido, revogado ou expirado.');
       if(!query('SELECT 1 FROM members WHERE room_id=? AND user_id=?',invite.room_id,user.id))addMember(invite.room_id,user.id,invite.role,user,'member.joined');
       broadcast(invite.room_id);return json(res,200,snapshot(invite.room_id,user.id));
+    }
+    // Biblioteca de modelos de ficha da conta (ADR 037): só o dono lê e muda.
+    if(path[1]==='sheet-models'){
+      limit(`sheet-models:${user.id}`,60);
+      if(path.length===2&&method==='GET')return json(res,200,sheetModels.list(user.id));
+      if(path.length===2&&method==='POST'){const model=transaction(()=>sheetModels.create(user.id,requestBody));return json(res,201,model);}
+      if(path.length===3&&method==='PATCH')return json(res,200,transaction(()=>sheetModels.rename(user.id,path[2],requestBody)));
+      if(path.length===3&&method==='DELETE'){transaction(()=>sheetModels.remove(user.id,path[2]));return json(res,200,{ok:true});}
+      fail(404,'Rota não encontrada.');
     }
     if(path[1]!=='rooms'||!path[2])fail(404,'Rota não encontrada.');
     const roomId=path[2],m=membership(roomId,user.id);

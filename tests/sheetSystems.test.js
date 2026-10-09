@@ -86,6 +86,51 @@ test('D&D 5e has six abilities, six saving throws and the 18 skills, each with i
   assert.ok(fields.filter(field=>field.tab==='Perícias').every(field=>/\((For|Des|Con|Int|Sab|Car)\)$/.test(field.label)));
 });
 
+test('the library lists the famous systems, each with a name, a summary and a distinct id',()=>{
+  assert.deepEqual(SHEET_SYSTEMS.map(system=>system.id),['dnd5e','ordem','tormenta20','cthulhu7e','pathfinder2e','vampiro5e','3dt','olddragon']);
+  assert.equal(new Set(SHEET_SYSTEMS.map(system=>system.name)).size,SHEET_SYSTEMS.length);
+  for(const system of SHEET_SYSTEMS){assert.ok(system.name&&system.summary.length>20);assert.ok(model(system.id).length<=200,`${system.id} cabe no limite do servidor`);}
+});
+
+test('Tormenta20: defense adds the Dexterity modifier and the armor bonuses; 29 skills and two resources',()=>{
+  const read=compute('tormenta20',{Destreza:3,'Bônus de armadura':5,'Bônus de escudo':2});
+  assert.equal(read('Defesa'),20);
+  const fields=model('tormenta20');
+  assert.equal(fields.filter(field=>field.tab==='Perícias').length,29);assert.deepEqual(fields.filter(field=>field.tab==='Recursos').map(field=>field.label),['Pontos de Vida','Pontos de Mana']);
+});
+
+test('Call of Cthulhu 7e: half and fifth values, maximum HP, MP and Sanity follow the rulebook',()=>{
+  const read=compute('cthulhu7e',{Força:65,Constituição:60,Tamanho:70,Poder:55,'Mitos de Cthulhu (%)':10});
+  assert.equal(read('Força ½'),32);assert.equal(read('Força ⅕'),13);
+  assert.equal(read('PV máximo'),13);assert.equal(read('PM máximo'),11);assert.equal(read('Sanidade máxima'),89);
+  const fields=model('cthulhu7e');
+  assert.equal(fields.filter(field=>field.tab==='Perícias').length,43);assert.equal(fields.filter(field=>field.tab==='Metade e quinto').length,16);
+});
+
+test('Pathfinder 2e: ability modifiers use the same rule as D&D and pair with the score',()=>{
+  const read=compute('pathfinder2e',{Força:18,Destreza:7});
+  assert.equal(read('Mod. Força'),4);assert.equal(read('Mod. Destreza'),-2);
+  const attributes=model('pathfinder2e').filter(field=>field.tab==='Atributos'),pairs=pairModifiers(attributes);
+  assert.equal(pairs.mods.size,6);
+});
+
+test('Vampiro 5e: maximum Health is Stamina plus 3 and maximum Willpower is Composure plus Resolve',()=>{
+  const read=compute('vampiro5e',{'Vigor (Físicos)':3,'Autocontrole (Sociais)':2,'Perseverança (Mentais)':4});
+  assert.equal(read('Vitalidade máxima'),6);assert.equal(read('Força de Vontade máxima'),6);
+  const fields=model('vampiro5e');assert.equal(fields.filter(field=>field.tab==='Atributos').length,9);assert.equal(fields.filter(field=>field.tab==='Habilidades').length,27);
+});
+
+test('3D&T Alpha: attack, defense, life and magic follow the rulebook sums',()=>{
+  const read=compute('3dt',{Poder:3,Habilidade:2,Resistência:4,Armadura:1,'Poder de Fogo':5});
+  assert.equal(read('Força de Ataque (corpo a corpo)'),5);assert.equal(read('Força de Ataque (à distância)'),7);assert.equal(read('Força de Defesa'),3);
+  assert.equal(read('Pontos de Vida máximos'),20);assert.equal(read('Pontos de Magia máximos'),20);
+});
+
+test('Old Dragon: six attributes with typed modifiers and three saving throws',()=>{
+  const fields=model('olddragon');
+  assert.equal(fields.filter(field=>field.tab==='Atributos').length,6);assert.equal(fields.filter(field=>field.tab==='Modificadores').length,6);assert.equal(fields.filter(field=>field.tab==='Proteção').length,3);
+});
+
 test('every alias belongs to a field that some template actually has',()=>{
   const labels=new Set(SHEET_SYSTEMS.flatMap(system=>model(system.id).map(field=>baseLabel(field.label))));
   for(const key of FIELD_ALIASES.keys())assert.ok(labels.has(key),`apelido sem campo: ${key}`);

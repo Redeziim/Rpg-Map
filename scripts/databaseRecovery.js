@@ -3,9 +3,10 @@ import {createHash} from 'node:crypto';
 import {createReadStream,lstatSync,realpathSync,mkdirSync,mkdtempSync,copyFileSync,constants,readFileSync,writeFileSync,openSync,fsyncSync,closeSync,chmodSync,linkSync,unlinkSync,rmdirSync,statSync} from 'node:fs';
 import {dirname,basename,join,resolve} from 'node:path';
 import {isDeepStrictEqual} from 'node:util';
-import {DATABASE_TABLES,DATABASE_V1_TABLES,DATABASE_V2_TABLES,DATABASE_V4_TABLES,DATABASE_V5_TABLES,DATABASE_V6_TABLES,DATABASE_V7_TABLES,LEGACY_DATABASE_TABLES,databaseSchemaIdentity} from '../server/databaseSchema.js';
+import {DATABASE_TABLES,DATABASE_V1_TABLES,DATABASE_V2_TABLES,DATABASE_V4_TABLES,DATABASE_V5_TABLES,DATABASE_V6_TABLES,DATABASE_V7_TABLES,DATABASE_V8_TABLES,LEGACY_DATABASE_TABLES,databaseSchemaIdentity} from '../server/databaseSchema.js';
 import {assertSavedSceneMedia} from '../server/sceneMedia.js';
 import {assertSavedTimeline} from '../server/campaignTimeline.js';
+import {assertSavedSheetModels} from '../server/sheetModels.js';
 import {assertMigrationLedger,assertRoomMigrationLedger} from '../server/databaseMigrations.js';
 import {assertRoomState,assertRoomMembers,migrateRoomState,ROOM_STATE_VERSION} from '../server/roomState.js';
 import {assertRoomAudit} from '../server/roomAudit.js';
@@ -63,6 +64,7 @@ function checkSavedData(db,tables,userVersion){
   if(tables.has('combat_operations'))assertCombatOperations(db);
   if(tables.has('scene_media'))assertSavedSceneMedia(db);
   if(tables.has('timeline_entries'))assertSavedTimeline(db);
+  if(tables.has('sheet_models'))assertSavedSheetModels(db);
   return roomStateVersions;
 }
 function openReadOnly(path){
@@ -78,7 +80,7 @@ export function inspectDatabase(path){
     const tables=new Set(schemaRows(db).map(row=>row.name));
     if(identity.userVersion>0){assertMigrationLedger(db,{throughVersion:identity.userVersion});assertRoomMigrationLedger(db);}
     const roomStateVersions=checkSavedData(db,tables,identity.userVersion);
-    const definitions=identity.userVersion===0?LEGACY_DATABASE_TABLES:identity.userVersion===1?DATABASE_V1_TABLES:identity.userVersion<4?DATABASE_V2_TABLES:identity.userVersion===4?DATABASE_V4_TABLES:identity.userVersion===5?DATABASE_V5_TABLES:identity.userVersion===6?DATABASE_V6_TABLES:identity.userVersion===7?DATABASE_V7_TABLES:DATABASE_TABLES;
+    const definitions=identity.userVersion===0?LEGACY_DATABASE_TABLES:identity.userVersion===1?DATABASE_V1_TABLES:identity.userVersion<4?DATABASE_V2_TABLES:identity.userVersion===4?DATABASE_V4_TABLES:identity.userVersion===5?DATABASE_V5_TABLES:identity.userVersion===6?DATABASE_V6_TABLES:identity.userVersion===7?DATABASE_V7_TABLES:identity.userVersion===8?DATABASE_V8_TABLES:DATABASE_TABLES;
     const counts=Object.fromEntries(Object.keys(definitions).sort().map(name=>[name,tables.has(name)?db.prepare(`SELECT count(*) AS count FROM ${name}`).get().count:0]));
     const sqliteVersion=db.prepare('SELECT sqlite_version() AS version').get().version;
     return {...identity,counts,sqliteVersion,roomStateVersions};

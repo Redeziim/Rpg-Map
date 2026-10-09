@@ -13,7 +13,36 @@ O mestre abre **Editar modelo da ficha** e escolhe um sistema em **Modelos de si
 
 Cada fórmula é conferida por teste com números reais (`tests/sheetSystems.test.js`): por exemplo, NEX 50% com Vigor 2 e Presença 3 dá nível 10, PV 76 e PE 50 de Combatente, Sanidade 65 de Ocultista; D&D nível 5 dá proficiência +3.
 
-Novos sistemas entram em `src/shared/sheetTemplates.js` (a lista de campos e os apelidos de leitura).
+Seis sistemas conhecidos entraram depois (ADR 037, `src/shared/sheetSystemsMore.js`), cada um com as contas da regra conferidas por teste:
+
+| Sistema | O que traz |
+| --- | --- |
+| Tormenta20 | Seis atributos, Defesa calculada (10 + Destreza + armadura + escudo), Vida e Mana, 29 perícias, poderes e magias |
+| Chamado de Cthulhu 7ª edição | Oito características com metade e quinto, Sorte, Vida, Magia e Sanidade com máximos calculados (PV = (CON + TAM) / 10, PM = Poder / 5, Sanidade = 99 − Mitos), 43 perícias em %, e as seções de história |
+| Pathfinder 2ª edição | Seis atributos com modificador, salvaguardas, Percepção, CD de classe, 16 perícias, talentos |
+| Vampiro: A Máscara 5ª edição | Nove atributos e 27 habilidades (0 a 5), Vitalidade (3 + Vigor) e Força de Vontade (Autocontrole + Perseverança) com máximos, Humanidade, Fome, Potência de Sangue |
+| 3D&T Alpha | Poder, Habilidade, Resistência, Armadura e Poder de Fogo, Força de Ataque e de Defesa, Vida e Magia (Resistência × 5) |
+| Old Dragon | Seis atributos com modificadores digitados, vida, armadura, base de ataque e três jogadas de proteção |
+
+Novos sistemas entram em `src/shared/sheetTemplates.js` ou `sheetSystemsMore.js` (a lista de campos e os apelidos de leitura).
+
+## Meus modelos e modelo gerado de um arquivo (ADR 037)
+
+Em **Editar modelo da ficha → Modelos de sistema**, o mestre ou ADM tem:
+
+- **Meus modelos**: os modelos guardados na sua conta (tabela `sheet_models`). Só você os vê, em qualquer mesa. Cada um pode ser somado à mesa, substituir o modelo da mesa ou ser apagado. Limite de 30 por conta.
+- **Criar modelo de um arquivo**: escolha um PDF, uma imagem ou um TXT. A leitura acontece no navegador (o arquivo não vai ao servidor). O app propõe os campos; você marca, renomeia, troca tipo e categoria, dá um nome e guarda, ou guarda e já soma à mesa.
+- **Guardar o modelo desta mesa**: copia os campos que a mesa usa hoje para os seus modelos.
+- **Sistemas conhecidos**: a lista acima, sempre disponível.
+
+### Como o arquivo vira modelo
+
+- **PDF com formulário**: os nomes dos campos do formulário viram os nomes dos campos do modelo; nomes genéricos ("Text Box 12") são ignorados.
+- **PDF ou imagem**: cada linha vira candidata. "Nome: Fulano" e "Força 14" dão o rótulo sem o valor; uma linha só com rótulos que a biblioteca conhece ("Força Destreza Constituição") é separada; palavras como ATRIBUTOS, PERÍCIAS ou EQUIPAMENTO abrem uma categoria; links, números de página, direitos autorais e frases longas são ignorados.
+- **Tipo**: número quando há número ou o rótulo é de atributo, perícia ou bônus; barra de recurso para vida, mana, sanidade e parecidos (e para "10 / 12"); texto longo para história, notas, magias; lista para inventário e ataques; imagem para retrato; texto nos demais.
+- **TXT à mão**, o jeito mais seguro: uma linha por campo; `# Categoria` (ou `[Categoria]`, `== Categoria ==`) abre uma categoria; `Campo [número]`, `[texto]`, `[longo]`, `[lista]`, `[barra]` e `[imagem]` escolhem o tipo; `Mod. Força = piso((Força-10)/2)` cria uma fórmula.
+- Se a ficha lembrar muito um sistema da biblioteca (pelo menos 10 campos e 70% em comum), o app avisa e os rótulos conhecidos usam o tipo, a categoria e a fórmula desse sistema.
+- Tudo é conferido pelas mesmas regras do servidor antes de guardar: até 200 campos, nomes únicos, tipos válidos e fórmulas com texto.
 
 ### Fórmulas
 

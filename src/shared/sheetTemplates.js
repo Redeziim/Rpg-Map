@@ -4,6 +4,8 @@
 // D&D 5e: campos do SRD 5.1 (licença CC BY 4.0, Wizards of the Coast). Ordem Paranormal: mecânica de jogo da Jambô Editora.
 
 // Rótulo sem o atributo entre parênteses: "Acrobacia (Des)" -> "Acrobacia".
+import {MORE_SYSTEMS} from './sheetSystemsMore.js';
+
 export const baseLabel=label=>String(label||'').replace(/\s*\([^)]*\)\s*$/,'').trim();
 
 const DND_ABILITIES=[['Força','For','STR','Strength'],['Destreza','Des','DEX','Dexterity'],['Constituição','Con','CON','Constitution'],['Inteligência','Int','INT','Intelligence'],['Sabedoria','Sab','WIS','Wisdom'],['Carisma','Car','CHA','Charisma']];
@@ -56,6 +58,7 @@ function opFields(){
 export const SHEET_SYSTEMS=Object.freeze([
   {id:'dnd5e',name:'D&D 5ª edição',summary:'Seis atributos com modificadores, bônus de proficiência, salvaguardas, 18 perícias e vida.',fields:dndFields},
   {id:'ordem',name:'Ordem Paranormal',summary:'Cinco atributos, NEX, Vida, Esforço e Sanidade, Defesa, 28 perícias e o cálculo de recursos por classe.',fields:opFields},
+  ...MORE_SYSTEMS,
 ]);
 
 // Cria os campos de um modelo. `makeId` entrega um identificador novo por campo.

@@ -3,12 +3,12 @@ import { Camera, Map, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Ca
 import { DICE_SKINS } from './Dice3D.jsx';
 import RolledDie from './RolledDie.jsx';
 import { SHEET_FONTS, loadSheetFont, FIELD_TYPES, resolveFormulas, suggestTab, DEFAULT_TABS } from './sheetHelpers.jsx';
-import { SHEET_SYSTEMS, buildSystemFields } from '../shared/sheetTemplates.js';
 import { pairModifiers, formatModifier, isCompactCategory } from '../shared/sheetFormulas.js';
 import { categoryWeight } from '../shared/bookPages.js';
 import SheetBook from './SheetBook.jsx';
 import './SheetGothic.css';
 const SheetImport = lazy(() => import('./SheetImport.jsx'));
+const SheetModels = lazy(() => import('./SheetModels.jsx'));
 // Neste arquivo "Map" é o ícone do lucide-react; por isso o par vazio vem da própria função em vez de `new Map()`.
 const NO_PAIRS = pairModifiers([]);
 
@@ -284,21 +284,6 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
 
   const categories = Array.from(new Set([...sheetFields, ...extraFields].map(f => f.tab || 'Geral')));
   const makeId = () => `f_${crypto.randomUUID()}`;
-  const [pendingSystem, setPendingSystem] = useState(null), [systemError, setSystemError] = useState('');
-  // Somar mantém o que já existe e só traz os campos de nome novo; substituir troca o modelo inteiro.
-  const systemPlan = pendingSystem && (() => {
-    const created = buildSystemFields(pendingSystem.system.id, makeId);
-    if (pendingSystem.mode === 'replace') return { fields: created, added: created.length };
-    const have = new Set(sheetFields.map(f => f.label.trim().toLowerCase()));
-    const extra = created.filter(f => !have.has(f.label.trim().toLowerCase()));
-    return { fields: [...sheetFields, ...extra], added: extra.length };
-  })();
-  const applySystem = () => {
-    if (!systemPlan) return;
-    if (systemPlan.fields.length > 200) { setSystemError('O modelo ficaria com mais de 200 campos. Remova campos antes de somar este sistema.'); return; }
-    onFieldsChange(systemPlan.fields);
-    setPendingSystem(null); setSystemError('');
-  };
   const createStarter = () => {
     if (sheetFields.length) return;
     const fields = [
@@ -345,25 +330,7 @@ const CharacterSheet = ({ viewMode, sheetFields, onFieldsChange, sheetFont, onFo
         <div className="section-heading"><h3>Modelo da campanha</h3><span>{sheetFields.length} campos</span></div>
         <p className="status-bars-hint">Defina os campos e suas categorias. Cada jogador preenche os próprios valores.</p>
         {!sheetFields.length && <button className="sheet-tool-btn starter-button" onClick={createStarter}><Plus size={16} /> Começar com uma ficha base</button>}
-        <section className="system-templates" aria-label="Modelos de sistema">
-          <h4>Modelos de sistema</h4>
-          <p>Um modelo traz os campos e as fórmulas de um sistema. Nada fica fixo: some campos de outro sistema, troque de modelo ou edite tudo depois.</p>
-          <ul>{SHEET_SYSTEMS.map(system => <li key={system.id}>
-            <div><strong>{system.name}</strong><span>{system.summary}</span></div>
-            <div className="system-template-actions">
-              <button type="button" className="sheet-tool-btn" onClick={() => { setPendingSystem({ system, mode: 'add' }); setSystemError(''); }}>Somar campos</button>
-              {sheetFields.length > 0 && <button type="button" className="sheet-tool-btn" onClick={() => { setPendingSystem({ system, mode: 'replace' }); setSystemError(''); }}>Substituir o modelo</button>}
-            </div>
-          </li>)}</ul>
-          {pendingSystem && systemPlan && <div className="system-confirm" role="group" aria-label={`Confirmar ${pendingSystem.system.name}`}>
-            <p role="alert">{pendingSystem.mode === 'replace'
-              ? `Substituir os ${sheetFields.length} campos atuais pelos ${systemPlan.added} de ${pendingSystem.system.name}? O que os jogadores já preencheram não some do servidor, mas deixa de aparecer nas fichas, porque o modelo novo tem campos diferentes. Se quiser manter os valores, escolha Somar campos em vez de Substituir.`
-              : systemPlan.added ? `Somar ${systemPlan.added} ${systemPlan.added === 1 ? 'campo' : 'campos'} de ${pendingSystem.system.name} ao modelo? Campos com o mesmo nome dos que já existem não são repetidos.` : `Todos os campos de ${pendingSystem.system.name} já existem neste modelo.`}</p>
-            {systemError && <p role="alert">{systemError}</p>}
-            <button type="button" className="sheet-tool-btn" disabled={!systemPlan.added} onClick={applySystem}>{pendingSystem.mode === 'replace' ? 'Substituir modelo' : 'Somar campos'}</button>
-            <button type="button" className="sheet-tool-btn" onClick={() => { setPendingSystem(null); setSystemError(''); }}>Cancelar</button>
-          </div>}
-        </section>
+        <Suspense fallback={<p role="status">Carregando os modelos…</p>}><SheetModels sheetFields={sheetFields} onFieldsChange={onFieldsChange} makeId={makeId} /></Suspense>
         <div className="field-type-grid">{FIELD_TYPES.map(ft => { const Icon=ft.icon; return <button key={ft.id} className={`field-type-btn ${newFieldType===ft.id?'active':''}`} onClick={() => setNewFieldType(ft.id)}><Icon size={15} />{ft.label}</button>; })}</div>
         <form className="field-add-row" onSubmit={e => { e.preventDefault(); addField(); }}>
           <label>Nome do campo<input value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)} placeholder="Ex.: Força…" required /></label>
