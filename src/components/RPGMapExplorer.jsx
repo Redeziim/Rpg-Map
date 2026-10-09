@@ -624,22 +624,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,onOpenRoom,connection,
                 <PointFinder points={points} types={pointTypes} query={pointQuery} onQuery={setPointQuery} type={pointType} onType={setPointType} linkLabel={point=>pointLinkLabel(pointLinks.get(point.id))} canDelete={canManageMap2D} saving={saving} onOpen={handlePointClick} onShow={showPointOnMap} onDelete={deletePoint} foundId={foundPointId}/>
               </ToolSection>
 
-              <ToolSection id="controles" status={instruments.controles.status} active={instruments.controles.active} title="Controles e zoom" icon={<Settings2 size={16} aria-hidden="true"/>}>
-                <div className="controls-info">
-                  <p id="map-keyboard-help"><strong>Mover e ampliar:</strong> arraste o mapa e use a roda do mouse. Com o teclado, foque o mapa e use as setas, +/− e Home.</p>
-                  <p><strong>Clique:</strong> {canManageMap2D ? 'adiciona um ponto' : 'abre um ponto'} no modo Mover e apaga um traço no modo Borracha.</p>
-                  <p>{canManageMap2D?'Você edita pontos e apaga traços de todos.':'Você desenha e apaga só os seus traços; os pontos são para consulta.'}</p>
-                </div>
-                {mapImage&&<div className="map-keyboard-actions" role="group" aria-label="Controles do mapa 2D">
-                  <button onClick={()=>setScale(prev=>Math.min(prev*1.2,3))}>Aproximar</button>
-                  <button onClick={()=>setScale(prev=>Math.max(prev/1.2,.5))}>Afastar</button>
-                  <button onClick={()=>{setScale(1);setPosition({x:0,y:0});}}>Centralizar</button>
-                  {canManageMap2D&&<button disabled={saving||!mapCanvasSize.width||!!mapImageError} onClick={()=>{setNewPoint({...newPoint,x:mapCanvasSize.width/2,y:mapCanvasSize.height/2});setShowPointModal(true);}}>Adicionar ponto no centro</button>}
-                </div>}
-                <div className="zoom-indicator">
-                  Zoom: {Math.round(scale * 100)}%
-                </div>
-              </ToolSection>
+              {canManageMap2D&&mapImage&&<div className="map-keyboard-actions" role="group" aria-label="Pontos do mapa 2D">
+                <button disabled={saving||!mapCanvasSize.width||!!mapImageError} onClick={()=>{setNewPoint({...newPoint,x:mapCanvasSize.width/2,y:mapCanvasSize.height/2});setShowPointModal(true);}}>Adicionar ponto no centro</button>
+              </div>}
               <ToolSection id="medida" status={instruments.medida.status} active={instruments.medida.active} title="Grade e régua" icon={<RulerIcon size={16} aria-hidden="true"/>} forceOpen={mapTool==='measure'}><MapMeasurement scale={mapScale} version={room.mapScaleVersion} measurement={measurement} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onClear={()=>rulerRef.current?.clear()} onSave={saveMapScale} busy={mapBusy||saving} hasImage={!!mapImage} prefs={measurementPrefs} onPrefs={changeMeasurementPrefs} screenRatio={mapFit*scale}/></ToolSection>
               <ToolSection id="nevoa" status={instruments.nevoa.status} active={instruments.nevoa.active} title="Névoa de guerra" icon={<FogIcon size={16} aria-hidden="true"/>} forceOpen={['reveal','cover'].includes(mapTool)}><MapFog fog={mapFog} canManage={canManageMap2D} tool={mapTool} onTool={selectMapTool} onChange={changeFog} busy={mapBusy||saving} hasImage={!!mapImage}/></ToolSection>
               {canManageMap2D&&<ToolSection id="imagem" title="Imagem do mapa" icon={<Upload size={16} aria-hidden="true"/>} status={instruments.imagem.status}>

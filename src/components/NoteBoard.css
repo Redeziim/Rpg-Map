@@ -9,14 +9,15 @@
 /* palco e quadro: a rolagem ocupa o palco inteiro; a grade é fina e translúcida */
 .note-board-stage{position:relative;flex:1 1 auto;min-height:0}
 .note-board-scroll{position:absolute;inset:0;overflow:auto;border:1px solid var(--rule-strong);background:var(--paper-0);overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--rule-strong) transparent}
-.note-board-extent{position:relative}
-.note-board-canvas{position:relative;transform-origin:top left;cursor:grab;outline-offset:-3px;background-color:var(--paper-0);
+/* a grade fica no fundo da rolagem, na escala do zoom, e cobre a janela inteira mesmo quando o quadro afastado é menor que ela */
+.note-board-extent{position:relative;min-width:100%;min-height:100%;background-color:var(--paper-0);
   background-image:
     linear-gradient(color-mix(in srgb,var(--gold) 15%,transparent) 1px,transparent 1px),
     linear-gradient(90deg,color-mix(in srgb,var(--gold) 15%,transparent) 1px,transparent 1px),
     linear-gradient(color-mix(in srgb,var(--gold) 7%,transparent) 1px,transparent 1px),
     linear-gradient(90deg,color-mix(in srgb,var(--gold) 7%,transparent) 1px,transparent 1px);
-  background-size:140px 140px,140px 140px,28px 28px,28px 28px}
+  background-size:calc(140px * var(--zoom,1)) calc(140px * var(--zoom,1)),calc(140px * var(--zoom,1)) calc(140px * var(--zoom,1)),calc(28px * var(--zoom,1)) calc(28px * var(--zoom,1)),calc(28px * var(--zoom,1)) calc(28px * var(--zoom,1))}
+.note-board-canvas{position:relative;transform-origin:top left;cursor:grab;outline-offset:-3px}
 .note-board-canvas:active{cursor:grabbing}
 .note-board-canvas.is-drawing{cursor:crosshair}
 .note-board-empty{position:absolute;left:50%;top:50%;z-index:2;width:min(280px,80%);transform:translate(-50%,-50%);padding:var(--space-4);color:var(--muted);font-size:var(--fs-small);line-height:1.5;text-align:center;pointer-events:none}

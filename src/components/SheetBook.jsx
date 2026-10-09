@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
-import {ChevronLeft,ChevronRight,List} from 'lucide-react';
+import {ChevronLeft,ChevronRight,FileUp,List} from 'lucide-react';
 import {clampStart,pagesInView,paginate,viewLabel,viewStart} from '../shared/bookPages.js';
 import './SheetBook.css';
 
@@ -46,7 +46,7 @@ export default function SheetBook({cover,items,tools,onShowList,label='Ficha do 
       const title=group.categories.join(' · ');
       list.push({key:`grupo-${index}`,title,tab:group.categories.length>1?`${group.categories[0]} +${group.categories.length-1}`:group.categories[0],node:<div className="category-layout">{nodes.map(item=><React.Fragment key={item.category}>{item.node}</React.Fragment>)}</div>});
     }
-    if(tools)list.push({key:'ferramentas',title:'Ferramentas',tab:'Importar',node:tools});
+    if(tools)list.push({key:'ferramentas',title:'Ferramentas',tab:'Importar ficha',node:tools});
     return list;
   },[cover,items,tools,capacity]);
 
@@ -103,6 +103,7 @@ export default function SheetBook({cover,items,tools,onShowList,label='Ficha do 
       <button type="button" className="sheet-tool-btn book-turn" onClick={()=>go(settled-perView)} disabled={first||!!turn} aria-label="Página anterior"><ChevronLeft size={18} aria-hidden="true"/></button>
       <span className="book-counter" role="status" aria-live="polite">{viewLabel(settled,total,perView)}</span>
       <button type="button" className="sheet-tool-btn book-turn" onClick={()=>go(settled+perView)} disabled={last||!!turn} aria-label="Próxima página"><ChevronRight size={18} aria-hidden="true"/></button>
+      {tools&&<button type="button" className="sheet-tool-btn book-import" onClick={()=>go(viewStart(total-1,perView))}><FileUp size={16} aria-hidden="true"/>Importar ficha</button>}
       <button type="button" className="sheet-tool-btn book-list" onClick={onShowList}><List size={16} aria-hidden="true"/>Ver como lista</button>
     </div>
   </div>;
