@@ -1,6 +1,6 @@
 # Cópia portátil de uma mesa
 
-Na aba **Mesa**, abra **Salvar uma cópia da mesa**, escolha **Preparar cópia da mesa**, confira as quantidades e use **Baixar cópia da mesa**. Há cancelamento durante o preparo e descarte do arquivo pronto. A interface funciona por teclado e em telas estreitas.
+Na aba **Participantes**, abra **Salvar uma cópia da mesa**, escolha **Preparar cópia da mesa**, confira as quantidades e use **Baixar cópia da mesa**. Há cancelamento durante o preparo e descarte do arquivo pronto. A interface funciona por teclado e em telas estreitas.
 
 O resultado é um JSON UTF-8 com `format: "grimorio-room"` e `formatVersion: 1`. Imagens e arquivos estão incorporados, sem depender das URLs autenticadas do servidor. Este formato ainda não tem importação pela interface; a restauração de um servidor continua descrita em [RESTORE.md](RESTORE.md).
 

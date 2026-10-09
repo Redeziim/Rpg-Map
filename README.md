@@ -135,4 +135,4 @@ Leia `AGENTS.md` antes de alterar o projeto. As skills locais ficam em `.agents/
 
 ### Exportação portátil
 
-A aba **Mesa** permite preparar uma cópia JSON com o conteúdo autorizado, histórico de notas, imagens e arquivos 3D incorporados. A exportação respeita notas privadas, compartilhamento histórico e névoa no modo jogador. O formato ainda não tem importação na interface. Veja [docs/ROOM_EXPORT.md](docs/ROOM_EXPORT.md).
+A aba **Participantes** permite preparar uma cópia JSON com o conteúdo autorizado, histórico de notas, imagens e arquivos 3D incorporados. A exportação respeita notas privadas, compartilhamento histórico e névoa no modo jogador. O formato ainda não tem importação na interface. Veja [docs/ROOM_EXPORT.md](docs/ROOM_EXPORT.md).

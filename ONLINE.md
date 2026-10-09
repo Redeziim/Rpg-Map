@@ -12,7 +12,7 @@ npm run dev
 O comando inicia o site Vite na porta 5173 e a API na porta 3001. Abra o endereço informado pelo Vite. Cadastre uma conta para começar. Não existem usuários ou senhas padrão.
 
 1. Crie uma mesa em **Minhas mesas**. Seu papel nessa mesa será **ADM**.
-2. Na aba **Mesa**, adicione um usuário já cadastrado ou gere um convite.
+2. Na aba **Participantes**, adicione um usuário já cadastrado ou gere um convite.
 3. Envie o link à pessoa. Ela entra/cria a conta e confirma **Entrar na mesa**.
 4. O ADM pode atribuir **Mestre** ou **Jogador**, remover participantes e alternar os dois modos.
 

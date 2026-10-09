@@ -143,8 +143,8 @@ const DiceRoller = ({onTrayRoll,sharedOnly=false,scenes=[]}) => {
         ))}
       </div>
 
-      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja da mesa<small>Sem marcar, só você e o ADM veem a rolagem. Marque para todos verem.</small></label>}
-      {onTrayRoll&&useTray&&<label className="tray-option tray-private-option"><input type="checkbox" checked={privateRoll} disabled={rolling||trayBusy} onChange={e=>setPrivateRoll(e.target.checked)}/>Rolagem privada · só você e o ADM veem o resultado e o histórico</label>}
+      {onTrayRoll&&!sharedOnly&&<label className="tray-option"><input type="checkbox" checked={useTray} disabled={rolling||trayBusy} onChange={e=>setUseTray(e.target.checked)}/>Jogar na bandeja da mesa<small>Sem marcar, a rolagem fica só na sua tela e ninguém mais a vê. Marque para enviá-la à mesa.</small></label>}
+      {onTrayRoll&&useTray&&<label className="tray-option tray-private-option"><input type="checkbox" checked={privateRoll} disabled={rolling||trayBusy} onChange={e=>setPrivateRoll(e.target.checked)}/>Rolagem privada · só você e o ADM veem o resultado e o histórico. Desmarque para todos verem.</label>}
       {!useTray&&<div className="dice-display-area">
         {terms.length === 0 ? (
           <div className="dice-face-3d dice-face-3d-empty">
