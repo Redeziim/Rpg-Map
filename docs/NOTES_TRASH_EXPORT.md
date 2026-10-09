@@ -26,5 +26,5 @@ Só a nota aberta sai; nada de outras pessoas. Funções em `src/components/note
 
 ## Atalhos e zoom (item 18)
 
-- **Atalhos do teclado** em "Mais opções" do mapa mental: lista dos atalhos que o código realmente trata (N, setas, Enter/Espaço, Shift+clique, Delete, Esc, Ctrl+Z/Y, Ctrl+C/V, Ctrl+F e os do modo desenho). A lista vive em `BOARD_SHORTCUTS`, ao lado do código que os trata.
+- **Atalhos do teclado** em "Mais" do mapa mental: lista dos atalhos que o código realmente trata (N, setas, Enter/Espaço, Shift+clique, Delete, Esc, Ctrl+Z/Y, Ctrl+C/V, Ctrl+F e os do modo desenho). A lista vive em `BOARD_SHORTCUTS`, ao lado do código que os trata.
 - **Zoom por pessoa**: o zoom escolhido fica guardado no navegador de quem o escolheu, por nota (`grimorio-board-zoom-v1:sala:caderno:nota`), e volta ao reabrir. Não vai para o servidor nem para os outros jogadores. Se o navegador bloquear o armazenamento, o zoom continua valendo na sessão.

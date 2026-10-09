@@ -7,7 +7,7 @@ test('docked window grows sideways and upwards while keeping its bottom left anc
   const rect=noteWindowRect({x:900,y:850},viewport,{wide:true,docked:true});
   assert.equal(rect.x,8);assert.equal(rect.y+rect.height,892);
   const bigger=resizeNoteWindow(rect,180,100,viewport,true);
-  assert.equal(bigger.width,1040);assert.equal(bigger.height,800);
+  assert.equal(bigger.width,1180);assert.equal(bigger.height,820);
   assert.equal(bigger.x,8);assert.equal(bigger.y+bigger.height,892);
   const next=noteWindowRect(bigger,{width:1280,height:800},{wide:true,docked:true});
   assert.equal(next.x,8);assert.equal(next.y+next.height,792);

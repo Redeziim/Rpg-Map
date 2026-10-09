@@ -65,6 +65,19 @@ Dois agentes (QA e revisor) e a skill de auditoria de interface avaliaram o resu
 
 Não corrigido, por ser maior: hospedar as fontes localmente, e um teste automatizado de interface (hoje a casca nova só é verificada à mão).
 
+## Sexta rodada (2026-10-09): Mapa mental estilo Obsidian e barra lateral com as mesas
+
+Pedido do usuário: o Mapa mental continuava feio e "preso num canto"; ele gosta do Canvas do Obsidian pela simplicidade. A barra lateral devia mostrar, em ícones, as mesas em que a pessoa está, quem ela é e o papel, com uma animação mais limpa. Pesquisa: o Canvas do Obsidian (cartões só de texto, alças nas bordas que viram conexões, conexões curvas com seta, barra flutuante junto da seleção, zoom e histórico num canto, cores por tipo).
+
+- **Por que parecia preso num canto.** A janela do Mapa mental abria *fixa* no canto inferior esquerdo (a regra `docked = boardOpen && position.docked !== false`). Agora abre solta e maior (1000 × 720), como uma nota. "Fixar" continua existindo.
+- **Cartão.** Só texto, com um ícone discreto e uma cor por tipo (pessoa, local, cena, pista; o ícone repete a informação, para não depender só da cor). O cartão inteiro é a alça: arrastar move, clicar seleciona, clicar de novo edita, Enter edita. Sem faixa de título nem "⋮⋮".
+- **Conexões.** Curvas que saem do lado do cartão que olha para o outro, com ponta de seta no destino; as bordas são medidas de verdade (`ResizeObserver`), então a seta toca o cartão mesmo com texto longo. Clique numa conexão para dar rótulo ou remover. A documentação antiga dizia "sem ponta de seta"; a mudança é pedido do usuário.
+- **Ferramentas.** Saiu a barra de texto, a contagem, o texto de ajuda e o botão "Aumentar área". À direita ficam zoom, 100%, desfazer, refazer e "Mais"; embaixo, Novo cartão, Imagem e Desenhar; junto do cartão selecionado, uma barra pequena com as cores de tipo, editar, conectar, detalhes e excluir. "Mais" abre um painel ao lado, com cada assunto recolhido (coleção de imagens, filtros, conexões, atalhos). O quadro cresce sozinho perto da borda.
+- **Fora de propósito.** "Ajustar à janela" (Enquadrar tudo) foi recolocado por engano e retirado de novo, porque o projeto o rejeitou em 2026-10-04.
+- **Barra lateral.** Fechada, mostra como ícones a marca, a mesa atual com um ponto de estado da conexão (verde, dourado enviando, vermelho sem conexão), as outras mesas da conta como quadrados com a inicial (um clique troca de mesa, com aviso se houver envio pendente), e quem você é com o ícone do papel (coroa para mestre, espadas para jogador, escudo para ADM, que também alterna o modo). Aberta, mostra nomes, papéis e o estado por extenso. Saiu o contador "N pontos". Nas telas baixas a barra rola em vez de cortar o rodapé, e em alto contraste tudo fica à vista.
+- **Animação.** Só a máscara anda; os nomes aparecem depois e somem antes. Medido quadro a quadro: abre em cerca de 190 ms, com os nomes a partir de 80 ms; fecha com os nomes sumindo em 100 ms e a barra recolhendo 150 ms depois.
+- **Achados das duas revisões que estas mudanças já resolvem:** rodapé da barra cortado em tela baixa, controles invisíveis em alto contraste, modo ADM e conexão invisíveis com a barra fechada, "Minhas mesas" duplicado no DOM, traço do quadro com cor fixa no tema claro, foco perdido depois do histórico da nota.
+
 ## O que ficou de fora de propósito
 
 - **Escolha de resolução ao enviar o mapa** ("Mais leve" ou "Mais detalhe"): não alterado; pode ficar atrás de "Opções" se atrapalhar.

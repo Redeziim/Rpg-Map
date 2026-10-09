@@ -75,7 +75,7 @@ Os itens **16, 17 e 18** continuam pendentes de notas. Apresente-os como uma ret
 - A Mesa 3D independente permanece. Pontos 2D abrem detalhes e notas; não reintroduza uma cena 3D aberta por ponto.
 - Nova nota deve continuar criando uma nota em branco. Não recoloque modelos de sessão, personagem, local ou pista.
 - A coleção de referências continua sendo de imagens. PDF fica fora do escopo.
-- No mapa mental, preserve conexões sem ponta de seta, busca com destaque, janela fixa inicialmente no canto inferior esquerdo, opção de soltar/redimensionar e vínculos com pontos 2D.
+- No mapa mental, preserve a busca com destaque, a opção de fixar a janela no canto inferior esquerdo (ela abre solta desde 2026-10-09, a pedido do usuário), o redimensionamento e os vínculos com pontos 2D. As conexões têm ponta de seta desde 2026-10-09, também a pedido do usuário (estilo Obsidian).
 - Não recoloque mini mapa, visão geral ou “Enquadrar tudo” no mapa mental. Essa decisão não remove os controles atuais de câmera da Mesa 3D.
 - Preserve o ADM em modo jogador usando as permissões desse modo. A validação final sempre deve acontecer no servidor.
 - Notas pessoais privadas de terceiros continuam privadas, inclusive diante de ADM/mestre. Compartilhar uma nota agora não libera automaticamente versões antigas privadas.

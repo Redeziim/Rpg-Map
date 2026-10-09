@@ -15,5 +15,5 @@ export default function ThemeToggle({className=''}){
     return ()=>window.removeEventListener('storage',sync);
   },[]);
   const light=theme==='claro';
-  return <button type="button" className={`theme-toggle ${className}`.trim()} title="Alternar entre o tema sombrio e o claro" aria-pressed={light} onClick={()=>{const next=nextTheme(theme);saveTheme(store(),next);setTheme(next);}}><Sun size={18} aria-hidden="true"/>Tema claro</button>;
+  return <button type="button" className={`theme-toggle ${className}`.trim()} title="Alternar entre o tema sombrio e o claro" aria-pressed={light} onClick={()=>{const next=nextTheme(theme);saveTheme(store(),next);setTheme(next);}}><Sun size={18} aria-hidden="true"/><span className="rail-label">Tema claro</span></button>;
 }

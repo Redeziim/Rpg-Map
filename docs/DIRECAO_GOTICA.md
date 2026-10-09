@@ -32,7 +32,7 @@ Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de 
 | Entrada e "Minhas mesas" | `src/AccountGothic.css` |
 | Ficha de personagem e ficha em livro | `src/components/SheetGothic.css`, `SheetBook.css` |
 | Barra lateral de ícones, faixa de turnos e notas, ferramentas do mapa | `src/CompactShell.css` |
-| Mapa mental das notas | `src/components/NoteBoardLayout.css` |
+| Mapa mental das notas | `src/components/NoteBoard.css` |
 | Tela de erro | `src/ErrorBoundary.css` |
 | Fontes do tema | `index.html` (Cormorant Garamond, Grenze Gotisch, Source Sans 3, Cinzel) |
 | Fontes decorativas da ficha | `src/shared/sheetFonts.js` (carregadas sob demanda) |
@@ -55,7 +55,7 @@ Mais gótico e sombrio, porém **sutil, nada vibrante**. A opção de trocar de 
 - **Temas só por tokens.** Cor e fonte passam por tokens; um tema novo redefine os tokens sob `:root[data-theme="..."]` sem tocar nos componentes.
 - **Raio do arco dos atributos.** O projeto usa raios de 2 e 4 px; o cartão de atributo da ficha é um arco de pedra e usa `--radius-arch` (48 px), a única exceção, nomeada como token.
 - **Alvos de toque.** O mínimo do projeto é 44 px. No computador, os controles novos da faixa de cima e do Mapa mental ficam em 36 a 40 px para a tela respirar; em tela de toque (`pointer:coarse`) voltam a 44 px.
-- **Animação da barra lateral.** Anima a largura (240 ms) e a cor do texto; a barra é um único painel e a largura é o que dá o efeito de revelar sem deslocar o conteúdo. Sem animação para quem pede movimento reduzido, e aberta em alto contraste.
+- **Animação da barra lateral.** A barra tem sempre a largura aberta; só a máscara (`clip-path`) anda, em 200 ms, sem refazer layout. Os nomes entram 80 ms depois, só com opacidade e um passo à esquerda, e saem antes de a barra fechar, que espera 150 ms para não piscar quando o mouse passa de um botão a outro. Sem animação para quem pede movimento reduzido, e aberta em alto contraste.
 - **Movimento.** A direção não adiciona animação ornamental. A seta de instrumento em uso das Ferramentas de mestre respeita `prefers-reduced-motion`.
 - **Checagens de acessibilidade.** O contraste dos dois temas é testado na suíte (`tests/themeLight.test.js`). A varredura com axe-core nas abas, em 1366, 900 e 420 px, é feita à mão com o navegador de teste e não faz parte da suíte.
 

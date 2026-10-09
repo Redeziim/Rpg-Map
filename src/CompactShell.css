@@ -3,47 +3,80 @@
    da faixa de cima usam .mist-theme.rpg-container, que tem mais força que as regras antigas de mesmo nome. */
 
 /* ---------- 1. Barra lateral só de ícones (a partir de 761 px) ----------
-   O conteúdo da barra fica sempre montado na largura aberta (220 px) e o cabeçalho recorta em 64 px. Assim nada muda de lugar quando ela
-   abre: só se revela, por cima do conteúdo, sem empurrá-lo. Abaixo de 761 px a navegação já é uma grade no topo (workspace.css). */
+   A barra tem sempre a largura aberta (220 px); o que muda é o recorte. Só a máscara anda (clip-path), sem medir nem refazer layout, e os
+   nomes entram depois dela: primeiro a superfície, depois o texto. Ao fechar, o texto some antes e a máscara espera um instante, para não
+   piscar quando o mouse passa de um botão a outro. Fechada, cada coisa aparece como ícone: a marca, a mesa atual com o estado da conexão,
+   as outras mesas, quem você é e o seu papel, a navegação e o rodapé. Abaixo de 761 px a navegação já é uma grade no topo (workspace.css). */
 @media(min-width:761px){
   /* a classe repetida é de propósito: ganha do 184 px de workspace.css e do 166 px de @media(max-width:1150px) */
   .mist-theme.rpg-container.mist-theme{--rail-width:64px;--rail-open:220px;grid-template-columns:var(--rail-width) minmax(0,1fr)}
-  .mist-theme .header{width:var(--rail-width);min-width:0;overflow:hidden;z-index:40;
-    transition:width 240ms var(--ease-out) 160ms,box-shadow 240ms var(--ease-out) 160ms}
-  .mist-theme .header:hover,.mist-theme .header:has(:focus-visible){width:var(--rail-open);transition-delay:0ms;
-    box-shadow:8px 0 24px color-mix(in srgb,var(--black) 55%,transparent)}
-  .mist-theme .header>*{width:var(--rail-open);min-width:var(--rail-open);box-sizing:border-box}
-  /* alinhamento: tudo no mesmo eixo. Ícones centrados em 32 px (8 px da lista + 15 px do botão + 9 px do meio do ícone), textos à esquerda */
-  .mist-theme .header-content{padding:18px 14px 12px 14px;gap:14px}
+  .mist-theme.rpg-container.mist-theme::before{content:"";position:fixed;top:0;bottom:0;left:calc(var(--rail-width) - 1px);width:1px;background:var(--line);z-index:39;pointer-events:none}
+  .mist-theme .header{width:var(--rail-open);min-width:var(--rail-open);z-index:40;overflow-x:clip;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
+    clip-path:inset(0 calc(var(--rail-open) - var(--rail-width)) 0 0);transition:clip-path 200ms var(--ease-out) 150ms}
+  .mist-theme .header::-webkit-scrollbar{display:none}
+  .mist-theme .header:is(:hover,:has(:focus-visible)){clip-path:inset(0);transition-delay:0ms}
+
+  /* os nomes: invisíveis e um passo à esquerda enquanto fechada; entram com um leve atraso, saem rápido */
+  .mist-theme .header :is(.tab-btn,.nav-about-button)>:not(svg),.mist-theme .header .rail-text,.mist-theme .header .logo>div:last-child{
+    opacity:0;transform:translateX(-6px);transition:opacity 90ms ease-out,transform 90ms ease-out}
+  .mist-theme .header:is(:hover,:has(:focus-visible)) :is(.tab-btn,.nav-about-button)>:not(svg),.mist-theme .header:is(:hover,:has(:focus-visible)) .rail-text,.mist-theme .header:is(:hover,:has(:focus-visible)) .logo>div:last-child{
+    opacity:1;transform:none;transition:opacity 170ms var(--ease-out) 80ms,transform 200ms var(--ease-out) 60ms}
+
+  /* alinhamento: tudo no mesmo eixo. Ícones e quadrados centrados em 32 px, textos à esquerda */
+  .mist-theme .header-content{padding:18px 14px 10px;gap:12px}
   .mist-theme .brand-mark{width:36px;height:42px}
-  .mist-theme .header-controls{align-items:stretch;text-align:left}
-  .mist-theme .header-controls>*{text-align:left;justify-content:flex-start}
-  .mist-theme .room-title-nav,.mist-theme .sync-status{margin-left:2px}
-  .mist-theme .user-indicator{justify-content:flex-start;padding-left:2px}
-  .mist-theme .header :where(button,summary,.mode-btn,.sync-status,.room-title-nav){white-space:nowrap}
-  .mist-theme .tab-nav{padding:0 8px}
+  .mist-theme .header-controls{align-items:stretch;gap:8px;text-align:left}
+  .mist-theme .tab-nav{padding:0 8px;gap:4px}
   .mist-theme .tab-btn,.mist-theme .nav-about-button{padding-left:15px;overflow:hidden}
   .mist-theme .nav-footer{padding:8px}
-  /* o que não é navegação some na faixa fechada, mas continua focável: ao receber foco do teclado a barra abre e tudo reaparece */
-  .mist-theme .header:not(:hover):not(:has(:focus-visible)) .header-controls,
-  .mist-theme .header:not(:hover):not(:has(:focus-visible)) .logo>div:last-child{opacity:0;pointer-events:none}
-  .mist-theme .header-controls,.mist-theme .logo>div:last-child{transition:opacity var(--motion-base) var(--ease-out) 80ms}
-  /* faixa fechada: o nome some (continua no HTML para leitor de tela) e só o ícone aparece; ao abrir, o texto é repintado */
-  .mist-theme .tab-btn,.mist-theme .nav-about-button{transition:color var(--motion-base) var(--ease-out) 70ms,background-color var(--motion-fast) var(--ease-out)}
-  .mist-theme .tab-btn svg,.mist-theme .nav-about-button svg{transition:transform var(--motion-fast) var(--ease-out)}
-  .mist-theme .tab-btn:hover svg,.mist-theme .nav-about-button:hover svg{transform:translateX(3px)}
-  .mist-theme .header:not(:hover):not(:has(:focus-visible)) :is(.tab-btn,.nav-about-button){color:transparent;border-color:transparent;background:transparent}
+  .mist-theme .header :where(button,summary,.rail-room,.rail-me){white-space:nowrap}
+  .mist-theme .account-menu{display:none}
+
+  /* mesa atual, mesas vizinhas e você */
+  .mist-theme.rpg-container .header :is(.rail-room,.rail-me,.rail-table){display:flex;align-items:center;justify-content:flex-start;gap:12px;box-sizing:border-box;width:100%;min-height:44px;margin:0;padding:0;border:0;border-radius:var(--radius-m);background:none;color:var(--ink);font:inherit;text-align:left;box-shadow:none}
+  .mist-theme.rpg-container .header :is(.rail-me,.rail-table){cursor:pointer}
+  .mist-theme.rpg-container .header :is(.rail-me,.rail-table):hover{background:none}
+  .mist-theme .header :is(.rail-me,.rail-table):hover .rail-avatar{border-color:var(--gold)}
+  .mist-theme .rail-avatar{position:relative;flex:none;display:grid;place-items:center;box-sizing:border-box;width:36px;height:36px;border:1px solid var(--gold-shadow);border-radius:var(--radius-m);background:var(--paper-1);color:var(--gold-bright);font:600 19px/1 var(--font-display)}
+  .mist-theme .rail-avatar-room{border-color:var(--gold)}
+  .mist-theme .rail-avatar.is-small{width:30px;height:30px;margin-left:3px;border-color:var(--rule);font-size:16px}
+  .mist-theme .rail-me.active .rail-avatar{border-color:var(--wine-line);background:var(--wine-deep);color:var(--danger-ink)}
+  .mist-theme .rail-dot{position:absolute;right:-4px;bottom:-4px;box-sizing:border-box;width:10px;height:10px;border:2px solid var(--surface-0);border-radius:50%;background:var(--ok-ink)}
+  .mist-theme .rail-dot.is-saving{background:var(--gold-bright)}
+  .mist-theme .rail-dot.is-offline{background:var(--danger-ink)}
+  .mist-theme .rail-text{display:grid;justify-items:start;min-width:0;line-height:1.25}
+  .mist-theme .rail-text,.mist-theme .rail-text>*{text-align:left}
+  .mist-theme .rail-text strong{overflow:hidden;color:var(--ink-strong);font:600 15px var(--font-display);text-overflow:ellipsis;white-space:nowrap}
+  .mist-theme .rail-text small,.mist-theme .rail-text .sync-status{overflow:hidden;margin:0;color:var(--muted);font-size:var(--fs-small);text-overflow:ellipsis}
+  .mist-theme .rail-text .room-title-nav{margin:0}
+  .mist-theme .rail-tables{padding-top:8px;border-top:1px solid var(--rule-soft)}
+  .mist-theme .rail-tables ul{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+  .mist-theme .rail-error{margin:4px 0 0;color:var(--danger-ink);font-size:var(--fs-small)}
+
+  /* fechada, os botões perdem caixa e borda: sobra o ícone, e a aba atual leva uma barra de ouro */
+  .mist-theme .header:not(:hover):not(:has(:focus-visible)) :is(.tab-btn,.nav-about-button){border-color:transparent;background:transparent}
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) :is(.tab-btn,.nav-about-button) svg{color:var(--muted)}
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) .tab-btn.active{box-shadow:inset 3px 0 0 var(--gold)}
   .mist-theme .header:not(:hover):not(:has(:focus-visible)) .tab-btn.active svg{color:var(--gold-bright)}
 }
-/* Alto contraste: o navegador ignora "color:transparent", então o nome ficaria cortado pela metade. A barra fica aberta. */
+/* Alto contraste: o navegador ignora transparência de cor e recortes decorativos; a barra fica aberta e com tudo legível. */
 @media(forced-colors:active) and (min-width:761px){
   .mist-theme.rpg-container.mist-theme{--rail-width:var(--rail-open)}
-  .mist-theme .header{transition:none}
+  .mist-theme .header{clip-path:none;transition:none}
+  .mist-theme .header :is(.tab-btn,.nav-about-button)>:not(svg),.mist-theme .header .rail-text,.mist-theme .header .logo>div:last-child{opacity:1;transform:none;transition:none}
 }
-/* "Minhas mesas" e "Sair da conta" só entram no rodapé da faixa de ícones; no celular continuam no menu da conta. */
-@media(max-width:760px){.mist-theme .rail-only{display:none}}
+/* "Minhas mesas" e "Sair da conta" só entram no rodapé da faixa de ícones; no celular continuam no menu da conta, e a mesa vira só o estado da conexão. */
+@media(max-width:760px){
+  .mist-theme .rail-only{display:none}
+  .mist-theme .rail-tables,.mist-theme .rail-room .rail-avatar,.mist-theme .rail-room .room-title-nav{display:none}
+  .mist-theme .rail-room,.mist-theme .rail-me{display:flex;align-items:center;justify-content:center;gap:6px}
+  .mist-theme .rail-me .rail-text strong{display:none}
+  .mist-theme .rail-me .rail-avatar{display:grid;place-items:center;width:18px;height:18px}
+  .mist-theme .rail-text{display:grid}
+  .mist-theme .rail-me{order:1}
+  .mist-theme .rail-room{order:2}
+  .mist-theme .account-menu{order:3}
+}
 
 /* ---------- 2. Faixa de cima: turnos e cadernos de notas ----------
    Um grupo compacto no canto superior direito de toda aba (acima de 760 px), sem esticar. Em Cenas, Linha do tempo e Sobre o botão de
@@ -117,10 +150,7 @@
 /* No computador os controles novos são mais baixos (36 a 40 px) para a tela respirar; em tela de toque voltam aos 44 px do projeto. */
 @media(pointer:coarse){
   .mist-theme .turns-pill-button,.mist-theme.rpg-container .session-strip .notebook-library summary{min-height:var(--target)}
-  .note-window .note-board-tools button,.note-window .note-board-zoom button,.note-window .note-board-drawer-close{min-height:var(--target);min-width:var(--target)}
-  .note-window .note-board-node-grip{min-height:var(--target)}
 }
 @media(prefers-reduced-motion:reduce){
-  .mist-theme .header,.mist-theme .header-controls,.mist-theme .logo>div:last-child,.mist-theme .tab-btn,.mist-theme .nav-about-button,.mist-theme .tab-btn svg,.mist-theme .nav-about-button svg{transition:none}
-  .mist-theme .tab-btn:hover svg,.mist-theme .nav-about-button:hover svg{transform:none}
+  .mist-theme .header,.mist-theme .header :is(.tab-btn,.nav-about-button)>:not(svg),.mist-theme .header .rail-text,.mist-theme .header .logo>div:last-child{transition:none}
 }

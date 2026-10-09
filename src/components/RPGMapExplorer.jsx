@@ -13,7 +13,8 @@ import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { Camera, Map, ShieldCheck, Users, Eye, Edit3, Plus, X, Upload, Grid, ChevronRight, Castle, Sword, Scroll, Skull, ScrollText, Dices, RotateCw, Image as ImageIcon, Type, GripVertical, Trash2, ListPlus, Settings2, ShoppingBag, Check, Hash, ArrowUp, ArrowDown, Palette, Minus, Heart, Calculator, ListChecks, Clapperboard, Info, Pencil, Undo2, Redo2, Eraser, Hand, Ruler, BookOpen } from 'lucide-react';
 import PointDetails from './PointDetails.jsx';
 import MapStrokeColor from './MapStrokeColor.jsx';
-import {DoorOpen,LogOut} from 'lucide-react';
+import {Crown,DoorOpen,LogOut,Swords} from 'lucide-react';
+import RailTables from './RailTables.jsx';
 import MapLayers,{MapStrokeAudience,loadMapLayers} from './MapLayers.jsx';
 import MapFog,{MapFogOverlay} from './MapFog.jsx';
 import MapMeasurement,{MapGrid,MapRuler,loadMapMeasurementPrefs} from './MapMeasurement.jsx';
@@ -45,7 +46,7 @@ const CharacterSheet=lazy(()=>import('./CharacterSheet.jsx'));
 const GroupStatus=lazy(()=>import('./GroupStatus.jsx'));
 const CampaignTimelinePanel=lazy(()=>import('./CampaignTimelinePanel.jsx'));
 
-const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,error,adminMode,setAdminMode}) => {
+const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,onOpenRoom,connection,saving,error,adminMode,setAdminMode}) => {
   const [heldDice,setHeldDice]=useState(null);
   const [diceStructure,setDiceStructure]=useState('tray');
   const diceLaunch=useRef(null);
@@ -535,6 +536,9 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
   const playerNames=room.members.filter(m=>m.role!=='master').map(m=>m.username);
   const groupEntries=room.groupBars;
   const instruments=instrumentStatuses({mapImage:!!mapImage,pointCount:points.length,scale,gridVisible:!!measurementPrefs.grid,hasScale:!!mapScale,fogEnabled:!!mapFog.enabled,positionsEnabled:!!positionsEnabled,strokeCount:readableStrokes.length,mapTool}),inUse=activeInstruments(instruments);
+  const connectionText=saving?'Enviando alterações…':connection==='online'?'Conectado à mesa':connection==='connecting'?'Conectando…':'Reconectando ao servidor…';
+  const RoleIcon=room.role==='admin'?ShieldCheck:room.role==='master'?Crown:Swords;
+  const roleText=room.role==='admin'?(viewMode==='master'?'ADM · modo mestre':'ADM · modo jogador'):ROLE_LABELS[room.role];
   return (
     <div className={`rpg-container mist-theme ${activeTab==='mapa'&&mapFocus?'map-focus':''}`}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
@@ -547,14 +551,15 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             <div className="brand-mark"><ScrollText size={25} /></div><div><span className="brand-kicker">SUA MESA DE RPG</span><h1>Grimório</h1></div>
           </div>
           <div className="header-controls">
-            <div className="room-title-nav">{room.name}</div>
-            {room.role==='admin'?<button className={`mode-btn ${viewMode==='master'?'active':''}`} onClick={()=>{setAdminMode(viewMode==='master'?'player':'master');setDrawError('');}} title="Como ADM, você pode alternar entre jogador e mestre"><ShieldCheck size={18}/>{viewMode==='master'?'ADM · modo mestre':'ADM · modo jogador'}</button>:<div className="identity-label">{ROLE_LABELS[room.role]} · @{user.username}</div>}
-            <span className={`sync-status ${connection!=='online'?'offline':''}`} role="status">{saving?'Enviando alterações…':connection==='online'?'Conectado à mesa':connection==='connecting'?'Conectando…':'Reconectando ao servidor…'}</span>
-            <details className="account-menu"><summary>@{user.username}</summary><div className="account-nav-actions"><button onClick={onExit}>Minhas mesas</button><button onClick={onLogout}>Sair da conta</button></div></details>
-            <div className="user-indicator">
-              <Users size={20} />
-              <span>{points.length} {points.length===1?'ponto':'pontos'}</span>
+            <div className="rail-room" title={`${room.name} · ${connectionText}`}>
+              <span className="rail-avatar rail-avatar-room" aria-hidden="true">{room.name.trim().charAt(0).toLocaleUpperCase('pt-BR')||'M'}<i className={`rail-dot ${connection!=='online'?'is-offline':saving?'is-saving':''}`}/></span>
+              <span className="rail-text"><strong className="room-title-nav">{room.name}</strong><span className={`sync-status ${connection!=='online'?'offline':''}`} role="status">{connectionText}</span></span>
             </div>
+            <RailTables currentId={room.id} onOpen={onOpenRoom}/>
+            {room.role==='admin'
+              ?<button type="button" className={`rail-me mode-btn ${viewMode==='master'?'active':''}`} onClick={()=>{setAdminMode(viewMode==='master'?'player':'master');setDrawError('');}} title="Como ADM, você pode alternar entre jogador e mestre"><span className="rail-avatar" aria-hidden="true"><RoleIcon size={18}/></span><span className="rail-text"><strong>@{user.username}</strong><small>{roleText}</small></span></button>
+              :<div className="rail-me identity-label" title={`${roleText} · @${user.username}`}><span className="rail-avatar" aria-hidden="true"><RoleIcon size={18}/></span><span className="rail-text"><strong>@{user.username}</strong><small>{roleText}</small></span></div>}
+            <details className="account-menu"><summary>@{user.username}</summary><div className="account-nav-actions"><button onClick={onExit}>Minhas mesas</button><button onClick={onLogout}>Sair da conta</button></div></details>
           </div>
         </div>
         <nav className="tab-nav" aria-label="Navegação principal"><button className={`tab-btn ${activeTab==='mesa'?'active':''}`} aria-current={activeTab==='mesa'?'page':undefined} title={'Participantes'} onClick={()=>setActiveTab('mesa')}><Users size={18}/><span className="tab-label-full">Participantes</span><span className="tab-label-short">Pessoas</span></button>
@@ -564,7 +569,7 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             title={'Mapa'} onClick={() => setActiveTab('mapa')}
           >
             <Map size={18} />
-            Mapa
+            <span className="rail-label">Mapa</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'ficha' ? 'active' : ''}`}
@@ -582,10 +587,10 @@ const RPGMapExplorer = ({room,user,mutate,onExit,onLogout,connection,saving,erro
             <Heart size={18} />
             <span className="tab-label-full">Status do Grupo</span><span className="tab-label-short">Grupo</span>
           </button>
-          <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-current={activeTab==='cenas'?'page':undefined} title={'Cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/>Cenas</button>
+          <button className={`tab-btn ${activeTab==='cenas'?'active':''}`} aria-current={activeTab==='cenas'?'page':undefined} title={'Cenas'} onClick={()=>setActiveTab('cenas')}><Clapperboard size={18} aria-hidden="true"/><span className="rail-label">Cenas</span></button>
           <button className={`tab-btn ${activeTab==='linha'?'active':''}`} aria-current={activeTab==='linha'?'page':undefined} title={'Linha do tempo'} onClick={()=>setActiveTab('linha')}><BookOpen size={18} aria-hidden="true"/><span className="tab-label-full">Linha do tempo</span><span className="tab-label-short">Diário</span></button>
         </nav>
-        <div className="nav-footer"><button type="button" className="nav-about-button rail-only" title="Minhas mesas" onClick={onExit}><DoorOpen size={18} aria-hidden="true"/>Minhas mesas</button><ThemeToggle className="nav-about-button"/><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-current={activeTab==='sobre'?'page':undefined} title={'Sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/>Sobre</button><button type="button" className="nav-about-button rail-only" title="Sair da conta" onClick={onLogout}><LogOut size={18} aria-hidden="true"/>Sair da conta</button></div>
+        <div className="nav-footer"><button type="button" className="nav-about-button rail-only" title="Minhas mesas" onClick={onExit}><DoorOpen size={18} aria-hidden="true"/><span className="rail-label">Minhas mesas</span></button><ThemeToggle className="nav-about-button"/><button className={`nav-about-button ${activeTab==='sobre'?'active':''}`} aria-current={activeTab==='sobre'?'page':undefined} title={'Sobre'} onClick={()=>setActiveTab('sobre')}><Info size={18} aria-hidden="true"/><span className="rail-label">Sobre</span></button><button type="button" className="nav-about-button rail-only" title="Sair da conta" onClick={onLogout}><LogOut size={18} aria-hidden="true"/><span className="rail-label">Sair da conta</span></button></div>
       </header>
 
       <div className="room-content">{connection!=='online'&&connection!=='connecting'&&<p className="connection-banner" role="status">Sem conexão com o servidor. Suas alterações só serão enviadas quando a conexão voltar; o que você está vendo pode estar desatualizado.</p>}<div className={`session-strip strip-${activeTab}`}><TurnsPill key={`${room.id}:${user.id}`} room={room} user={user} editable={viewMode==='master'} saving={saving} connection={connection} mutate={mutate}/><Notebook key={room.id+':personal:'+user.id} storageKey={`${room.id}:${user.id}:${user.username}`} className="personal-notebook" title="Minhas notas" hint="Privadas · você escolhe com quem compartilhar" scope={user.username} username={user.username} members={room.members} canShare notes={room.state.playerSheets?.[user.username]?.notebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')} onShare={(scope,id,data)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/share`,data,'PATCH')} onTrash={(scope,id,trashed,version)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}/trash`,{trashed,version},'PATCH')} onEmptyTrash={scope=>mutate(`/notes/${encodeURIComponent(scope)}/trash`,undefined,'DELETE')}/>{viewMode==='master'&&<Notebook key={room.id+':master'} storageKey={room.id+':'+user.id+':master'} className="master-notebook" title="Notas do mestre" hint="Privadas · várias janelas" scope="@master" username={user.username} members={room.members} canShare notes={room.state.masterNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(_,id,note)=>mutate('/notes/@master/'+id,note,'PATCH')} onShare={(_,id,data)=>mutate('/notes/@master/'+id+'/share',data,'PATCH')} onTrash={(_,id,trashed,version)=>mutate('/notes/@master/'+id+'/trash',{trashed,version},'PATCH')} onEmptyTrash={()=>mutate('/notes/@master/trash',undefined,'DELETE')}/>}<Notebook key={room.id+':shared:'+user.id} storageKey={room.id+':'+user.id+':shared'} className="shared-notebook" title="Notas compartilhadas" hint="Acesso e edição em grupo" scope="shared" username={user.username} members={room.members} notes={room.state.sharedNotebooks||[]} points={points} onOpenPoint={openLinkedPoint} openRequest={openNoteRequest} roomId={room.id} onSave={(scope,id,note)=>mutate(`/notes/${encodeURIComponent(scope)}/${id}`,note,'PATCH')}/></div>

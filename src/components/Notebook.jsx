@@ -16,7 +16,7 @@ import './Notebook.css';
 
 const noteKey=note=>`${note.scope||''}:${note.id}`;
 const searchable=text=>String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
-const clampPosition=(x,y,wide=false)=>({x:Math.max(8,Math.min(x,innerWidth-Math.min(wide?860:500,innerWidth-16)-8)),y:Math.max(8,Math.min(y,innerHeight-180))});
+const clampPosition=(x,y,wide=false)=>({x:Math.max(8,Math.min(x,innerWidth-Math.min(wide?1000:500,innerWidth-16)-8)),y:Math.max(8,Math.min(y,innerHeight-180))});
 const normalized=note=>({title:note.title||'',body:note.body||'',board:note.board||emptyNoteBoard(),version:note.version||0,sharedWith:note.sharedWith||[]});
 function savedFromRoom(room,scope,id){
   if(!room?.state)return null;
@@ -40,7 +40,7 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onTrash,onClos
   const findIndex=findResults.length?findCursor%findResults.length:0,activeFind=findResults[findIndex];
   const wide=boardOpen||historyOpen;
   const [viewport,setViewport]=useState(()=>({width:innerWidth,height:innerHeight}));
-  const docked=boardOpen&&position.docked!==false;
+  const docked=boardOpen&&position.docked===true;
   const rect=noteWindowRect(position,viewport,{wide,docked});
   const panel=useRef(null),drag=useRef(null),resizing=useRef(null),persisted=useRef(!note.isNew);
   const findToggle=useRef(null),exportMenu=useRef(null);
@@ -76,15 +76,15 @@ function NoteWindow({note,latest,position,readOnly,onSave,onShare,onTrash,onClos
     setRestorationUndo(draft);setDraft(next);setEditedFields(editedNoteFields(next,saved));setRetainedDirty(false);setHistoryOpen(false);setError('');
     if(fields.includes('board'))setBoardEpoch(value=>value+1);
     setNotice(`Campos da versão ${version.version} carregados no rascunho. Revise e salve para criar uma nova versão.`);
-    requestAnimationFrame(()=>panel.current?.querySelector('.note-history-access button,.note-history-toggle')?.focus());
+    requestAnimationFrame(()=>panel.current?.querySelector('.note-menu summary')?.focus());
   }
   function undoRestoration(){
     if(!restorationUndo)return;
     textHistory.current={title:{past:[],future:[]},body:{past:[],future:[]}};
     setDraft(restorationUndo);setEditedFields(editedNoteFields(restorationUndo,saved));setRestorationUndo(null);setBoardEpoch(value=>value+1);setNotice('Rascunho anterior à restauração recuperado.');
-    requestAnimationFrame(()=>panel.current?.querySelector('.note-history-access button,.note-history-toggle')?.focus());
+    requestAnimationFrame(()=>panel.current?.querySelector('.note-menu summary')?.focus());
   }
-  function closeHistory(){setHistoryOpen(false);requestAnimationFrame(()=>panel.current?.querySelector('.note-history-access button,.note-history-toggle')?.focus());}
+  function closeHistory(){setHistoryOpen(false);requestAnimationFrame(()=>panel.current?.querySelector('.note-menu summary')?.focus());}
   function openFind(){setFindOpen(true);setFindNavigation(value=>value+1);requestAnimationFrame(()=>{const input=panel.current?.querySelector('input[name="note-find"]');input?.focus();input?.select();});}
   function closeFind(){setFindOpen(false);setFindNavigation(value=>value+1);findToggle.current?.focus();}
   function findShortcut(event){if((event.ctrlKey||event.metaKey)&&!event.altKey&&event.key.toLowerCase()==='f'){event.preventDefault();event.stopPropagation();openFind();}}
