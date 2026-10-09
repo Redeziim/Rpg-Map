@@ -39,7 +39,37 @@ function pageLines(items){
 
 // Three readings of the same picture: the default one gives running text; the two sparse-text modes keep the position of every
 // word, which is what makes box-style sheets (value above or beside its label) readable. A failed extra reading never loses the first.
-const PASSES=[['3',false],['12',true],['6',true]];
+const PASSES=[['3',false],['12',true],['6',true],['11',true]];
+// Fichas de caixas perdem fileiras inteiras no OCR porque as bordas das caixas confundem a leitura. Apagar as linhas retas longas (bordas e
+// sublinhados) deixa só o texto, e uma leitura extra da imagem limpa recupera os rótulos. O texto, que é mais curto que uma linha reta, fica.
+const RULE_MIN=70;
+function removeRules(source){
+  const {width,height}=source,canvas=document.createElement('canvas');
+  canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(source,0,0);
+  const image=context.getImageData(0,0,width,height),data=image.data;
+  const dark=index=>(data[index]+data[index+1]+data[index+2])/3<150;
+  const erase=index=>{data[index]=data[index+1]=data[index+2]=255;};
+  let removed=0;
+  for(let y=0;y<height;y++){
+    let run=0;
+    for(let x=0;x<=width;x++){
+      if(x<width&&dark((y*width+x)*4)){run++;continue;}
+      if(run>=RULE_MIN){for(let k=x-run;k<x;k++)erase((y*width+k)*4);removed++;}
+      run=0;
+    }
+  }
+  for(let x=0;x<width;x++){
+    let run=0;
+    for(let y=0;y<=height;y++){
+      if(y<height&&dark((y*width+x)*4)){run++;continue;}
+      if(run>=RULE_MIN){for(let k=y-run;k<y;k++)erase((k*width+x)*4);removed++;}
+      run=0;
+    }
+  }
+  context.putImageData(image,0,0);
+  return {canvas,removed};
+}
 async function ocr(image,{onProgress,signal}){
   const {createWorker}=await import('tesseract.js');
   let pass=0;
@@ -63,6 +93,17 @@ async function ocr(image,{onProgress,signal}){
         }
       }catch(error){if(error?.name==='AbortError'||!keepWords)throw error;console.warn('Leitura extra do OCR falhou:',mode,error?.message);}
     }
+    // Leitura extra da imagem sem as linhas das caixas; uma falha aqui nunca perde o que já foi lido.
+    try{
+      const {canvas,removed}=removeRules(image);
+      if(removed>=4)for(const mode of ['12','11']){
+        aborted();onProgress?.('Reconhecendo o texto sem as bordas das caixas…');
+        await worker.setParameters({tessedit_pageseg_mode:mode});
+        const {data}=await worker.recognize(canvas,{},{blocks:true});
+        const words=(data.blocks||[]).flatMap(block=>block.paragraphs.flatMap(paragraph=>paragraph.lines.flatMap(line=>line.words))).map(word=>[word.text,word.bbox.x0,word.bbox.y0,word.bbox.x1,word.bbox.y1,word.confidence]);
+        if(words.length)wordSets.push(words);
+      }
+    }catch(error){if(error?.name==='AbortError')throw error;console.warn('Leitura sem bordas falhou:',error?.message);}
     return {text,wordSets};
   }finally{signal?.removeEventListener('abort',stop);await worker.terminate().catch(()=>{});}
 }

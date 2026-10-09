@@ -1,10 +1,26 @@
 /* Biblioteca de modelos da ficha. Os estilos da lista de sistemas (.system-templates) vêm de theme.css; aqui entram só as partes novas. */
-.sheet-models h5{margin:var(--space-4) 0 var(--space-2);color:var(--ink-warm);font:600 var(--fs-small) var(--font-body);letter-spacing:.04em}
+.sheet-models h5{margin:var(--space-3) 0 var(--space-1);color:var(--ink-warm);font:600 var(--fs-small) var(--font-body);letter-spacing:.04em}
 .sheet-models-empty,.sheet-models-notice{margin:0 0 var(--space-3);color:var(--muted);font-size:var(--fs-small)}
 .sheet-models-notice{color:var(--ok-ink)}
 .sheet-models-error{margin:var(--space-2) 0;padding-left:var(--space-3);border-left:3px solid var(--red);color:var(--danger-ink);font-size:var(--fs-small)}
-.sheet-models-create{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin:var(--space-3) 0}
-.sheet-models-create>p{flex:1 1 100%;margin:0;color:var(--muted);font-size:var(--fs-small)}
+.sheet-models-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2)}
+.sheet-models-head h4{margin:0}
+.sheet-models-tools{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.sheet-models-hint{margin:var(--space-1) 0 0!important}
+/* linhas curtas: o nome, uma frase pequena e os botões na mesma altura */
+.sheet-models .sheet-models-list{gap:var(--space-1)}
+.sheet-models .sheet-models-list li{flex-wrap:nowrap;gap:var(--space-2);padding:var(--space-1) 0;border-bottom:1px solid var(--rule-soft)}
+.sheet-models .sheet-models-list li>div:first-child{flex:1 1 auto}
+.sheet-models .sheet-models-list li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-models .sheet-models-list .sheet-tool-btn,.sheet-models-head .sheet-tool-btn{min-height:36px;padding:0 var(--space-3);font-size:var(--fs-small)}
+.sheet-models-systems{margin-top:var(--space-3);border-top:1px solid var(--rule-soft)}
+.sheet-models-systems>summary{display:flex;align-items:center;min-height:var(--target);color:var(--ink-warm);font:600 var(--fs-small) var(--font-body);cursor:pointer}
+.sheet-models-systems>summary{list-style:none;gap:var(--space-2)}
+.sheet-models-systems>summary::-webkit-details-marker{display:none}
+.sheet-models-systems>summary::after{content:"";inline-size:7px;block-size:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform var(--motion-fast) ease}
+.sheet-models-systems[open]>summary::after{transform:rotate(225deg)}
+@media(prefers-reduced-motion:reduce){.sheet-models-systems>summary::after{transition:none}}
+.sheet-models-systems>summary:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 .sheet-models-file{position:relative;cursor:pointer}
 .sheet-models-file input{position:absolute;inline-size:1px;block-size:1px;opacity:0;pointer-events:none}
 .sheet-models-file:focus-within{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
@@ -18,6 +34,9 @@
 .sheet-models-review h5:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 .sheet-models-review>p{margin:0 0 var(--space-3);color:var(--muted);font-size:var(--fs-small);line-height:var(--lh-body)}
 .sheet-models-note{padding:var(--space-2) var(--space-3);border-left:3px solid var(--gold-deep);color:var(--ink-soft)!important}
+.sheet-models-raw{margin:0 0 var(--space-3);color:var(--muted);font-size:var(--fs-small)}
+.sheet-models-raw>summary{display:flex;align-items:center;min-height:var(--target);cursor:pointer;color:var(--ink-soft)}
+.sheet-models-raw pre{max-block-size:160px;overflow:auto;margin:var(--space-1) 0;padding:var(--space-2);border:1px solid var(--rule-soft);background:var(--surface-0);white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 var(--font-body)}
 .sheet-models-bulk{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;margin:var(--space-3) 0 var(--space-2)}
 .sheet-models-bulk span{color:var(--muted);font-size:var(--fs-small)}
 .sheet-models-table{max-block-size:420px;overflow:auto;margin-bottom:var(--space-3);border:1px solid var(--rule-soft)}
@@ -34,5 +53,6 @@
 .sheet-models .sheet-tool-btn.is-danger{border-color:var(--wine-line);color:var(--danger-ink)}
 .sheet-models .sheet-tool-btn:disabled{opacity:.55;cursor:default}
 .visually-hidden{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:700px){.sheet-models .sheet-models-list li{flex-wrap:wrap}.sheet-models .sheet-models-list li span{white-space:normal}}
 @media(max-width:560px){.sheet-models-review{padding:var(--space-3)}.sheet-models-actions button{flex:1 1 100%}}
 @media(forced-colors:active){.sheet-models-review,.sheet-models-table{border-color:CanvasText}}

@@ -38,10 +38,12 @@ Em **Editar modelo da ficha → Modelos de sistema**, o mestre ou ADM tem:
 ### Como o arquivo vira modelo
 
 - **PDF com formulário**: os nomes dos campos do formulário viram os nomes dos campos do modelo; nomes genéricos ("Text Box 12") são ignorados.
+- **Imagem**: o OCR é lido de várias maneiras e os resultados são somados; as linhas retas longas (bordas de caixas e sublinhados) são apagadas numa leitura extra, porque as caixas faziam o OCR pular fileiras inteiras de rótulos, e a posição de cada palavra separa as colunas. Rótulos em maiúsculas viram frase normal.
 - **PDF ou imagem**: cada linha vira candidata. "Nome: Fulano" e "Força 14" dão o rótulo sem o valor; uma linha só com rótulos que a biblioteca conhece ("Força Destreza Constituição") é separada; palavras como ATRIBUTOS, PERÍCIAS ou EQUIPAMENTO abrem uma categoria; links, números de página, direitos autorais e frases longas são ignorados.
 - **Tipo**: número quando há número ou o rótulo é de atributo, perícia ou bônus; barra de recurso para vida, mana, sanidade e parecidos (e para "10 / 12"); texto longo para história, notas, magias; lista para inventário e ataques; imagem para retrato; texto nos demais.
 - **TXT à mão**, o jeito mais seguro: uma linha por campo; `# Categoria` (ou `[Categoria]`, `== Categoria ==`) abre uma categoria; `Campo [número]`, `[texto]`, `[longo]`, `[lista]`, `[barra]` e `[imagem]` escolhem o tipo; `Mod. Força = piso((Força-10)/2)` cria uma fórmula.
 - Se a ficha lembrar muito um sistema da biblioteca (pelo menos 10 campos e 70% em comum), o app avisa e os rótulos conhecidos usam o tipo, a categoria e a fórmula desse sistema.
+- A revisão tem **Texto lido do arquivo**: mostra o que cada leitura enxergou, para saber se um campo faltou porque o arquivo não foi bem lido ou porque o rótulo não foi reconhecido.
 - Tudo é conferido pelas mesmas regras do servidor antes de guardar: até 200 campos, nomes únicos, tipos válidos e fórmulas com texto.
 
 ### Fórmulas
@@ -54,6 +56,8 @@ As fórmulas agora aceitam `piso`, `teto`, `min`, `max` e `abs`, referenciam out
 - Ordem Paranormal: mecânica de jogo da Jambô Editora (nomes de campos, atributo-base de cada perícia e fórmulas de recursos por classe). Conferida contra o sistema comunitário `SouOWendel/ordemparanormal_fvtt`. Nenhum texto do livro foi copiado.
 
 ## Importar ficha de PDF ou imagem
+
+> **Retirado da interface em 2026-10-09, a pedido do usuário, por enquanto.** A tela "Importar ficha" saiu do livro e da lista da ficha. `SheetImport.jsx`, `sheetReader.js` e os interpretadores continuam no código (a leitura é a mesma que gera modelos) e voltam quando o usuário pedir.
 
 Na ficha do jogador, **Importar de um PDF ou imagem**. Tudo acontece neste navegador; o arquivo não vai ao servidor nem a nenhum serviço de IA.
 

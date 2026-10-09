@@ -19,6 +19,7 @@ test('a TXT written by hand: headings, types by hint, formulas and plain labels'
   assert.equal(byLabel(model,'Mana').type,'status');
   assert.equal(byLabel(model,'Biografia').type,'textarea');assert.equal(byLabel(model,'Retrato').type,'image');
   assert.equal(model.title,'minha ficha');
+  assert.ok(model.readings.length===1&&model.readings[0].startsWith('# Identidade'),'a revisão pode mostrar o que foi lido');
   assert.equal(model.system,null,'uma ficha própria não é tomada por um sistema conhecido');
 });
 
@@ -32,6 +33,31 @@ test('a filled sheet read from a PDF: label and value on the same line, columns 
 test('columns glued into one line are split when every word is a label the library knows',()=>{
   const model=inferSheetModel({text:['ATRIBUTOS','Força Destreza Constituição','Inteligência Sabedoria Carisma','Nome do herói'].join('\n')});
   assert.deepEqual(model.fields.map(field=>field.label),['Força','Destreza','Constituição','Inteligência','Sabedoria','Carisma','Nome do herói']);
+});
+
+test('a picture: words placed side by side become separate fields, and the sheet title is not a field',()=>{
+  // [texto,x0,y0,x1,y1,confiança] como o OCR devolve
+  const word=(text,x,y)=>[text,x,y,x+text.length*10,y+16,90];
+  const words=[word('FICHA',10,10),word('DE',70,10),word('PERSONAGEM',100,10),
+    word('PERÍCIAS'.replace('Í','I'),10,60),
+    word('NOME',10,110),word('DO',60,110),word('PERSONAGEM',90,110),word('CLASSE',420,110),word('NÍVEL',700,110),
+    word('PONTOS',10,160),word('DE',80,160),word('VIDA',110,160),word('INICIATIVA',420,160)];
+  const model=inferSheetModel({wordSets:[words]});
+  const labels=model.fields.map(field=>field.label);
+  assert.ok(!labels.some(label=>/ficha/i.test(label)));
+  for(const expected of ['Nome do personagem','Classe','Nível','Iniciativa','Pontos de vida'])assert.ok(labels.includes(expected),expected+' em '+labels.join(', '));
+});
+
+test('matching a known system never leaves a duplicate field or a formula that points at fields the model does not have',()=>{
+  const model=inferSheetModel({text:['Nome do personagem','Personagem','Classe','Raça','Nível','Classe de Armadura','Iniciativa','Deslocamento','Pontos de vida','ATRIBUTOS','Força','Destreza','Constituição'].join('\n')});
+  assert.equal(model.fields.filter(field=>field.label==='Personagem').length,1);
+  assert.notEqual(byLabel(model,'Iniciativa').type,'formula');
+  assert.ok(model.fields.every(field=>field.type!=='formula'||field.formula));
+});
+
+test('a heading read without its accent still gets the accented name',()=>{
+  const model=inferSheetModel({text:['PERICIAS','Acrobacia (Des)','Atletismo (For)'].join('\n')});
+  assert.equal(byLabel(model,'Acrobacia (Des)').tab,'Perícias');
 });
 
 test('noise is ignored: page numbers, links, copyright, sentences and bare numbers',()=>{

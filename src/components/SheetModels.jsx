@@ -73,8 +73,8 @@ export default function SheetModels({sheetFields,onFieldsChange,makeId}){
       // O leitor (PDF.js e OCR) é grande; só carrega quando alguém manda um arquivo.
       const {readSheetFile}=await import('./sheetReader.js');
       const read=await readSheetFile(file,{onProgress:setMessage,signal:controller.signal});
-      const inferred=inferSheetModel({text:read.text,formFieldNames:read.formFieldNames,fileName:file.name});
-      setDraft({name:inferred.title||'Modelo novo',notes:inferred.notes,fileName:file.name,method:read.method,truncated:read.truncated,
+      const inferred=inferSheetModel({text:read.text,wordSets:read.wordSets,formFieldNames:read.formFieldNames,fileName:file.name});
+      setDraft({name:inferred.title||'Modelo novo',notes:inferred.notes,readings:inferred.readings,fileName:file.name,method:read.method,truncated:read.truncated,
         rows:inferred.fields.map((field,index)=>({key:index,use:true,type:field.type,label:field.label,tab:field.tab,formula:field.formula||'',evidence:field.evidence}))});
       setPhase('review');
     }catch(cause){
@@ -111,23 +111,21 @@ export default function SheetModels({sheetFields,onFieldsChange,makeId}){
   </li>);
 
   return <section className="system-templates sheet-models" aria-label="Modelos de sistema">
-    <h4>Modelos de sistema</h4>
-    <p>Um modelo traz os campos e as fórmulas de um sistema. Nada fica fixo: some campos de outro sistema, troque de modelo ou edite tudo depois. Os sistemas conhecidos já estão prontos; os que você criar ficam só na sua conta.</p>
-
-    <h5>Meus modelos</h5>
-    {mine===null&&!loadError&&<p role="status">Carregando seus modelos…</p>}
-    {loadError&&<p role="alert" className="sheet-models-error">{loadError} <button type="button" className="sheet-tool-btn" onClick={load}>Tentar de novo</button></p>}
-    {mine&&!mine.length&&<p className="sheet-models-empty">Você ainda não guardou nenhum modelo. Crie um a partir de um arquivo, ou guarde o modelo desta mesa.</p>}
-    {mine&&mine.length>0&&<ul>{list(mine,{own:true})}</ul>}
-
-    <div className="sheet-models-create">
-      {phase==='idle'&&<>
-        <label className="sheet-tool-btn sheet-models-file"><FileUp size={16} aria-hidden="true"/>Criar modelo de um arquivo<input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,text/plain,.pdf,.txt,.md" onChange={readFile}/></label>
-        {sheetFields.length>0&&!saveOwn&&<button type="button" className="sheet-tool-btn" onClick={()=>{setSaveOwn({name:''});setError('');}}><Save size={16} aria-hidden="true"/>Guardar o modelo desta mesa</button>}
-        <p>Mande a ficha em branco (ou preenchida) em PDF, imagem ou TXT. A leitura acontece neste navegador, o arquivo não vai ao servidor, e você revisa os campos antes de guardar.</p>
-      </>}
-      {phase==='reading'&&<div className="sheet-models-progress" role="status"><p>{message}</p><button type="button" className="sheet-tool-btn" onClick={()=>abort.current?.abort()}>Cancelar leitura</button></div>}
+    <div className="sheet-models-head">
+      <h4>Modelos de sistema</h4>
+      {phase==='idle'&&<div className="sheet-models-tools">
+        <label className="sheet-tool-btn sheet-models-file" title="PDF, imagem (print) ou TXT. A leitura acontece neste navegador."><FileUp size={16} aria-hidden="true"/>Criar de um arquivo<input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,text/plain,.pdf,.txt,.md" onChange={readFile}/></label>
+        {sheetFields.length>0&&!saveOwn&&<button type="button" className="sheet-tool-btn" onClick={()=>{setSaveOwn({name:''});setError('');}}><Save size={16} aria-hidden="true"/>Guardar esta mesa</button>}
+      </div>}
     </div>
+    <p className="sheet-models-hint">PDF, imagem ou TXT viram um modelo para revisar. Os seus modelos ficam só na sua conta.</p>
+    {phase==='reading'&&<div className="sheet-models-progress" role="status"><p>{message}</p><button type="button" className="sheet-tool-btn" onClick={()=>abort.current?.abort()}>Cancelar leitura</button></div>}
+
+    <h5>Meus modelos{mine?` (${mine.length})`:''}</h5>
+    {mine===null&&!loadError&&<p role="status" className="sheet-models-empty">Carregando…</p>}
+    {loadError&&<p role="alert" className="sheet-models-error">{loadError} <button type="button" className="sheet-tool-btn" onClick={load}>Tentar de novo</button></p>}
+    {mine&&!mine.length&&<p className="sheet-models-empty">Nenhum modelo guardado ainda.</p>}
+    {mine&&mine.length>0&&<ul className="sheet-models-list">{list(mine,{own:true})}</ul>}
 
     {saveOwn&&<form className="sheet-models-save" onSubmit={saveRoomModel}>
       <label>Nome do modelo<input name="sheet-model-name" autoComplete="off" value={saveOwn.name} maxLength={SHEET_MODEL_LIMITS.name} required placeholder="Ex.: Minha campanha de Cthulhu…" onChange={event=>setSaveOwn({name:event.target.value})}/></label>
@@ -139,6 +137,7 @@ export default function SheetModels({sheetFields,onFieldsChange,makeId}){
       <h5 ref={heading} tabIndex={-1}>Revise o modelo lido</h5>
       <p>De <strong>{draft.fileName}</strong> ({draft.method}) saíram {plural(draft.rows.length,'campo','campos')}. Marque os que quer, corrija nomes, tipos e categorias, e dê um nome ao modelo.{draft.truncated?' Só o começo do arquivo foi lido.':''}</p>
       {draft.notes.map(note=><p key={note} className="sheet-models-note" role="status">{note}</p>)}
+      {draft.readings?.length>0&&<details className="sheet-models-raw"><summary>Texto lido do arquivo</summary>{draft.readings.map((reading,index)=><pre key={index} aria-label={`Leitura ${index+1}`}>{reading}</pre>)}</details>}
       <label className="sheet-models-name">Nome do modelo<input name="sheet-model-title" autoComplete="off" value={draft.name} maxLength={SHEET_MODEL_LIMITS.name} onChange={event=>setDraft({...draft,name:event.target.value})}/></label>
       {draft.rows.length>0&&<>
         <div className="sheet-models-bulk" role="group" aria-label="Seleção"><button type="button" className="sheet-tool-btn" onClick={()=>setDraft({...draft,rows:draft.rows.map(row=>({...row,use:true}))})}>Marcar todos</button><button type="button" className="sheet-tool-btn" onClick={()=>setDraft({...draft,rows:draft.rows.map(row=>({...row,use:false}))})}>Desmarcar todos</button><span>{chosen.length} de {draft.rows.length} marcados</span></div>
@@ -164,8 +163,9 @@ export default function SheetModels({sheetFields,onFieldsChange,makeId}){
     {error&&<p role="alert" className="sheet-models-error">{error}</p>}
     {notice&&<p role="status" className="sheet-models-notice">{notice}</p>}
 
-    <h5>Sistemas conhecidos</h5>
-    <ul>{list(systemItems)}</ul>
+    <details className="sheet-models-systems"><summary>Sistemas de RPG ({systemItems.length})</summary>
+      <ul className="sheet-models-list">{list(systemItems)}</ul>
+    </details>
 
     {pending&&plan&&<div className="system-confirm" role="group" aria-label={`Confirmar ${pending.name}`}>
       <p role="alert">{pending.mode==='replace'
